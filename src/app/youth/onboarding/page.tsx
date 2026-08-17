@@ -28,7 +28,7 @@ export default function YouthOnboarding() {
 
         <div className="question-block">
           <div className="question-icon">
-            <Target aria-hidden size={54} />
+            <Target aria-hidden size={32} />
           </div>
           <h1>What is your main goal right now?</h1>
           <p>This helps us build the right path for you.</p>
@@ -43,7 +43,7 @@ export default function YouthOnboarding() {
                 type="button"
                 key={goal.title}
               >
-                <Icon aria-hidden size={42} />
+                <Icon aria-hidden size={28} />
                 <strong>{goal.title}</strong>
                 <span>{goal.text}</span>
               </button>
