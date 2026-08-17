@@ -1,10 +1,5 @@
 {
-  "/_not-found/page": "app/_not-found/page.js",
   "/page": "app/page.js",
-  "/youth/ask/page": "app/youth/ask/page.js",
-  "/youth/find-help/page": "app/youth/find-help/page.js",
-  "/youth/page": "app/youth/page.js",
   "/youth/onboarding/page": "app/youth/onboarding/page.js",
-  "/youth/progress/page": "app/youth/progress/page.js",
-  "/youth/steps/page": "app/youth/steps/page.js"
+  "/youth/page": "app/youth/page.js"
 }
