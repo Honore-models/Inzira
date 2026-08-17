@@ -1,13 +1,22 @@
 import { CheckCircle2, CircleDashed, Clock3 } from "lucide-react";
 import { ProgressMeter, YouthShell } from "@/components/youth/YouthShell";
-
-const milestones = [
-  { label: "Roadmap reviewed", value: "Approved by officer", icon: CheckCircle2 },
-  { label: "Current step", value: "RDB registration", icon: Clock3 },
-  { label: "Next unlock", value: "TIN application", icon: CircleDashed },
-];
+import { roadmapSteps, youthCase } from "@/data/youth";
 
 export default function YouthProgress() {
+  const currentStep = roadmapSteps.find((step) => step.state === "current")!;
+  const nextLocked = roadmapSteps.find(
+    (step) => step.number === currentStep.number + 1,
+  )!;
+  const milestones = [
+    {
+      label: "Roadmap reviewed",
+      value: `Approved by ${youthCase.youth.officer}`,
+      icon: CheckCircle2,
+    },
+    { label: "Current step", value: currentStep.title, icon: Clock3 },
+    { label: "Next unlock", value: nextLocked.title, icon: CircleDashed },
+  ];
+
   return (
     <YouthShell active="My Steps">
       <header className="page-heading two-column-heading">
@@ -15,7 +24,7 @@ export default function YouthProgress() {
           <h1>Progress</h1>
           <p>Track what is done, what is current, and what comes next.</p>
         </div>
-        <ProgressMeter value={40} label="Overall progress" />
+        <ProgressMeter value={youthCase.progress.percent} label="Overall progress" />
       </header>
 
       <section className="progress-overview">
@@ -29,6 +38,18 @@ export default function YouthProgress() {
             </article>
           );
         })}
+      </section>
+
+      <section className="content-card document-panel">
+        <div>
+          <h2>Documents for the current step</h2>
+          <p>Prepare these before visiting the office.</p>
+        </div>
+        <ul>
+          {youthCase.documents.map((document) => (
+            <li key={document}>{document}</li>
+          ))}
+        </ul>
       </section>
     </YouthShell>
   );

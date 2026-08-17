@@ -1,8 +1,20 @@
 import Link from "next/link";
-import { ClipboardList, HelpCircle, Lightbulb, ListChecks, MapPin, MessagesSquare, Sun } from "lucide-react";
+import {
+  ClipboardList,
+  FileCheck2,
+  HelpCircle,
+  Lightbulb,
+  ListChecks,
+  MapPin,
+  MessagesSquare,
+  Sun,
+} from "lucide-react";
 import { ProgressMeter, YouthShell } from "@/components/youth/YouthShell";
+import { roadmapSteps, youthCase } from "@/data/youth";
 
 export default function YouthDashboard() {
+  const nextStep = roadmapSteps.find((step) => step.id === youthCase.nextStepId)!;
+
   return (
     <YouthShell active="Home">
       <div className="dashboard-grid">
@@ -11,15 +23,31 @@ export default function YouthDashboard() {
             <Sun aria-hidden size={42} />
             <div>
               <p>Good morning,</p>
-              <h1>Diane</h1>
-              <span>You are on your path. Keep going.</span>
+              <h1>{youthCase.youth.name}</h1>
+              <span>
+                You are on your path in {youthCase.youth.district}. Keep going.
+              </span>
             </div>
           </div>
           <div className="progress-card compact-card">
             <p>Overall progress</p>
-            <strong>2 of 5 steps done</strong>
-            <ProgressMeter value={40} label="40% complete" />
+            <strong>
+              {youthCase.progress.completed} of {youthCase.progress.total} steps done
+            </strong>
+            <ProgressMeter
+              value={youthCase.progress.percent}
+              label={`${youthCase.progress.percent}% complete`}
+            />
           </div>
+        </section>
+
+        <section className="case-stat-grid">
+          {youthCase.quickStats.map((stat) => (
+            <article className="case-stat" key={stat.label}>
+              <span>{stat.label}</span>
+              <strong>{stat.value}</strong>
+            </article>
+          ))}
         </section>
 
         <section className="content-card next-step-card">
@@ -29,11 +57,11 @@ export default function YouthDashboard() {
               <ClipboardList aria-hidden size={44} />
             </div>
             <div>
-              <h2>Register your business name with RDB</h2>
-              <p>This is the first official step to start your business.</p>
+              <h2>{nextStep.title}</h2>
+              <p>{nextStep.detail}</p>
               <span>
                 <MapPin aria-hidden size={15} />
-                RDB Office - Your District
+                {nextStep.location}
               </span>
             </div>
             <Link className="small-action" href="/youth/steps">
@@ -60,6 +88,11 @@ export default function YouthDashboard() {
               <strong>Find Help</strong>
               <span>Discover institutions near you</span>
             </Link>
+            <Link className="quick-card" href="/youth/progress">
+              <FileCheck2 aria-hidden size={28} />
+              <strong>Progress</strong>
+              <span>Track approvals and unlocks</span>
+            </Link>
           </div>
         </section>
 
@@ -67,9 +100,9 @@ export default function YouthDashboard() {
           <MessagesSquare aria-hidden size={22} />
           <span>
             <strong>Need help from a real person?</strong>
-            Message your youth officer
+            Message youth officer {youthCase.youth.officer}
           </span>
-          <span aria-hidden>→</span>
+          <span aria-hidden>-&gt;</span>
         </Link>
       </div>
     </YouthShell>

@@ -1,23 +1,8 @@
 import Link from "next/link";
 import { ArrowLeft, BriefcaseBusiness, Hammer, Target, Volume2 } from "lucide-react";
+import { intakeGoals } from "@/data/youth";
 
-const goals = [
-  {
-    title: "Start a business",
-    text: "I want to start or grow my own business",
-    icon: BriefcaseBusiness,
-  },
-  {
-    title: "Get vocational training",
-    text: "I want to learn skills or go to a training center",
-    icon: Hammer,
-  },
-  {
-    title: "Find a job",
-    text: "I want to find employment",
-    icon: BriefcaseBusiness,
-  },
-];
+const goalIcons = [BriefcaseBusiness, Hammer, BriefcaseBusiness];
 
 export default function YouthOnboarding() {
   return (
@@ -50,10 +35,14 @@ export default function YouthOnboarding() {
         </div>
 
         <div className="goal-grid">
-          {goals.map((goal) => {
-            const Icon = goal.icon;
+          {intakeGoals.map((goal, index) => {
+            const Icon = goalIcons[index];
             return (
-              <button className="goal-card" type="button" key={goal.title}>
+              <button
+                className={`goal-card ${goal.selected ? "selected" : ""}`}
+                type="button"
+                key={goal.title}
+              >
                 <Icon aria-hidden size={42} />
                 <strong>{goal.title}</strong>
                 <span>{goal.text}</span>

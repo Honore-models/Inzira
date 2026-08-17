@@ -1,11 +1,6 @@
 import { HelpCircle, Send, ShieldCheck } from "lucide-react";
 import { YouthShell } from "@/components/youth/YouthShell";
-
-const suggestions = [
-  "What documents do I need for RDB registration?",
-  "Can I get training before I register a business?",
-  "When should I talk to a youth officer?",
-];
+import { askSuggestions, seededMessages, youthCase } from "@/data/youth";
 
 export default function YouthAsk() {
   return (
@@ -27,8 +22,17 @@ export default function YouthAsk() {
               </p>
             </div>
           </div>
+          <div className="seeded-chat">
+            {seededMessages.map((message) => (
+              <article key={message.text}>
+                <strong>{message.from}</strong>
+                <p>{message.text}</p>
+                <span>{message.source}</span>
+              </article>
+            ))}
+          </div>
           <div className="suggestions">
-            {suggestions.map((item) => (
+            {askSuggestions.map((item) => (
               <button type="button" key={item}>
                 {item}
               </button>
@@ -50,6 +54,11 @@ export default function YouthAsk() {
             Inzira answers from verified sources. If a question could affect
             money, legal status, or eligibility, your youth officer reviews it.
           </p>
+          <div className="officer-mini-card">
+            <span>Your officer</span>
+            <strong>{youthCase.youth.officer}</strong>
+            <p>{youthCase.youth.district} District youth support</p>
+          </div>
         </aside>
       </section>
     </YouthShell>

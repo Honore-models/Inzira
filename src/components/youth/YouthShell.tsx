@@ -1,17 +1,17 @@
 import Link from "next/link";
 import {
-  BookOpenText,
   ChevronDown,
   Globe2,
   HelpCircle,
   Home,
   ListChecks,
-  MapPin,
   MessageCircle,
+  PanelLeft,
   Search,
   UserRound,
   Volume2,
 } from "lucide-react";
+import { youthCase } from "@/data/youth";
 
 const navItems = [
   { href: "/youth", label: "Home", icon: Home },
@@ -30,9 +30,20 @@ export function YouthShell({
   return (
     <main className="youth-app">
       <aside className="youth-sidebar">
-        <Link className="youth-logo" href="/youth">
-          Inzira
-        </Link>
+        <div className="sidebar-brand-row">
+          <Link className="youth-logo" href="/youth">
+            Inzira
+          </Link>
+          <PanelLeft aria-hidden size={18} />
+        </div>
+
+        <div className="youth-profile-card">
+          <div>{youthCase.youth.name.slice(0, 1)}</div>
+          <span>
+            <strong>{youthCase.youth.name}</strong>
+            {youthCase.youth.district} District
+          </span>
+        </div>
 
         <nav className="youth-nav" aria-label="Youth navigation">
           {navItems.map((item) => {
@@ -53,7 +64,7 @@ export function YouthShell({
         <div className="youth-sidebar-spacer" />
 
         <div className="youth-nav secondary">
-          <Link href="/youth/messages">
+          <Link href="/youth/ask">
             <MessageCircle aria-hidden size={16} />
             <span>Messages</span>
             <small>2</small>
@@ -74,7 +85,19 @@ export function YouthShell({
           <ChevronDown aria-hidden size={14} />
         </button>
       </aside>
-      <section className="youth-content">{children}</section>
+      <section className="youth-content">
+        <header className="youth-topbar">
+          <div>
+            <span>Representative youth case</span>
+            <strong>{youthCase.youth.goal}</strong>
+          </div>
+          <div>
+            <span>Officer</span>
+            <strong>{youthCase.youth.officer}</strong>
+          </div>
+        </header>
+        {children}
+      </section>
     </main>
   );
 }
@@ -98,24 +121,3 @@ export function ProgressMeter({
     </div>
   );
 }
-
-export const institutions = [
-  {
-    title: "RDB Office - Your District",
-    meta: "Business registration support",
-    distance: "2.4 km away",
-    icon: MapPin,
-  },
-  {
-    title: "WDA Training Center",
-    meta: "TVET guidance and certification",
-    distance: "8.1 km away",
-    icon: BookOpenText,
-  },
-  {
-    title: "BDF Branch Office",
-    meta: "Loan guarantee information",
-    distance: "11.6 km away",
-    icon: ListChecks,
-  },
-];

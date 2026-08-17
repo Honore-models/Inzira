@@ -1433,3 +1433,351 @@ p {
     grid-template-columns: 1fr;
   }
 }
+
+/* Youth product screens */
+.youth-app {
+  background:
+    radial-gradient(circle at top right, rgba(31, 111, 76, 0.08), transparent 420px),
+    #f6f4ee;
+  color: #1e262b;
+  grid-template-columns: 248px minmax(0, 1fr);
+}
+
+.youth-sidebar {
+  background: rgba(255, 254, 250, 0.92);
+  box-shadow: 12px 0 30px rgba(32, 37, 43, 0.035);
+  padding: 26px 18px;
+}
+
+.sidebar-brand-row {
+  align-items: center;
+  display: flex;
+  justify-content: space-between;
+}
+
+.sidebar-brand-row svg {
+  color: #7a837c;
+}
+
+.youth-profile-card {
+  align-items: center;
+  background: #f3f5ef;
+  border: 1px solid #dfe5dc;
+  border-radius: 8px;
+  display: grid;
+  gap: 12px;
+  grid-template-columns: 42px 1fr;
+  padding: 12px;
+}
+
+.youth-profile-card > div {
+  align-items: center;
+  background: var(--green);
+  border-radius: 50%;
+  color: white;
+  display: inline-flex;
+  font-size: 18px;
+  font-weight: 900;
+  height: 42px;
+  justify-content: center;
+  width: 42px;
+}
+
+.youth-profile-card span {
+  color: #5b635f;
+  display: grid;
+  font-size: 12px;
+  gap: 3px;
+}
+
+.youth-profile-card strong {
+  color: #1f272c;
+  font-size: 15px;
+}
+
+.youth-nav a {
+  min-height: 44px;
+}
+
+.youth-nav a.active {
+  box-shadow: inset 3px 0 0 var(--green);
+}
+
+.youth-content {
+  max-width: 1220px;
+  padding: 30px 38px 56px;
+  width: 100%;
+}
+
+.youth-topbar {
+  align-items: center;
+  background: rgba(255, 254, 250, 0.78);
+  border: 1px solid #e0e4dc;
+  border-radius: 10px;
+  display: flex;
+  gap: 18px;
+  justify-content: space-between;
+  margin-bottom: 26px;
+  padding: 14px 18px;
+}
+
+.youth-topbar div {
+  display: grid;
+  gap: 4px;
+}
+
+.youth-topbar span {
+  color: #6b746f;
+  font-size: 12px;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.youth-topbar strong {
+  color: #1f272c;
+  font-size: 14px;
+}
+
+.welcome-card,
+.content-card,
+.quick-card,
+.message-strip,
+.institution-card,
+.roadmap-item,
+.intake-panel {
+  background: rgba(255, 254, 250, 0.96);
+  border-color: #dfe4dc;
+}
+
+.welcome-card {
+  background:
+    linear-gradient(135deg, rgba(232, 240, 235, 0.72), rgba(255, 254, 250, 0.96)),
+    rgba(255, 254, 250, 0.96);
+}
+
+.welcome-copy svg {
+  height: 70px;
+  padding: 14px;
+  width: 70px;
+}
+
+.case-stat-grid {
+  display: grid;
+  gap: 14px;
+  grid-template-columns: repeat(3, 1fr);
+}
+
+.case-stat {
+  background: #fffefa;
+  border: 1px solid #dfe4dc;
+  border-radius: 8px;
+  padding: 16px;
+}
+
+.case-stat span,
+.roadmap-summary span,
+.officer-mini-card span {
+  color: #68726d;
+  display: block;
+  font-size: 12px;
+  font-weight: 800;
+  margin-bottom: 7px;
+  text-transform: uppercase;
+}
+
+.case-stat strong,
+.roadmap-summary strong {
+  color: #1f272c;
+  font-size: 16px;
+}
+
+.quick-grid {
+  grid-template-columns: repeat(4, 1fr);
+}
+
+.quick-card {
+  border-radius: 8px;
+  transition: border-color 160ms ease, transform 160ms ease, box-shadow 160ms ease;
+}
+
+.quick-card:hover,
+.institution-card:hover,
+.goal-card:hover {
+  border-color: rgba(31, 111, 76, 0.55);
+  box-shadow: 0 18px 36px rgba(32, 37, 43, 0.07);
+  transform: translateY(-1px);
+}
+
+.roadmap-summary {
+  display: grid;
+  gap: 14px;
+  grid-template-columns: 1.2fr 1fr 1fr;
+  margin-bottom: 18px;
+}
+
+.roadmap-summary div {
+  background: #fffefa;
+  border: 1px solid #dfe4dc;
+  border-radius: 8px;
+  padding: 16px;
+}
+
+.roadmap-list {
+  position: relative;
+}
+
+.roadmap-item {
+  border-radius: 8px;
+}
+
+.roadmap-item.current {
+  background: #fffefa;
+  box-shadow: 0 18px 42px rgba(31, 111, 76, 0.09);
+}
+
+.roadmap-item.locked {
+  background: rgba(255, 254, 250, 0.68);
+}
+
+.source-line {
+  color: var(--green);
+  display: block;
+  font-size: 12px;
+  font-weight: 900;
+  margin-top: 10px;
+}
+
+.intake-screen {
+  background:
+    radial-gradient(circle at 50% 20%, rgba(31, 111, 76, 0.08), transparent 340px),
+    #f6f4ee;
+}
+
+.intake-panel {
+  box-shadow: 0 24px 70px rgba(32, 37, 43, 0.08);
+}
+
+.goal-card {
+  transition: border-color 160ms ease, transform 160ms ease, box-shadow 160ms ease;
+}
+
+.goal-card.selected {
+  background: #eef5ef;
+  border-color: var(--green);
+  box-shadow: 0 14px 34px rgba(31, 111, 76, 0.12);
+}
+
+.seeded-chat {
+  display: grid;
+  gap: 12px;
+  margin-bottom: 22px;
+}
+
+.seeded-chat article {
+  background: #f7f6f1;
+  border: 1px solid #e0e4dc;
+  border-radius: 8px;
+  padding: 14px 16px;
+}
+
+.seeded-chat strong {
+  color: #1f272c;
+  font-size: 14px;
+}
+
+.seeded-chat p {
+  color: #30383e;
+  font-size: 14px;
+  line-height: 1.45;
+  margin: 7px 0;
+}
+
+.seeded-chat span {
+  color: var(--green);
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.officer-mini-card {
+  background: #f3f5ef;
+  border: 1px solid #dfe4dc;
+  border-radius: 8px;
+  margin-top: 18px;
+  padding: 14px;
+}
+
+.officer-mini-card strong {
+  color: #1f272c;
+  display: block;
+  font-size: 18px;
+  margin-bottom: 4px;
+}
+
+.officer-mini-card p {
+  margin: 0;
+}
+
+.institution-title-row {
+  align-items: center;
+  display: flex;
+  gap: 10px;
+  justify-content: space-between;
+}
+
+.institution-title-row small {
+  background: #e8f0eb;
+  border-radius: 999px;
+  color: var(--green);
+  flex: 0 0 auto;
+  font-size: 11px;
+  font-weight: 900;
+  padding: 5px 9px;
+}
+
+.document-panel {
+  display: grid;
+  gap: 22px;
+  grid-template-columns: 1fr 1.2fr;
+  margin-top: 20px;
+}
+
+.document-panel h2 {
+  color: #1f272c;
+  font-size: 22px;
+  margin-bottom: 8px;
+}
+
+.document-panel ul {
+  display: grid;
+  gap: 10px;
+  grid-template-columns: repeat(2, 1fr);
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.document-panel li {
+  background: #f3f5ef;
+  border: 1px solid #dfe4dc;
+  border-radius: 7px;
+  color: #1f272c;
+  font-size: 14px;
+  font-weight: 800;
+  padding: 12px;
+}
+
+@media (max-width: 980px) {
+  .youth-app,
+  .case-stat-grid,
+  .quick-grid,
+  .roadmap-summary,
+  .document-panel,
+  .document-panel ul {
+    grid-template-columns: 1fr;
+  }
+
+  .youth-topbar {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+}
