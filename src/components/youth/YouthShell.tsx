@@ -4,20 +4,18 @@ import {
   Globe2,
   HelpCircle,
   Home,
+  Lightbulb,
   ListChecks,
   MessageCircle,
-  PanelLeft,
-  Search,
   UserRound,
   Volume2,
 } from "lucide-react";
-import { youthCase } from "@/data/youth";
 
 const navItems = [
   { href: "/youth", label: "Home", icon: Home },
   { href: "/youth/steps", label: "My Steps", icon: ListChecks },
   { href: "/youth/ask", label: "Ask", icon: HelpCircle },
-  { href: "/youth/find-help", label: "Find Help", icon: Search },
+  { href: "/youth/find-help", label: "Find Help", icon: Lightbulb },
 ];
 
 export function YouthShell({
@@ -30,20 +28,9 @@ export function YouthShell({
   return (
     <main className="youth-app">
       <aside className="youth-sidebar">
-        <div className="sidebar-brand-row">
-          <Link className="youth-logo" href="/youth">
-            Inzira
-          </Link>
-          <PanelLeft aria-hidden size={18} />
-        </div>
-
-        <div className="youth-profile-card">
-          <div>{youthCase.youth.name.slice(0, 1)}</div>
-          <span>
-            <strong>{youthCase.youth.name}</strong>
-            {youthCase.youth.district} District
-          </span>
-        </div>
+        <Link className="youth-logo" href="/youth">
+          Inzira
+        </Link>
 
         <nav className="youth-nav" aria-label="Youth navigation">
           {navItems.map((item) => {
@@ -54,7 +41,7 @@ export function YouthShell({
                 href={item.href}
                 key={item.href}
               >
-                <Icon aria-hidden size={16} />
+                <Icon aria-hidden size={18} />
                 <span>{item.label}</span>
               </Link>
             );
@@ -65,39 +52,27 @@ export function YouthShell({
 
         <div className="youth-nav secondary">
           <Link href="/youth/ask">
-            <MessageCircle aria-hidden size={16} />
+            <MessageCircle aria-hidden size={18} />
             <span>Messages</span>
             <small>2</small>
           </Link>
           <Link href="/youth/profile">
-            <UserRound aria-hidden size={16} />
+            <UserRound aria-hidden size={18} />
             <span>My Profile</span>
           </Link>
         </div>
 
-        <button className="read-button" type="button">
-          <Volume2 aria-hidden size={15} />
+        <button className="read-button sidebar-read-button" type="button">
+          <Volume2 aria-hidden size={16} />
           Read aloud
         </button>
         <button className="language-button" type="button">
-          <Globe2 aria-hidden size={15} />
+          <Globe2 aria-hidden size={16} />
           English
           <ChevronDown aria-hidden size={14} />
         </button>
       </aside>
-      <section className="youth-content">
-        <header className="youth-topbar">
-          <div>
-            <span>Representative youth case</span>
-            <strong>{youthCase.youth.goal}</strong>
-          </div>
-          <div>
-            <span>Officer</span>
-            <strong>{youthCase.youth.officer}</strong>
-          </div>
-        </header>
-        {children}
-      </section>
+      <section className="youth-content">{children}</section>
     </main>
   );
 }
@@ -105,19 +80,24 @@ export function YouthShell({
 export function ProgressMeter({
   value,
   label,
+  showHeader = false,
 }: {
   value: number;
   label: string;
+  showHeader?: boolean;
 }) {
   return (
     <div className="progress-meter" aria-label={label}>
-      <div>
-        <span>{label}</span>
-        <strong>{value}%</strong>
-      </div>
+      {showHeader ? (
+        <div className="progress-meter-header">
+          <span>{label}</span>
+          <strong>{value}%</strong>
+        </div>
+      ) : null}
       <div className="meter-track">
         <span style={{ width: `${value}%` }} />
       </div>
+      {!showHeader ? <span className="meter-caption">{label}</span> : null}
     </div>
   );
 }

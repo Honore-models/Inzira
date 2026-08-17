@@ -703,55 +703,55 @@ p {
 }
 
 .youth-app {
-  min-height: 100vh;
-}
-
-.youth-app {
   display: grid;
-  grid-template-columns: 220px minmax(0, 1fr);
+  grid-template-columns: 240px minmax(0, 1fr);
+  min-height: 100vh;
 }
 
 .youth-sidebar {
   border-right: 1px solid var(--line);
   display: flex;
   flex-direction: column;
-  gap: 22px;
-  min-height: 100vh;
-  padding: 28px 20px;
-  position: -webkit-sticky;
-  position: sticky;
+  gap: 18px;
+  height: 100vh;
+  left: 0;
+  overflow-y: auto;
+  padding: 24px 18px;
+  position: fixed;
   top: 0;
+  width: 240px;
+  z-index: 20;
 }
 
 .youth-logo {
   color: var(--green);
-  font-size: 28px;
-  font-weight: 800;
+  font-size: 22px;
+  font-weight: 700;
 }
 
 .intake-logo {
   color: var(--green);
   font-size: 22px;
-  font-weight: 800;
+  font-weight: 700;
 }
 
 .youth-nav {
   display: grid;
-  grid-gap: 8px;
-  gap: 8px;
+  grid-gap: 4px;
+  gap: 4px;
 }
 
 .youth-nav a {
   align-items: center;
-  border-radius: 7px;
-  color: #1f272c;
+  border-radius: 8px;
+  color: #30383e;
   display: grid;
   font-size: 14px;
-  font-weight: 700;
+  font-weight: 500;
   grid-gap: 10px;
   gap: 10px;
-  grid-template-columns: 18px 1fr auto;
-  min-height: 42px;
+  grid-template-columns: 20px 1fr auto;
+  min-height: 40px;
   padding: 0 12px;
 }
 
@@ -759,6 +759,7 @@ p {
 .youth-nav a:hover {
   background: #e8f0eb;
   color: var(--green);
+  font-weight: 600;
 }
 
 .youth-nav small {
@@ -768,7 +769,7 @@ p {
   color: white;
   display: inline-flex;
   font-size: 11px;
-  font-weight: 800;
+  font-weight: 600;
   height: 18px;
   justify-content: center;
   width: 18px;
@@ -777,7 +778,7 @@ p {
 .youth-sidebar-spacer {
   border-top: 1px solid var(--line);
   flex: 1 1;
-  min-height: 36px;
+  min-height: 24px;
 }
 
 .read-button,
@@ -786,26 +787,35 @@ p {
   align-items: center;
   background: transparent;
   border: 1px solid var(--green);
-  border-radius: 5px;
+  border-radius: 6px;
   color: var(--green);
+  cursor: pointer;
   display: inline-flex;
   font-family: inherit;
-  font-size: 13px;
-  font-weight: 800;
+  font-size: 14px;
+  font-weight: 500;
   gap: 8px;
   justify-content: center;
   min-height: 38px;
   padding: 0 12px;
 }
 
+.sidebar-read-button {
+  width: 100%;
+}
+
 .language-button {
   border-color: transparent;
   color: #30383e;
   justify-content: flex-start;
+  padding-left: 0;
 }
 
 .youth-content {
-  padding: 42px;
+  margin-left: 240px;
+  max-width: 960px;
+  padding: 32px 36px 40px;
+  width: 100%;
 }
 
 .dashboard-grid,
@@ -813,8 +823,8 @@ p {
 .ask-layout,
 .directory-layout {
   display: grid;
-  grid-gap: 22px;
-  gap: 22px;
+  grid-gap: 20px;
+  gap: 20px;
 }
 
 .welcome-card,
@@ -835,14 +845,14 @@ p {
   display: grid;
   grid-gap: 24px;
   gap: 24px;
-  grid-template-columns: 1fr 260px;
-  padding: 30px;
+  grid-template-columns: 1fr 240px;
+  padding: 24px 28px;
 }
 
 .welcome-copy {
   align-items: center;
   display: flex;
-  gap: 24px;
+  gap: 16px;
 }
 
 .welcome-copy svg,
@@ -857,53 +867,73 @@ p {
   justify-content: center;
 }
 
+.welcome-copy svg {
+  height: 48px;
+  padding: 10px;
+  width: 48px;
+}
+
 .welcome-copy p,
 .progress-card p,
 .section-label {
   color: #1f272c;
   font-size: 14px;
-  font-weight: 800;
-  line-height: 1.2;
-  margin: 0 0 8px;
+  font-weight: 600;
+  line-height: 1.4;
+  margin: 0 0 4px;
 }
 
 .welcome-copy h1,
 .page-heading h1 {
   color: var(--green);
-  font-size: clamp(34px, 4vw, 46px);
-  line-height: 1;
-  margin: 0 0 10px;
+  font-size: 24px;
+  font-weight: 700;
+  line-height: 1.2;
+  margin: 0 0 6px;
 }
 
 .welcome-copy span,
 .page-heading p {
-  color: #2f373d;
-  font-size: 16px;
+  color: #545d65;
+  font-size: 14px;
+  font-weight: 400;
   line-height: 1.45;
 }
 
 .compact-card,
 .content-card {
-  padding: 22px;
+  padding: 20px 22px;
 }
 
-.progress-card strong {
+.progress-card strong,
+.progress-steps {
+  color: var(--green);
   display: block;
-  font-size: 15px;
-  margin-bottom: 14px;
+  font-size: 14px;
+  font-weight: 600;
+  margin-bottom: 12px;
 }
 
-.progress-meter > div:first-child {
+.progress-meter-header {
   align-items: center;
   display: flex;
   justify-content: space-between;
   margin-bottom: 8px;
 }
 
-.progress-meter span,
-.progress-meter strong {
+.progress-meter-header span,
+.progress-meter-header strong {
   color: #30383e;
-  font-size: 12px;
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.meter-caption {
+  color: #545d65;
+  display: block;
+  font-size: 13px;
+  font-weight: 400;
+  margin-top: 8px;
 }
 
 .meter-track {
@@ -922,21 +952,21 @@ p {
 
 .next-step-card {
   display: grid;
-  grid-gap: 14px;
-  gap: 14px;
+  grid-gap: 12px;
+  gap: 12px;
 }
 
 .next-step {
   align-items: center;
   display: grid;
-  grid-gap: 22px;
-  gap: 22px;
-  grid-template-columns: 84px 1fr auto;
+  grid-gap: 20px;
+  gap: 20px;
+  grid-template-columns: 56px 1fr auto;
 }
 
 .large-icon {
-  height: 76px;
-  width: 76px;
+  height: 56px;
+  width: 56px;
 }
 
 .next-step h2,
@@ -944,10 +974,11 @@ p {
 .institution-card h2,
 .assistant-intro h2,
 .guardrail-card h2 {
-  color: #1f272c;
-  font-size: 18px;
-  line-height: 1.2;
-  margin: 0 0 8px;
+  color: var(--green);
+  font-size: 16px;
+  font-weight: 600;
+  line-height: 1.3;
+  margin: 0 0 6px;
 }
 
 .next-step p,
@@ -955,19 +986,21 @@ p {
 .institution-card p,
 .assistant-intro p,
 .guardrail-card p {
-  color: #3b4349;
+  color: #545d65;
   font-size: 14px;
+  font-weight: 400;
   line-height: 1.45;
-  margin: 0 0 10px;
+  margin: 0 0 8px;
 }
 
 .next-step span,
 .meta-line {
   align-items: center;
-  color: #2f373d;
+  color: #545d65;
   display: inline-flex;
   font-size: 13px;
-  gap: 7px;
+  font-weight: 400;
+  gap: 6px;
 }
 
 .small-action,
@@ -976,15 +1009,17 @@ p {
   align-items: center;
   background: var(--green);
   border: 0;
-  border-radius: 5px;
+  border-radius: 6px;
   color: white;
+  cursor: pointer;
   display: inline-flex;
   font-family: inherit;
-  font-size: 13px;
-  font-weight: 900;
+  font-size: 14px;
+  font-weight: 600;
   justify-content: center;
   min-height: 38px;
   padding: 0 18px;
+  white-space: nowrap;
 }
 
 .quick-grid,
@@ -997,10 +1032,10 @@ p {
 
 .quick-card {
   display: grid;
-  grid-gap: 8px;
-  gap: 8px;
-  min-height: 118px;
-  padding: 20px;
+  grid-gap: 6px;
+  gap: 6px;
+  min-height: 100px;
+  padding: 18px;
 }
 
 .quick-card svg,
@@ -1015,14 +1050,16 @@ p {
 .message-strip strong,
 .milestone-card strong {
   color: #1f272c;
-  font-size: 15px;
+  font-size: 14px;
+  font-weight: 600;
 }
 
 .quick-card span,
 .message-strip span,
 .milestone-card p {
-  color: #3b4349;
+  color: #545d65;
   font-size: 13px;
+  font-weight: 400;
   line-height: 1.35;
 }
 
@@ -1031,13 +1068,24 @@ p {
   display: grid;
   grid-gap: 14px;
   gap: 14px;
-  grid-template-columns: 28px 1fr auto;
-  padding: 18px 20px;
+  grid-template-columns: 24px 1fr auto;
+  padding: 16px 20px;
 }
 
 .message-strip strong {
+  color: #545d65;
   display: block;
-  margin-bottom: 4px;
+  font-size: 14px;
+  font-weight: 400;
+  margin-bottom: 2px;
+}
+
+.message-link {
+  color: var(--green);
+  display: block;
+  font-size: 14px;
+  font-style: normal;
+  font-weight: 600;
 }
 
 .page-heading {
@@ -1426,8 +1474,15 @@ p {
   .youth-sidebar {
     border-bottom: 1px solid var(--line);
     border-right: 0;
-    min-height: auto;
+    height: auto;
     position: static;
+    width: 100%;
+  }
+
+  .youth-content {
+    margin-left: 0;
+    max-width: none;
+    padding: 24px 20px;
   }
 
   .youth-sidebar-spacer,
@@ -1442,10 +1497,6 @@ p {
   .read-button,
   .language-button {
     width: max-content;
-  }
-
-  .youth-content {
-    padding: 28px 20px;
   }
 
   .next-step,
@@ -1554,108 +1605,21 @@ p {
 /* Youth product screens */
 .youth-app {
   background:
-    radial-gradient(circle at top right, rgba(31, 111, 76, 0.08), transparent 420px),
+    radial-gradient(circle at top right, rgba(31, 111, 76, 0.06), transparent 420px),
     #f6f4ee;
   color: #1e262b;
-  grid-template-columns: 248px minmax(0, 1fr);
+  font-size: 14px;
+  font-weight: 400;
 }
 
 .youth-sidebar {
-  background: rgba(255, 254, 250, 0.92);
-  box-shadow: 12px 0 30px rgba(32, 37, 43, 0.035);
-  padding: 26px 18px;
-}
-
-.sidebar-brand-row {
-  align-items: center;
-  display: flex;
-  justify-content: space-between;
-}
-
-.sidebar-brand-row svg {
-  color: #7a837c;
-}
-
-.youth-profile-card {
-  align-items: center;
-  background: #f3f5ef;
-  border: 1px solid #dfe5dc;
-  border-radius: 8px;
-  display: grid;
-  grid-gap: 12px;
-  gap: 12px;
-  grid-template-columns: 42px 1fr;
-  padding: 12px;
-}
-
-.youth-profile-card > div {
-  align-items: center;
-  background: var(--green);
-  border-radius: 50%;
-  color: white;
-  display: inline-flex;
-  font-size: 18px;
-  font-weight: 900;
-  height: 42px;
-  justify-content: center;
-  width: 42px;
-}
-
-.youth-profile-card span {
-  color: #5b635f;
-  display: grid;
-  font-size: 12px;
-  grid-gap: 3px;
-  gap: 3px;
-}
-
-.youth-profile-card strong {
-  color: #1f272c;
-  font-size: 15px;
-}
-
-.youth-nav a {
-  min-height: 44px;
+  background: #faf9f6;
+  box-shadow: none;
 }
 
 .youth-nav a.active {
-  box-shadow: inset 3px 0 0 var(--green);
-}
-
-.youth-content {
-  max-width: 1220px;
-  padding: 30px 38px 56px;
-  width: 100%;
-}
-
-.youth-topbar {
-  align-items: center;
-  background: rgba(255, 254, 250, 0.78);
-  border: 1px solid #e0e4dc;
-  border-radius: 10px;
-  display: flex;
-  gap: 18px;
-  justify-content: space-between;
-  margin-bottom: 26px;
-  padding: 14px 18px;
-}
-
-.youth-topbar div {
-  display: grid;
-  grid-gap: 4px;
-  gap: 4px;
-}
-
-.youth-topbar span {
-  color: #6b746f;
-  font-size: 12px;
-  font-weight: 800;
-  text-transform: uppercase;
-}
-
-.youth-topbar strong {
-  color: #1f272c;
-  font-size: 14px;
+  box-shadow: none;
+  font-weight: 600;
 }
 
 .welcome-card,
@@ -1665,20 +1629,19 @@ p {
 .institution-card,
 .roadmap-item,
 .intake-panel {
-  background: rgba(255, 254, 250, 0.96);
+  background: #fffefa;
   border-color: #dfe4dc;
+  box-shadow: none;
 }
 
 .welcome-card {
-  background:
-    linear-gradient(135deg, rgba(232, 240, 235, 0.72), rgba(255, 254, 250, 0.96)),
-    rgba(255, 254, 250, 0.96);
+  background: #fffefa;
 }
 
 .welcome-copy svg {
-  height: 70px;
-  padding: 14px;
-  width: 70px;
+  height: 48px;
+  padding: 10px;
+  width: 48px;
 }
 
 .case-stat-grid {
@@ -1713,7 +1676,7 @@ p {
 }
 
 .quick-grid {
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(3, 1fr);
 }
 
 .quick-card {
@@ -1899,11 +1862,6 @@ p {
   .document-panel,
   .document-panel ul {
     grid-template-columns: 1fr;
-  }
-
-  .youth-topbar {
-    align-items: flex-start;
-    flex-direction: column;
   }
 }
 

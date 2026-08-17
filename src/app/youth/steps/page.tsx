@@ -11,6 +11,7 @@ export default function YouthSteps() {
           <p>Your personalized roadmap</p>
         </div>
         <ProgressMeter
+          showHeader
           value={youthCase.progress.percent}
           label={`Overall progress: ${youthCase.progress.completed} of ${youthCase.progress.total} steps done`}
         />

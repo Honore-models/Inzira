@@ -1,7 +1,7 @@
 import Link from "next/link";
 import {
+  ChevronRight,
   ClipboardList,
-  FileCheck2,
   HelpCircle,
   Lightbulb,
   ListChecks,
@@ -20,18 +20,16 @@ export default function YouthDashboard() {
       <div className="dashboard-grid">
         <section className="welcome-card">
           <div className="welcome-copy">
-            <Sun aria-hidden size={42} />
+            <Sun aria-hidden size={28} />
             <div>
               <p>Good morning,</p>
               <h1>{youthCase.youth.name}</h1>
-              <span>
-                You are on your path in {youthCase.youth.district}. Keep going.
-              </span>
+              <span>You&apos;re on your path. Keep going!</span>
             </div>
           </div>
           <div className="progress-card compact-card">
             <p>Overall progress</p>
-            <strong>
+            <strong className="progress-steps">
               {youthCase.progress.completed} of {youthCase.progress.total} steps done
             </strong>
             <ProgressMeter
@@ -41,26 +39,17 @@ export default function YouthDashboard() {
           </div>
         </section>
 
-        <section className="case-stat-grid">
-          {youthCase.quickStats.map((stat) => (
-            <article className="case-stat" key={stat.label}>
-              <span>{stat.label}</span>
-              <strong>{stat.value}</strong>
-            </article>
-          ))}
-        </section>
-
         <section className="content-card next-step-card">
           <p className="section-label">Your next step</p>
           <div className="next-step">
             <div className="large-icon">
-              <ClipboardList aria-hidden size={44} />
+              <ClipboardList aria-hidden size={28} />
             </div>
             <div>
               <h2>{nextStep.title}</h2>
               <p>{nextStep.detail}</p>
               <span>
-                <MapPin aria-hidden size={15} />
+                <MapPin aria-hidden size={14} />
                 {nextStep.location}
               </span>
             </div>
@@ -74,35 +63,30 @@ export default function YouthDashboard() {
           <p className="section-label">Quick access</p>
           <div className="quick-grid">
             <Link className="quick-card" href="/youth/steps">
-              <ListChecks aria-hidden size={28} />
+              <ListChecks aria-hidden size={22} />
               <strong>My Steps</strong>
               <span>See your full plan</span>
             </Link>
             <Link className="quick-card" href="/youth/ask">
-              <HelpCircle aria-hidden size={28} />
+              <HelpCircle aria-hidden size={22} />
               <strong>Ask</strong>
               <span>Get answers to your questions</span>
             </Link>
             <Link className="quick-card" href="/youth/find-help">
-              <Lightbulb aria-hidden size={28} />
+              <Lightbulb aria-hidden size={22} />
               <strong>Find Help</strong>
               <span>Discover institutions near you</span>
-            </Link>
-            <Link className="quick-card" href="/youth/progress">
-              <FileCheck2 aria-hidden size={28} />
-              <strong>Progress</strong>
-              <span>Track approvals and unlocks</span>
             </Link>
           </div>
         </section>
 
         <Link className="message-strip" href="/youth/ask">
-          <MessagesSquare aria-hidden size={22} />
+          <MessagesSquare aria-hidden size={20} />
           <span>
             <strong>Need help from a real person?</strong>
-            Message youth officer {youthCase.youth.officer}
+            <em className="message-link">Message your youth officer</em>
           </span>
-          <span aria-hidden>-&gt;</span>
+          <ChevronRight aria-hidden size={18} />
         </Link>
       </div>
     </YouthShell>

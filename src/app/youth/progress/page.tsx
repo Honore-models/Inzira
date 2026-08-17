@@ -24,7 +24,11 @@ export default function YouthProgress() {
           <h1>Progress</h1>
           <p>Track what is done, what is current, and what comes next.</p>
         </div>
-        <ProgressMeter value={youthCase.progress.percent} label="Overall progress" />
+        <ProgressMeter
+          showHeader
+          value={youthCase.progress.percent}
+          label="Overall progress"
+        />
       </header>
 
       <section className="progress-overview">
