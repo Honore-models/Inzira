@@ -1,7 +1,7 @@
 import NextAuth from "next-auth";
 import Credentials from "next-auth/providers/credentials";
 import bcrypt from "bcryptjs";
-import { createClient } from "@/lib/supabase/server";
+import { createClient } from "@supabase/supabase-js";
 
 declare module "next-auth" {
   interface Session {
@@ -36,7 +36,12 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
           return null;
         }
 
-        const supabase = await createClient();
+        // Use service role key to bypass RLS during login
+        const supabase = createClient(
+          process.env.NEXT_PUBLIC_SUPABASE_URL!,
+          process.env.SUPABASE_SERVICE_ROLE_KEY!,
+          { auth: { autoRefreshToken: false, persistSession: false } },
+        );
 
         // Look up user in profiles table
         const { data: profile } = await supabase

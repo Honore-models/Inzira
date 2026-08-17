@@ -1,10 +1,18 @@
 import { NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
-import { createClient } from "@/lib/supabase/server";
+import { createClient } from "@supabase/supabase-js";
+
+function getSupabaseAdmin() {
+  return createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!,
+    { auth: { autoRefreshToken: false, persistSession: false } },
+  );
+}
 
 export async function POST() {
   try {
-    const supabase = await createClient();
+    const supabase = getSupabaseAdmin();
 
     // Check if seed data already exists
     const { data: existingProfiles } = await supabase

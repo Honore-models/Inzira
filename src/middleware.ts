@@ -13,6 +13,11 @@ export default auth((req) => {
     return NextResponse.next();
   }
 
+  // API routes that don't require auth
+  if (pathname.startsWith("/api/seed") || pathname.startsWith("/api/auth")) {
+    return NextResponse.next();
+  }
+
   // If not logged in, redirect to sign in
   if (!isLoggedIn) {
     const signInUrl = new URL("/auth/signin", req.url);

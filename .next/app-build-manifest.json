@@ -1,5 +1,10 @@
 {
   "pages": {
+    "/api/seed/route": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/chunks/app/api/seed/route.js"
+    ],
     "/layout": [
       "static/chunks/webpack.js",
       "static/chunks/main-app.js",
@@ -11,25 +16,25 @@
       "static/chunks/main-app.js",
       "static/chunks/app/page.js"
     ],
-    "/youth/find-help/page": [
+    "/api/auth/[...nextauth]/route": [
       "static/chunks/webpack.js",
       "static/chunks/main-app.js",
-      "static/chunks/app/youth/find-help/page.js"
+      "static/chunks/app/api/auth/[...nextauth]/route.js"
     ],
-    "/youth/page": [
+    "/auth/signin/page": [
       "static/chunks/webpack.js",
       "static/chunks/main-app.js",
-      "static/chunks/app/youth/page.js"
+      "static/chunks/app/auth/signin/page.js"
     ],
-    "/youth/steps/page": [
+    "/auth/signup/page": [
       "static/chunks/webpack.js",
       "static/chunks/main-app.js",
-      "static/chunks/app/youth/steps/page.js"
+      "static/chunks/app/auth/signup/page.js"
     ],
-    "/youth/onboarding/page": [
+    "/api/auth/signup/route": [
       "static/chunks/webpack.js",
       "static/chunks/main-app.js",
-      "static/chunks/app/youth/onboarding/page.js"
+      "static/chunks/app/api/auth/signup/route.js"
     ]
   }
 }

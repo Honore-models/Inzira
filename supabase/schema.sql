@@ -196,7 +196,7 @@ CREATE POLICY "Participants can view messages"
     )
   );
 
-CREATE POLICY "Officers can send messages"
+CREATE POLICY "Participants can send messages"
   ON messages FOR INSERT
   WITH CHECK (
     sender_id IN (SELECT id FROM profiles WHERE user_id = auth.uid())
