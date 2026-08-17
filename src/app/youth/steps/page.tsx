@@ -5,6 +5,7 @@ import { roadmapSteps, youthCase } from "@/data/youth";
 export default function YouthSteps() {
   return (
     <YouthShell active="My Steps">
+      <div className="youth-page-wrap steps-page">
       <header className="page-heading two-column-heading">
         <div>
           <h1>My Steps</h1>
@@ -68,6 +69,7 @@ export default function YouthSteps() {
       <p className="roadmap-note">
         Steps unlock in order. Complete the current step to move forward.
       </p>
+      </div>
     </YouthShell>
   );
 }

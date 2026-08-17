@@ -1,51 +1,90 @@
-import { ArrowRight, Building2, MapPin, Phone } from "lucide-react";
+import {
+  ChevronDown,
+  Filter,
+  MapPin,
+  Navigation,
+  Search,
+} from "lucide-react";
 import { YouthShell } from "@/components/youth/YouthShell";
-import { institutions, youthCase } from "@/data/youth";
+import { helpCategories, institutions } from "@/data/youth";
 
 export default function YouthFindHelp() {
   return (
     <YouthShell active="Find Help">
-      <header className="page-heading">
-        <h1>Find Help</h1>
-        <p>Verified offices and support points connected to your roadmap.</p>
-      </header>
+      <div className="youth-page-wrap find-help-page">
+        <header className="page-heading">
+          <h1>Find Help</h1>
+          <p>Find verified institutions and programs near you.</p>
+        </header>
 
-      <section className="directory-layout">
-        <div className="map-panel">
-          <MapPin aria-hidden size={44} />
-          <strong>{youthCase.youth.district} support map</strong>
-          <span>Nearby offices connected to Diane&apos;s roadmap</span>
+        <div className="find-help-toolbar">
+          <div className="find-help-search-row">
+            <label className="find-help-search">
+              <input
+                type="search"
+                placeholder="Search for institutions, programs, or services..."
+              />
+              <Search aria-hidden size={18} />
+            </label>
+            <button className="find-help-filter" type="button">
+              <Filter aria-hidden size={16} />
+              Filter
+            </button>
+          </div>
+
+          <div className="find-help-filters" role="tablist" aria-label="Filter by category">
+            {helpCategories.map((category, index) => (
+              <button
+                className={index === 0 ? "active" : ""}
+                key={category}
+                type="button"
+              >
+                {category}
+              </button>
+            ))}
+          </div>
         </div>
+
         <div className="institution-list">
           {institutions.map((item) => (
-            <article className="institution-card" key={item.title}>
-              <Building2 aria-hidden size={28} />
-              <div>
-                <div className="institution-title-row">
-                  <h2>{item.title}</h2>
-                  <small>{item.tag}</small>
-                </div>
-                <p>{item.meta}</p>
-                <span>
-                  {item.distance} - {item.hours}
-                </span>
+            <article className="institution-card" key={item.id}>
+              <div
+                className="institution-logo"
+                style={{ backgroundColor: item.logoBg }}
+              >
+                {item.initials}
               </div>
-              <button type="button">
-                <Phone aria-hidden size={15} />
-                Contact
-              </button>
+
+              <div className="institution-body">
+                <h2>{item.title}</h2>
+                <p>{item.description}</p>
+                <div className="institution-meta">
+                  <span>
+                    <MapPin aria-hidden size={14} />
+                    {item.location}
+                  </span>
+                  <span>
+                    <Navigation aria-hidden size={14} />
+                    {item.distance}
+                  </span>
+                </div>
+              </div>
+
+              <div className="institution-actions">
+                <span className="institution-tag">{item.category}</span>
+                <button className="institution-details" type="button">
+                  View details
+                </button>
+              </div>
             </article>
           ))}
         </div>
-      </section>
 
-      <a className="message-strip" href="/youth/steps">
-        <span>
-          <strong>Not sure which office to visit first?</strong>
-          Open your roadmap and follow the current step.
-        </span>
-        <ArrowRight aria-hidden size={18} />
-      </a>
+        <button className="load-more-card" type="button">
+          Load more results
+          <ChevronDown aria-hidden size={18} />
+        </button>
+      </div>
     </YouthShell>
   );
 }

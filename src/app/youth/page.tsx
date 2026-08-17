@@ -17,7 +17,7 @@ export default function YouthDashboard() {
 
   return (
     <YouthShell active="Home">
-      <div className="dashboard-grid">
+      <div className="dashboard-grid youth-dashboard-grid youth-page-wrap">
         <section className="welcome-card">
           <div className="welcome-copy">
             <Sun aria-hidden size={28} />
