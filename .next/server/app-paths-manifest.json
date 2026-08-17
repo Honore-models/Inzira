@@ -1,7 +1,5 @@
 {
+  "/youth/onboarding/page": "app/youth/onboarding/page.js",
   "/page": "app/page.js",
-  "/youth/page": "app/youth/page.js",
-  "/youth/ask/page": "app/youth/ask/page.js",
-  "/youth/find-help/page": "app/youth/find-help/page.js",
-  "/youth/onboarding/page": "app/youth/onboarding/page.js"
+  "/youth/page": "app/youth/page.js"
 }

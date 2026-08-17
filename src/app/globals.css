@@ -1158,7 +1158,9 @@ p {
   flex-shrink: 0;
   gap: 6px;
   grid-template-columns: repeat(5, 1fr);
-  margin: 16px 0 20px;
+  margin: 16px auto 20px;
+  max-width: 280px;
+  width: 100%;
 }
 
 .intake-progress span {
@@ -1218,10 +1220,10 @@ p {
   cursor: pointer;
   display: grid;
   font-family: inherit;
-  gap: 8px;
+  gap: 10px;
   justify-items: center;
-  min-height: 0;
-  padding: 16px 12px;
+  min-height: 148px;
+  padding: 22px 16px;
   text-align: center;
 }
 
@@ -1443,7 +1445,8 @@ p {
   }
 
   .intake-progress {
-    margin: 12px 0 14px;
+    margin: 12px auto 14px;
+    max-width: 220px;
   }
 
   .question-icon {
@@ -1467,7 +1470,8 @@ p {
   }
 
   .goal-card {
-    padding: 12px 8px;
+    min-height: 120px;
+    padding: 14px 8px;
   }
 
   .goal-card strong {
