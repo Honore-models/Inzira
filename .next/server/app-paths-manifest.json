@@ -1,15 +1,6 @@
 {
-  "/officer/intake/page": "app/officer/intake/page.js",
-  "/officer/youth/page": "app/officer/youth/page.js",
-  "/officer/messages/page": "app/officer/messages/page.js",
-  "/officer/page": "app/officer/page.js",
-  "/officer/youth/[id]/page": "app/officer/youth/[id]/page.js",
+  "/page": "app/page.js",
   "/youth/page": "app/youth/page.js",
-  "/youth/steps/page": "app/youth/steps/page.js",
-  "/youth/ask/page": "app/youth/ask/page.js",
   "/youth/find-help/page": "app/youth/find-help/page.js",
-  "/youth/messages/page": "app/youth/messages/page.js",
-  "/youth/onboarding/page": "app/youth/onboarding/page.js",
-  "/officer/intake/review/page": "app/officer/intake/review/page.js",
-  "/officer/library/page": "app/officer/library/page.js"
+  "/youth/onboarding/page": "app/youth/onboarding/page.js"
 }

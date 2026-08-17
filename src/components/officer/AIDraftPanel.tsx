@@ -1,7 +1,16 @@
 "use client";
 
 import { useState } from "react";
-import { GripVertical, MoreVertical, Plus, Sparkles } from "lucide-react";
+import Link from "next/link";
+import {
+  FileText,
+  GripVertical,
+  MoreVertical,
+  Plus,
+  Sparkles,
+  ShieldCheck,
+  RefreshCw,
+} from "lucide-react";
 import type { aiDraftSteps } from "@/data/officer";
 
 type DraftStep = (typeof aiDraftSteps)[number];
@@ -26,42 +35,66 @@ export function AIDraftPanel({ steps }: { steps: DraftStep[] }) {
 
   return (
     <section className="officer-card ai-draft">
-      <header className="officer-card-header">
+      <header className="intake-section-header">
+        <div className="intake-section-icon ai">
+          <Sparkles aria-hidden size={18} />
+        </div>
         <div>
           <h2>
-            <Sparkles aria-hidden size={17} />
-            AI Draft Roadmap
+            2. AI Generated Roadmap <span className="draft-label">(Draft)</span>
           </h2>
-          <p>Generated from verified program library</p>
+          <p>
+            <span className="ai-draft-status">Draft • Not sent to youth</span>
+          </p>
         </div>
-        <span className="officer-chip green">Draft</span>
       </header>
+
+      <div className="ai-generated-source">
+        <ShieldCheck aria-hidden size={15} />
+        <span>Generated from verified sources</span>
+      </div>
+
       <div className="ai-draft-list">
         {draftSteps.map((step) => (
           <div className="ai-draft-row" key={step.number}>
-            <span className="ai-drag">
-              <GripVertical aria-hidden size={16} />
-            </span>
             <span className="ai-step-number">{step.number}</span>
+            <div className="ai-step-icon">
+              <FileText aria-hidden size={16} />
+            </div>
             <div className="ai-step-body">
               <strong>{step.title}</strong>
               <p>{step.detail}</p>
-              <span className="ai-badge">{step.badge}</span>
             </div>
+            <span className="ai-badge">{step.badge}</span>
             <button className="ai-more" type="button" aria-label="More options">
               <MoreVertical aria-hidden size={16} />
             </button>
           </div>
         ))}
       </div>
+
       <div className="ai-draft-actions">
         <button className="officer-button outline" type="button" onClick={addStep}>
           <Plus aria-hidden size={15} />
           Add step
         </button>
         <button className="officer-button ghost" type="button">
+          <RefreshCw aria-hidden size={14} />
           Reorder
         </button>
+        <div className="ai-draft-actions-spacer" />
+        <Link className="officer-button primary" href="/officer/intake/review">
+          Review &amp; edit roadmap
+          <span aria-hidden>→</span>
+        </Link>
+      </div>
+
+      <div className="ai-draft-footer-note">
+        <ShieldCheck aria-hidden size={15} />
+        <span>
+          This roadmap is a <strong>DRAFT</strong>. Review it carefully before
+          approving and sending to the youth.
+        </span>
       </div>
     </section>
   );

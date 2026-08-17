@@ -11,70 +11,25 @@
       "static/chunks/main-app.js",
       "static/chunks/app/page.js"
     ],
+    "/youth/find-help/page": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/chunks/app/youth/find-help/page.js"
+    ],
     "/youth/page": [
       "static/chunks/webpack.js",
       "static/chunks/main-app.js",
       "static/chunks/app/youth/page.js"
-    ],
-    "/youth/messages/page": [
-      "static/chunks/webpack.js",
-      "static/chunks/main-app.js",
-      "static/chunks/app/youth/messages/page.js"
     ],
     "/youth/steps/page": [
       "static/chunks/webpack.js",
       "static/chunks/main-app.js",
       "static/chunks/app/youth/steps/page.js"
     ],
-    "/youth/find-help/page": [
-      "static/chunks/webpack.js",
-      "static/chunks/main-app.js",
-      "static/chunks/app/youth/find-help/page.js"
-    ],
-    "/youth/ask/page": [
-      "static/chunks/webpack.js",
-      "static/chunks/main-app.js",
-      "static/chunks/app/youth/ask/page.js"
-    ],
     "/youth/onboarding/page": [
       "static/chunks/webpack.js",
       "static/chunks/main-app.js",
       "static/chunks/app/youth/onboarding/page.js"
-    ],
-    "/officer/page": [
-      "static/chunks/webpack.js",
-      "static/chunks/main-app.js",
-      "static/chunks/app/officer/page.js"
-    ],
-    "/officer/intake/page": [
-      "static/chunks/webpack.js",
-      "static/chunks/main-app.js",
-      "static/chunks/app/officer/intake/page.js"
-    ],
-    "/officer/youth/page": [
-      "static/chunks/webpack.js",
-      "static/chunks/main-app.js",
-      "static/chunks/app/officer/youth/page.js"
-    ],
-    "/officer/youth/[id]/page": [
-      "static/chunks/webpack.js",
-      "static/chunks/main-app.js",
-      "static/chunks/app/officer/youth/[id]/page.js"
-    ],
-    "/officer/intake/review/page": [
-      "static/chunks/webpack.js",
-      "static/chunks/main-app.js",
-      "static/chunks/app/officer/intake/review/page.js"
-    ],
-    "/officer/messages/page": [
-      "static/chunks/webpack.js",
-      "static/chunks/main-app.js",
-      "static/chunks/app/officer/messages/page.js"
-    ],
-    "/officer/library/page": [
-      "static/chunks/webpack.js",
-      "static/chunks/main-app.js",
-      "static/chunks/app/officer/library/page.js"
     ]
   }
 }

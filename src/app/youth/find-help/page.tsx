@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { ChevronDown, Filter, Search } from "lucide-react";
+import { ChevronDown, Search, X } from "lucide-react";
 import { InstitutionCard } from "@/components/youth/InstitutionCard";
 import { YouthShell } from "@/components/youth/YouthShell";
 import { helpCategories, institutions } from "@/data/youth";
@@ -43,29 +43,27 @@ export default function YouthFindHelp() {
         <div className="find-help-toolbar">
           <div className="find-help-search-row">
             <label className="find-help-search">
+              <Search aria-hidden size={18} />
               <input
                 type="search"
-                placeholder="Search for institutions, programs, or services..."
+                placeholder="Search for institutions, programs, or services…"
                 value={query}
                 onChange={(e) => {
                   setQuery(e.target.value);
                   setVisible(INITIAL_VISIBLE);
                 }}
               />
-              <Search aria-hidden size={18} />
+              {query && (
+                <button
+                  type="button"
+                  className="find-help-clear"
+                  onClick={() => setQuery("")}
+                  aria-label="Clear search"
+                >
+                  <X aria-hidden size={16} />
+                </button>
+              )}
             </label>
-            <button
-              className="find-help-filter"
-              type="button"
-              onClick={() =>
-                window.alert(
-                  "Filters are applied through the category tabs below.",
-                )
-              }
-            >
-              <Filter aria-hidden size={16} />
-              Filter
-            </button>
           </div>
 
           <div className="find-help-filters" role="tablist" aria-label="Filter by category">
@@ -74,6 +72,8 @@ export default function YouthFindHelp() {
                 className={category === cat ? "active" : ""}
                 key={cat}
                 type="button"
+                role="tab"
+                aria-selected={category === cat}
                 onClick={() => {
                   setCategory(cat);
                   setVisible(INITIAL_VISIBLE);
@@ -87,7 +87,7 @@ export default function YouthFindHelp() {
 
         {filtered.length === 0 ? (
           <div className="find-help-empty">
-            <p>No institutions match your search. Try a different term.</p>
+            <p>No institutions match your search. Try a different term or category.</p>
           </div>
         ) : (
           <div className="institution-list">

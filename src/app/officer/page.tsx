@@ -1,3 +1,6 @@
+"use client";
+
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import {
   Clock,
@@ -8,12 +11,23 @@ import {
 } from "lucide-react";
 import { DateSelector } from "@/components/officer/DateSelector";
 import { OfficerAvatar, OfficerShell } from "@/components/officer/OfficerShell";
-import {
-  dashboardStats,
-  officerProfile,
-  pendingApprovals,
-  weeklySteps,
-} from "@/data/officer";
+import { officerProfile } from "@/data/officer";
+
+interface YouthCase {
+  id: string;
+  status: string;
+  current_step: number;
+  total_steps: number;
+  created_at: string;
+  youth: {
+    full_name: string;
+    goal: string;
+    district: string;
+  } | null;
+  officer: {
+    full_name: string;
+  } | null;
+}
 
 const statIcons: Record<string, typeof Users> = {
   users: Users,
@@ -23,7 +37,73 @@ const statIcons: Record<string, typeof Users> = {
 };
 
 export default function OfficerDashboard() {
-  const maxWeekly = Math.max(...weeklySteps.map((d) => d.value));
+  const [cases, setCases] = useState<YouthCase[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    async function load() {
+      try {
+        const res = await fetch("/api/cases");
+        if (res.ok) {
+          const data = await res.json();
+          setCases(data);
+        }
+      } catch {
+        // Silently handle errors
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    load();
+  }, []);
+
+  const activeCases = cases.filter((c) => c.status === "active");
+  const pendingCases = cases.filter((c) => c.status === "active" && c.current_step > 0);
+
+  const stats = [
+    {
+      label: "Active youth",
+      value: String(activeCases.length),
+      change: "Currently in your caseload",
+      icon: "users",
+      tone: "green",
+    },
+    {
+      label: "Pending approvals",
+      value: String(pendingCases.length),
+      change: "Requires your review",
+      icon: "clock",
+      tone: "amber",
+    },
+    {
+      label: "Total cases",
+      value: String(cases.length),
+      change: "All time",
+      icon: "sparkles",
+      tone: "blue",
+    },
+    {
+      label: "Completed",
+      value: String(cases.filter((c) => c.status === "completed").length),
+      change: "Successfully finished",
+      icon: "trending",
+      tone: "purple",
+    },
+  ];
+
+  if (loading) {
+    return (
+      <OfficerShell active="Dashboard">
+        <div className="officer-page-wrap">
+          <div className="yd-loading">
+            <div className="yd-loading-spinner" />
+            <p>Loading dashboard…</p>
+          </div>
+        </div>
+      </OfficerShell>
+    );
+  }
 
   return (
     <OfficerShell active="Dashboard">
@@ -37,7 +117,7 @@ export default function OfficerDashboard() {
         </header>
 
         <section className="officer-stat-grid" aria-label="Caseload summary">
-          {dashboardStats.map((stat) => {
+          {stats.map((stat) => {
             const Icon = statIcons[stat.icon];
             return (
               <article className={`officer-stat-card ${stat.tone}`} key={stat.label}>
@@ -66,53 +146,63 @@ export default function OfficerDashboard() {
               </Link>
             </header>
             <div className="pending-list">
-              {pendingApprovals.map((item) => (
+              {activeCases.slice(0, 5).map((item) => (
                 <Link
                   className="pending-row"
                   href={`/officer/youth/${item.id}`}
                   key={item.id}
                 >
-                  <OfficerAvatar avatar={item.avatar} />
+                  <OfficerAvatar
+                    avatar={{
+                      label: item.youth?.full_name?.split(" ").map((w) => w[0]).join("") || "?",
+                      bg: "#1f6f4c",
+                    }}
+                  />
                   <div className="pending-row-body">
-                    <strong>{item.name}</strong>
-                    <span>{item.goal}</span>
+                    <strong>{item.youth?.full_name || "Unknown"}</strong>
+                    <span>{item.youth?.goal || "No goal set"}</span>
                   </div>
                   <div className="pending-row-meta">
                     <span>
-                      {item.steps} • {item.time}
+                      Step {item.current_step}/{item.total_steps}
                     </span>
                     <i className="pending-dot" title="Needs review" />
                   </div>
                 </Link>
               ))}
+              {activeCases.length === 0 && (
+                <p style={{ color: "#545d65", fontSize: 13, padding: "16px", textAlign: "center" }}>
+                  No active cases yet. Create one from the Smart Intake page.
+                </p>
+              )}
             </div>
-            <footer className="pending-footer">
-              <Link href="/officer/youth">See all pending (7)</Link>
-            </footer>
+            {activeCases.length > 5 && (
+              <footer className="pending-footer">
+                <Link href="/officer/youth">See all ({activeCases.length})</Link>
+              </footer>
+            )}
           </article>
 
           <article className="officer-card weekly-card">
             <header className="officer-card-header">
               <div>
-                <h2>Steps completed this week</h2>
-                <p>Across all active youth</p>
+                <h2>Caseload overview</h2>
+                <p>Summary of all youth cases</p>
               </div>
-              <span className="officer-chip">+32 this week</span>
             </header>
-            <div className="bar-chart" aria-label="Steps completed per day">
-              {weeklySteps.map((day) => (
-                <div className="bar-column" key={day.day}>
-                  <span className="bar-value">{day.value}</span>
-                  <div className="bar-track">
-                    <span
-                      style={{
-                        height: `${Math.round((day.value / maxWeekly) * 100)}%`,
-                      }}
-                    />
-                  </div>
-                  <small>{day.day}</small>
-                </div>
-              ))}
+            <div className="caseload-summary">
+              <div className="caseload-stat">
+                <strong>{activeCases.length}</strong>
+                <span>Active</span>
+              </div>
+              <div className="caseload-stat">
+                <strong>{cases.filter((c) => c.status === "completed").length}</strong>
+                <span>Completed</span>
+              </div>
+              <div className="caseload-stat">
+                <strong>{cases.filter((c) => c.status === "archived").length}</strong>
+                <span>Archived</span>
+              </div>
             </div>
           </article>
         </section>

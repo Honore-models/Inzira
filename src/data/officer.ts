@@ -219,10 +219,31 @@ export const youthDetail = {
 export const intakeForm = {
   name: "Uvimana Sandrine",
   goal: "Start a business",
-  skills: "Tailoring certificate, basic business knowledge",
+  skills: "Tailoring, basic business knowledge",
   situation:
     "Unemployed. Wants to start a tailoring business but needs guidance on registration and funding.",
-  location: "Gasabo District, Kimihurura Sector",
+  district: "Gasabo District",
+  sector: "Kimihurura Sector",
+};
+
+export const goalOptions = [
+  "Start a business",
+  "Get vocational training",
+  "Find a job",
+  "Get a certification",
+  "Continue education",
+];
+
+export const districts = [
+  "Gasabo District",
+  "Kicukiro District",
+  "Nyarugenge District",
+];
+
+export const sectors: Record<string, string[]> = {
+  "Gasabo District": ["Kimihurura", "Kacyiru", "Gisozi", "Remera", "Kibagabaga"],
+  "Kicukiro District": ["Kicukiro", "Nyarugunga", "Gatenga", "Kanombe", "Niboye"],
+  "Nyarugenge District": ["Nyarugenge", "Gitega", "Kanyinya", "Kimisagara", "Nyamirambo"],
 };
 
 export const aiDraftSteps = [
