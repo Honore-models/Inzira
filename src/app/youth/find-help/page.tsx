@@ -1,10 +1,5 @@
-import {
-  ChevronDown,
-  Filter,
-  MapPin,
-  Navigation,
-  Search,
-} from "lucide-react";
+import { ChevronDown, Filter, Search } from "lucide-react";
+import { InstitutionCard } from "@/components/youth/InstitutionCard";
 import { YouthShell } from "@/components/youth/YouthShell";
 import { helpCategories, institutions } from "@/data/youth";
 
@@ -47,40 +42,7 @@ export default function YouthFindHelp() {
 
         <div className="institution-list">
           {institutions.map((item) => (
-            <article className="institution-card" key={item.id}>
-              <div
-                className="institution-logo"
-                style={{ backgroundColor: item.logoBg }}
-              >
-                {item.logo ? (
-                  <img src={item.logo} alt={`${item.initials} logo`} />
-                ) : (
-                  item.initials
-                )}
-              </div>
-
-              <div className="institution-body">
-                <h2>{item.title}</h2>
-                <p>{item.description}</p>
-                <div className="institution-meta">
-                  <span>
-                    <MapPin aria-hidden size={14} />
-                    {item.location}
-                  </span>
-                  <span>
-                    <Navigation aria-hidden size={14} />
-                    {item.distance}
-                  </span>
-                </div>
-              </div>
-
-              <div className="institution-actions">
-                <span className="institution-tag">{item.category}</span>
-                <button className="institution-details" type="button">
-                  View details
-                </button>
-              </div>
-            </article>
+            <InstitutionCard item={item} key={item.id} />
           ))}
         </div>
 

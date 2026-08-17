@@ -88,6 +88,20 @@ export const institutions = [
     initials: "RDB",
     logoBg: "#1f6f4c",
     logo: "/RDB_logo.png",
+    details: {
+      fullDescription:
+        "The Rwanda Development Board is the national agency responsible for business registration, investment promotion, and private sector development. It is the first stop when registering your business name and getting the licenses you need to operate legally.",
+      services: [
+        "Business name registration",
+        "Company and investment licenses",
+        "Startup support and incubation",
+        "Investment incentives and guidance",
+      ],
+      phone: "+250 788 185 400",
+      email: "info@rdb.rw",
+      hours: "Mon – Fri, 8:00 AM – 5:00 PM",
+      address: "Kigali City Tower, Avenue du Travail, Kigali",
+    },
   },
   {
     id: "rtb",
@@ -99,6 +113,20 @@ export const institutions = [
     initials: "RTB",
     logoBg: "#2f5f46",
     logo: "/RTB_logo.jpg",
+    details: {
+      fullDescription:
+        "RTB / TVET Rwanda coordinates technical and vocational education and training across the country. It connects young people to skills programs, national certificates, and work-based learning opportunities that lead to employment.",
+      services: [
+        "Vocational skills training",
+        "National TVET certificates",
+        "Career guidance and placement",
+        "Short professional courses",
+      ],
+      phone: "+250 788 305 100",
+      email: "info@rtb.rw",
+      hours: "Mon – Fri, 7:30 AM – 5:00 PM",
+      address: "TVET Headquarters, Kigali",
+    },
   },
   {
     id: "bdf",
@@ -110,6 +138,20 @@ export const institutions = [
     initials: "BDF",
     logoBg: "#15583b",
     logo: "/BDF_logo.png",
+    details: {
+      fullDescription:
+        "The Business Development Fund provides loan guarantees and affordable financing to small businesses and young entrepreneurs who may not qualify for traditional bank loans. It also offers business advisory services to help you prepare strong applications.",
+      services: [
+        "Loan guarantees for SMEs",
+        "Youth and women financing",
+        "Business advisory and coaching",
+        "Loan application support",
+      ],
+      phone: "+250 788 180 300",
+      email: "info@bdf.rw",
+      hours: "Mon – Fri, 8:00 AM – 5:00 PM",
+      address: "KK 15 Rd, Kigali",
+    },
   },
   {
     id: "rra",
@@ -121,6 +163,20 @@ export const institutions = [
     initials: "RRA",
     logoBg: "#3b6b52",
     logo: "/RRA_logo.png",
+    details: {
+      fullDescription:
+        "The Rwanda Revenue Authority is the national tax administration. It issues Tax Identification Numbers (TINs), processes tax registration, and provides guidance on tax obligations so you can comply as your business grows.",
+      services: [
+        "TIN registration",
+        "Tax filing and compliance support",
+        "Taxpayer education",
+        "E-services online portal",
+      ],
+      phone: "+250 788 180 000",
+      email: "info@rra.gov.rw",
+      hours: "Mon – Fri, 7:00 AM – 6:00 PM",
+      address: "RRA Headquarters, Boulevard de l'Umuganda, Kigali",
+    },
   },
 ];
 

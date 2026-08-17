@@ -3,6 +3,5 @@
   "/youth/page": "app/youth/page.js",
   "/youth/steps/page": "app/youth/steps/page.js",
   "/youth/find-help/page": "app/youth/find-help/page.js",
-  "/youth/ask/page": "app/youth/ask/page.js",
   "/youth/messages/page": "app/youth/messages/page.js"
 }
