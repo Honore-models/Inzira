@@ -33,19 +33,28 @@ const officerItems = [
 
 const stories = [
   {
-    src: "/story-1.png",
+    src: "/youth.webp",
+    alt: "Young Rwandan person outdoors",
     quote: "I want skills that lead to a job, but I do not know where to start.",
     label: "Seeking vocational training",
   },
   {
-    src: "/story-2.png",
+    src: "/youth2.jpg",
+    alt: "Young Rwandan man thinking",
     quote: "I have a business idea, but I need support to grow it.",
     label: "Building a small business",
   },
   {
-    src: "/story-3.png",
+    src: "/youth3.jpg",
+    alt: "Young Rwandan person waiting for guidance",
     quote: "I do not qualify for loans, and I do not know why.",
     label: "Looking for financial support",
+  },
+  {
+    src: "/youth4.jpg",
+    alt: "Young Rwandan person in a community setting",
+    quote: "I know support exists, but I need someone to show me the right order.",
+    label: "Finding the right first step",
   },
 ];
 
@@ -129,7 +138,7 @@ export default function Home() {
         </div>
         <div className="image-frame">
           <Image
-            src="/problem-youth.png"
+            src="/youth.webp"
             alt="Young Rwandan man seated in a crowd"
             width={764}
             height={572}
@@ -166,16 +175,19 @@ export default function Home() {
             You are not alone. We will help you find your way.
           </p>
         </div>
-        <div className="story-grid">
+        <div className="slideshow" aria-label="Youth challenge slideshow">
           {stories.map((story) => (
-            <article className="story" key={story.label}>
-              <Image src={story.src} alt="" width={304} height={354} />
-              <blockquote>{story.quote}</blockquote>
-              <p>{story.label}</p>
+            <article className="slide" key={story.label}>
+              <Image src={story.src} alt={story.alt} width={720} height={520} />
+              <div className="slide-caption">
+                <blockquote>{story.quote}</blockquote>
+                <p>{story.label}</p>
+              </div>
             </article>
           ))}
           <div className="dots" aria-hidden="true">
             <span className="active" />
+            <span />
             <span />
             <span />
           </div>
@@ -219,9 +231,10 @@ export default function Home() {
           <span>Kinyarwanda for "the path"</span>
         </div>
         <p>
-          A demonstration project built for a competition.
-          <br />
-          All names and data shown are fictional.
+          A demonstration project set in Rwanda. All people, organizations, and
+          data shown are fictional and for demonstration only. Statistics cited
+          are from public sources and are not a substitute for professional,
+          financial, or legal advice.
         </p>
       </footer>
     </main>
