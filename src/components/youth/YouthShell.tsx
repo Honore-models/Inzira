@@ -18,6 +18,11 @@ const navItems = [
   { href: "/youth/find-help", label: "Find Help", icon: Lightbulb },
 ];
 
+const secondaryNavItems = [
+  { href: "/youth/messages", label: "Messages", icon: MessageCircle, badge: 2 },
+  { href: "/youth/profile", label: "My Profile", icon: UserRound },
+];
+
 export function YouthShell({
   active,
   children,
@@ -51,15 +56,20 @@ export function YouthShell({
         <div className="youth-sidebar-spacer" />
 
         <div className="youth-nav secondary">
-          <Link href="/youth/ask">
-            <MessageCircle aria-hidden size={18} />
-            <span>Messages</span>
-            <small>2</small>
-          </Link>
-          <Link href="/youth/profile">
-            <UserRound aria-hidden size={18} />
-            <span>My Profile</span>
-          </Link>
+          {secondaryNavItems.map((item) => {
+            const Icon = item.icon;
+            return (
+              <Link
+                className={active === item.label ? "active" : ""}
+                href={item.href}
+                key={item.href}
+              >
+                <Icon aria-hidden size={18} />
+                <span>{item.label}</span>
+                {item.badge ? <small>{item.badge}</small> : null}
+              </Link>
+            );
+          })}
         </div>
 
         <button className="read-button sidebar-read-button" type="button">

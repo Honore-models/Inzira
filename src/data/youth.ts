@@ -166,6 +166,70 @@ export const seededMessages = [
   },
 ];
 
+export const conversations = [
+  {
+    id: "jean-claude",
+    name: "Jean Claude",
+    role: "Youth Officer",
+    location: "Gasabo District",
+    time: "10:30 AM",
+    unread: 2,
+    preview:
+      "Hello Diane, I reviewed your progress. Great job completing the first step!",
+    avatar: {
+      kind: "initials",
+      label: "JC",
+      bg: "#1f6f4c",
+      photo: "/jeanclaude.jpg",
+    },
+    active: true,
+  },
+  {
+    id: "inzira-support",
+    name: "Inzira Support",
+    time: "Yesterday",
+    preview: "Thank you for reaching out. We will get back to you soon.",
+    avatar: { kind: "icon", label: "users", bg: "#e8f0eb" },
+  },
+  {
+    id: "alice-umutoni",
+    name: "Alice Umutoni",
+    role: "Training Advisor",
+    location: "WDA",
+    time: "May 10",
+    preview: "Information about the tailoring training program you asked for.",
+    avatar: { kind: "initials", label: "AU", bg: "#15583b" },
+  },
+  {
+    id: "rdb-info",
+    name: "RDB Information Desk",
+    time: "May 8",
+    preview: "Here is the link to the business registration guide.",
+    avatar: { kind: "initials", label: "RDB", bg: "#ffffff", color: "#1f6f4c" },
+  },
+];
+
+export const conversationMessages = [
+  {
+    id: 1,
+    from: "officer",
+    time: "10:30 AM",
+    text: "Hello Diane,\n\nI reviewed your progress. Great job completing the first step (Register your business name with RDB).\n\nYou can now move to the next step. If you have any questions, I'm here to help.\n\n— Jean Claude",
+  },
+  {
+    id: 2,
+    from: "me",
+    time: "10:32 AM",
+    text: "Thank you! I have a question. Do I need to pay anything when I apply for the TIN?",
+  },
+  {
+    id: 3,
+    from: "officer",
+    time: "10:35 AM",
+    text: "Good question! No, getting a TIN is free. I'll send you the official guide so you can see the requirements.",
+  },
+];
+
 export const intakeGoals = [
   {
     title: "Start a business",

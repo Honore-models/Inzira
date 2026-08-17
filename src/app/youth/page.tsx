@@ -80,11 +80,19 @@ export default function YouthDashboard() {
           </div>
         </section>
 
-        <Link className="message-strip" href="/youth/ask">
+        <Link className="message-strip" href="/youth/messages">
           <MessagesSquare aria-hidden size={20} />
           <span>
             <strong>Need help from a real person?</strong>
             <em className="message-link">Message your youth officer</em>
+          </span>
+          <ChevronRight aria-hidden size={18} />
+        </Link>
+        <Link className="message-strip" href="/youth/messages">
+          <MessagesSquare aria-hidden size={20} />
+          <span>
+            <strong>New message</strong>
+            <em className="message-link">You have 2 unread messages</em>
           </span>
           <ChevronRight aria-hidden size={18} />
         </Link>

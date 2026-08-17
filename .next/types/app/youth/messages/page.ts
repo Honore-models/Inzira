@@ -1,8 +1,8 @@
-// File: C:\Users\HP\Desktop\Inzira\src\app\youth\onboarding\page.tsx
-import * as entry from '../../../../../src/app/youth/onboarding/page.js'
+// File: C:\Users\HP\Desktop\Inzira\src\app\youth\messages\page.tsx
+import * as entry from '../../../../../src/app/youth/messages/page.js'
 import type { ResolvingMetadata, ResolvingViewport } from 'next/dist/lib/metadata/types/metadata-interface.js'
 
-type TEntry = typeof import('../../../../../src/app/youth/onboarding/page.js')
+type TEntry = typeof import('../../../../../src/app/youth/messages/page.js')
 
 type SegmentParams<T extends Object = any> = T extends Record<string, any>
   ? { [K in keyof T]: T[K] extends string ? string | string[] | undefined : never }
