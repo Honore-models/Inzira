@@ -1,11 +1,1 @@
-{
-  "version": 4,
-  "routes": {},
-  "dynamicRoutes": {},
-  "notFoundRoutes": [],
-  "preview": {
-    "previewModeId": "80ed409d9590eab133f56886b83ef997",
-    "previewModeSigningKey": "7c3a9e07dbc2196d572fb7f2465bf7cbad28a20ccba8a1c8bf3942fe205076de",
-    "previewModeEncryptionKey": "198ad954d9f4a0e9c92c2286df723df7574c7c866bc85f18df1a27b1bbea5de4"
-  }
-}
+{"version":4,"routes":{"/officer/youth/sandrine":{}},"dynamicRoutes":{"/officer/youth/[id]":{"dataRoute":null,"dataRouteRegex":null,"fallback":null,"fallbackRevalidate":false,"fallbackSourceRoute":"/officer/youth/[id]","routeRegex":"^\\/officer\\/youth\\/([^/]+?)(?:\\/)?$","allowHeader":[]}},"notFoundRoutes":[],"preview":{"previewModeId":"80ed409d9590eab133f56886b83ef997","previewModeSigningKey":"7c3a9e07dbc2196d572fb7f2465bf7cbad28a20ccba8a1c8bf3942fe205076de","previewModeEncryptionKey":"198ad954d9f4a0e9c92c2286df723df7574c7c866bc85f18df1a27b1bbea5de4"}}

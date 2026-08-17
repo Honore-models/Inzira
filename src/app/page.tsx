@@ -96,7 +96,7 @@ export default function Home() {
           <a className="button primary" href="/youth/onboarding">
             Enter as a youth
           </a>
-          <a className="button secondary" href="#officer">
+          <a className="button secondary" href="/officer">
             Enter as an officer
           </a>
         </div>
@@ -219,7 +219,7 @@ export default function Home() {
           <a className="button primary" href="/youth/onboarding">
             Enter as a youth
           </a>
-          <a className="button secondary" href="#officer">
+          <a className="button secondary" href="/officer">
             Enter as an officer
           </a>
         </div>

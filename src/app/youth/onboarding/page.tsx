@@ -1,3 +1,6 @@
+"use client";
+
+import { useState } from "react";
 import Link from "next/link";
 import { ArrowLeft, BriefcaseBusiness, Hammer, Target, Volume2 } from "lucide-react";
 import { intakeGoals } from "@/data/youth";
@@ -5,6 +8,10 @@ import { intakeGoals } from "@/data/youth";
 const goalIcons = [BriefcaseBusiness, Hammer, BriefcaseBusiness];
 
 export default function YouthOnboarding() {
+  const [selected, setSelected] = useState(
+    intakeGoals.findIndex((g) => g.selected),
+  );
+
   return (
     <main className="intake-screen">
       <section className="intake-panel">
@@ -39,9 +46,10 @@ export default function YouthOnboarding() {
             const Icon = goalIcons[index];
             return (
               <button
-                className={`goal-card ${goal.selected ? "selected" : ""}`}
+                className={`goal-card ${selected === index ? "selected" : ""}`}
                 type="button"
                 key={goal.title}
+                onClick={() => setSelected(index)}
               >
                 <Icon aria-hidden size={28} />
                 <strong>{goal.title}</strong>

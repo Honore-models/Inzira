@@ -1,3 +1,6 @@
+"use client";
+
+import { useState } from "react";
 import {
   Bell,
   CheckCheck,
@@ -42,8 +45,52 @@ function Avatar({
   );
 }
 
+type Conversation = (typeof conversations)[number];
+
 export default function YouthMessages() {
-  const active = conversations.find((c) => c.active)!;
+  const [threads, setThreads] = useState<Conversation[]>(conversations);
+  const [messagesByConv, setMessagesByConv] = useState<Record<string, typeof conversationMessages>>({
+    "jean-claude": conversationMessages,
+  });
+  const [activeId, setActiveId] = useState(conversations.find((c) => c.active)?.id ?? "jean-claude");
+  const [query, setQuery] = useState("");
+  const [draft, setDraft] = useState("");
+
+  const active = threads.find((c) => c.id === activeId) ?? threads[0];
+  const visibleThreads = threads.filter((c) =>
+    c.name.toLowerCase().includes(query.trim().toLowerCase()),
+  );
+
+  function openConversation(id: string) {
+    setActiveId(id);
+    setThreads((prev) =>
+      prev.map((c) => (c.id === id ? ({ ...c, unread: 0 } as Conversation) : c)),
+    );
+  }
+
+  function sendMessage() {
+    const text = draft.trim();
+    if (!text) return;
+    setMessagesByConv((prev) => ({
+      ...prev,
+      [activeId]: [
+        ...(prev[activeId] ?? []),
+        {
+          id: Date.now(),
+          from: "me",
+          time: "Now",
+          text,
+        },
+      ],
+    }));
+    setDraft("");
+  }
+
+  function notifyOfficer() {
+    window.alert(
+      "Your youth officer has been notified and will follow up with you.",
+    );
+  }
 
   return (
     <YouthShell active="Messages">
@@ -75,7 +122,11 @@ export default function YouthMessages() {
           <aside className="conversations-panel">
             <div className="conversations-header">
               <h2>Conversations</h2>
-              <button className="new-message-btn" type="button">
+              <button
+                className="new-message-btn"
+                type="button"
+                onClick={() => window.alert("New message: pick a contact to start a conversation.")}
+              >
                 <PenSquare aria-hidden size={15} />
                 New message
               </button>
@@ -83,18 +134,24 @@ export default function YouthMessages() {
 
             <label className="conversations-search">
               <Search aria-hidden size={16} />
-              <input type="search" placeholder="Search messages..." />
+              <input
+                type="search"
+                placeholder="Search messages..."
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+              />
               <button type="button" aria-label="Filter conversations">
                 <SlidersHorizontal aria-hidden size={15} />
               </button>
             </label>
 
             <div className="conversation-list">
-              {conversations.map((c) => (
+              {visibleThreads.map((c) => (
                 <button
-                  className={`conversation-item ${c.active ? "active" : ""}`}
+                  className={`conversation-item ${c.id === activeId ? "active" : ""}`}
                   key={c.id}
                   type="button"
+                  onClick={() => openConversation(c.id)}
                 >
                   <Avatar avatar={c.avatar} className="conversation-avatar" />
                   <span className="conversation-copy">
@@ -112,6 +169,9 @@ export default function YouthMessages() {
                   {c.unread ? <small className="unread-badge">{c.unread}</small> : null}
                 </button>
               ))}
+              {visibleThreads.length === 0 ? (
+                <p className="conversation-empty">No conversations match your search.</p>
+              ) : null}
             </div>
 
             <div className="privacy-note">
@@ -132,7 +192,7 @@ export default function YouthMessages() {
                 <span className="chat-contact-copy">
                   <strong>{active.name}</strong>
                   <em>
-                    {active.role} • {active.location}
+                    {active.role ? `${active.role} • ${active.location}` : "Inzira"}
                   </em>
                 </span>
               </div>
@@ -140,11 +200,8 @@ export default function YouthMessages() {
 
             <div className="chat-messages">
               <div className="date-divider">May 12, 2025</div>
-              {conversationMessages.map((m) => (
-                <div
-                  className={`chat-bubble-row ${m.from === "me" ? "mine" : ""}`}
-                  key={m.id}
-                >
+              {(messagesByConv[activeId] ?? []).map((m) => (
+                <div className={`chat-bubble-row ${m.from === "me" ? "mine" : ""}`} key={m.id}>
                   {m.from === "officer" ? (
                     <Avatar avatar={active.avatar} className="bubble-avatar" />
                   ) : null}
@@ -163,17 +220,41 @@ export default function YouthMessages() {
             </div>
 
             <div className="chat-composer">
-              <textarea placeholder="Type your message..." rows={1} />
+              <textarea
+                placeholder="Type your message..."
+                rows={1}
+                value={draft}
+                onChange={(e) => setDraft(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" && !e.shiftKey) {
+                    e.preventDefault();
+                    sendMessage();
+                  }
+                }}
+              />
               <div className="composer-tools">
                 <span className="composer-attach">
-                  <button type="button" aria-label="Attach a file">
+                  <button
+                    type="button"
+                    aria-label="Attach a file"
+                    onClick={() => window.alert("Attachments are not available in this demo.")}
+                  >
                     <Paperclip aria-hidden size={17} />
                   </button>
-                  <button type="button" aria-label="Record a voice message">
+                  <button
+                    type="button"
+                    aria-label="Record a voice message"
+                    onClick={() => window.alert("Voice messages are not available in this demo.")}
+                  >
                     <Mic aria-hidden size={17} />
                   </button>
                 </span>
-                <button className="composer-send" type="button" aria-label="Send message">
+                <button
+                  className="composer-send"
+                  type="button"
+                  aria-label="Send message"
+                  onClick={sendMessage}
+                >
                   <Send aria-hidden size={16} />
                 </button>
               </div>
@@ -185,7 +266,9 @@ export default function YouthMessages() {
                 For financial, legal, or eligibility disputes, Inzira will connect
                 you to a real person.
               </span>
-              <button type="button">Notify my officer</button>
+              <button type="button" onClick={notifyOfficer}>
+                Notify my officer
+              </button>
             </footer>
           </section>
         </div>

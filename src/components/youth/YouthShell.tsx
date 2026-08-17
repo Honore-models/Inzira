@@ -1,15 +1,14 @@
 import Link from "next/link";
 import {
-  ChevronDown,
-  Globe2,
   HelpCircle,
   Home,
   Lightbulb,
   ListChecks,
   MessageCircle,
   UserRound,
-  Volume2,
 } from "lucide-react";
+import { LogoutButton } from "@/components/LogoutButton";
+import { SidebarControls } from "@/components/youth/SidebarControls";
 
 const navItems = [
   { href: "/youth", label: "Home", icon: Home },
@@ -72,15 +71,8 @@ export function YouthShell({
           })}
         </div>
 
-        <button className="read-button sidebar-read-button" type="button">
-          <Volume2 aria-hidden size={16} />
-          Read aloud
-        </button>
-        <button className="language-button" type="button">
-          <Globe2 aria-hidden size={16} />
-          English
-          <ChevronDown aria-hidden size={14} />
-        </button>
+        <SidebarControls />
+        <LogoutButton className="youth-logout" />
       </aside>
       <section className="youth-content">{children}</section>
     </main>
