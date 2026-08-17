@@ -455,7 +455,7 @@ p {
 }
 
 .journey ol {
-  align-items: start;
+  align-items: flex-start;
   counter-reset: journey;
   display: grid;
   gap: 32px;
@@ -510,7 +510,7 @@ p {
   font-weight: 800;
   gap: 6px;
   grid-column: 2;
-  justify-self: center;
+  justify-self: end;
 }
 
 .cta {
@@ -676,5 +676,760 @@ p {
 
   .button {
     width: 100%;
+  }
+}
+
+.youth-app,
+.intake-screen {
+  --youth-bg: #fbfaf7;
+  --youth-card: #fffefa;
+  background: var(--youth-bg);
+  min-height: 100vh;
+}
+
+.youth-app {
+  display: grid;
+  grid-template-columns: 220px minmax(0, 1fr);
+}
+
+.youth-sidebar {
+  border-right: 1px solid var(--line);
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+  min-height: 100vh;
+  padding: 28px 20px;
+  position: sticky;
+  top: 0;
+}
+
+.youth-logo,
+.intake-logo {
+  color: var(--green);
+  font-size: 28px;
+  font-weight: 800;
+}
+
+.youth-nav {
+  display: grid;
+  gap: 8px;
+}
+
+.youth-nav a {
+  align-items: center;
+  border-radius: 7px;
+  color: #1f272c;
+  display: grid;
+  font-size: 14px;
+  font-weight: 700;
+  gap: 10px;
+  grid-template-columns: 18px 1fr auto;
+  min-height: 42px;
+  padding: 0 12px;
+}
+
+.youth-nav a.active,
+.youth-nav a:hover {
+  background: #e8f0eb;
+  color: var(--green);
+}
+
+.youth-nav small {
+  align-items: center;
+  background: var(--green);
+  border-radius: 999px;
+  color: white;
+  display: inline-flex;
+  font-size: 11px;
+  font-weight: 800;
+  height: 18px;
+  justify-content: center;
+  width: 18px;
+}
+
+.youth-sidebar-spacer {
+  border-top: 1px solid var(--line);
+  flex: 1;
+  min-height: 36px;
+}
+
+.read-button,
+.language-button,
+.outline-action {
+  align-items: center;
+  background: transparent;
+  border: 1px solid var(--green);
+  border-radius: 5px;
+  color: var(--green);
+  display: inline-flex;
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 800;
+  gap: 8px;
+  justify-content: center;
+  min-height: 38px;
+  padding: 0 12px;
+}
+
+.language-button {
+  border-color: transparent;
+  color: #30383e;
+  justify-content: flex-start;
+}
+
+.youth-content {
+  padding: 42px;
+}
+
+.dashboard-grid,
+.quick-section,
+.ask-layout,
+.directory-layout {
+  display: grid;
+  gap: 22px;
+}
+
+.welcome-card,
+.content-card,
+.quick-card,
+.message-strip,
+.institution-card,
+.roadmap-item,
+.intake-panel {
+  background: var(--youth-card);
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  box-shadow: 0 12px 32px rgba(32, 37, 43, 0.04);
+}
+
+.welcome-card {
+  align-items: center;
+  display: grid;
+  gap: 24px;
+  grid-template-columns: 1fr 260px;
+  padding: 30px;
+}
+
+.welcome-copy {
+  align-items: center;
+  display: flex;
+  gap: 24px;
+}
+
+.welcome-copy svg,
+.large-icon,
+.question-icon {
+  align-items: center;
+  background: #e8f0eb;
+  border-radius: 999px;
+  color: var(--green);
+  display: inline-flex;
+  flex: 0 0 auto;
+  justify-content: center;
+}
+
+.welcome-copy p,
+.progress-card p,
+.section-label {
+  color: #1f272c;
+  font-size: 14px;
+  font-weight: 800;
+  line-height: 1.2;
+  margin: 0 0 8px;
+}
+
+.welcome-copy h1,
+.page-heading h1 {
+  color: var(--green);
+  font-size: clamp(34px, 4vw, 46px);
+  line-height: 1;
+  margin: 0 0 10px;
+}
+
+.welcome-copy span,
+.page-heading p {
+  color: #2f373d;
+  font-size: 16px;
+  line-height: 1.45;
+}
+
+.compact-card,
+.content-card {
+  padding: 22px;
+}
+
+.progress-card strong {
+  display: block;
+  font-size: 15px;
+  margin-bottom: 14px;
+}
+
+.progress-meter > div:first-child {
+  align-items: center;
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+
+.progress-meter span,
+.progress-meter strong {
+  color: #30383e;
+  font-size: 12px;
+}
+
+.meter-track {
+  background: #e5e6e2;
+  border-radius: 999px;
+  height: 8px;
+  overflow: hidden;
+}
+
+.meter-track span {
+  background: var(--green);
+  border-radius: inherit;
+  display: block;
+  height: 100%;
+}
+
+.next-step-card {
+  display: grid;
+  gap: 14px;
+}
+
+.next-step {
+  align-items: center;
+  display: grid;
+  gap: 22px;
+  grid-template-columns: 84px 1fr auto;
+}
+
+.large-icon {
+  height: 76px;
+  width: 76px;
+}
+
+.next-step h2,
+.roadmap-item h2,
+.institution-card h2,
+.assistant-intro h2,
+.guardrail-card h2 {
+  color: #1f272c;
+  font-size: 18px;
+  line-height: 1.2;
+  margin: 0 0 8px;
+}
+
+.next-step p,
+.roadmap-item p,
+.institution-card p,
+.assistant-intro p,
+.guardrail-card p {
+  color: #3b4349;
+  font-size: 14px;
+  line-height: 1.45;
+  margin: 0 0 10px;
+}
+
+.next-step span,
+.meta-line {
+  align-items: center;
+  color: #2f373d;
+  display: inline-flex;
+  font-size: 13px;
+  gap: 7px;
+}
+
+.small-action,
+.youth-primary-action,
+.question-box button {
+  align-items: center;
+  background: var(--green);
+  border: 0;
+  border-radius: 5px;
+  color: white;
+  display: inline-flex;
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 900;
+  justify-content: center;
+  min-height: 38px;
+  padding: 0 18px;
+}
+
+.quick-grid,
+.progress-overview {
+  display: grid;
+  gap: 14px;
+  grid-template-columns: repeat(3, 1fr);
+}
+
+.quick-card {
+  display: grid;
+  gap: 8px;
+  min-height: 118px;
+  padding: 20px;
+}
+
+.quick-card svg,
+.institution-card > svg,
+.milestone-card svg,
+.assistant-intro svg,
+.guardrail-card svg {
+  color: var(--green);
+}
+
+.quick-card strong,
+.message-strip strong,
+.milestone-card strong {
+  color: #1f272c;
+  font-size: 15px;
+}
+
+.quick-card span,
+.message-strip span,
+.milestone-card p {
+  color: #3b4349;
+  font-size: 13px;
+  line-height: 1.35;
+}
+
+.message-strip {
+  align-items: center;
+  display: grid;
+  gap: 14px;
+  grid-template-columns: 28px 1fr auto;
+  padding: 18px 20px;
+}
+
+.message-strip strong {
+  display: block;
+  margin-bottom: 4px;
+}
+
+.page-heading {
+  margin-bottom: 28px;
+}
+
+.page-heading h1 {
+  color: #1f272c;
+}
+
+.two-column-heading {
+  align-items: end;
+  display: grid;
+  gap: 22px;
+  grid-template-columns: 1fr 280px;
+}
+
+.roadmap-list {
+  display: grid;
+  gap: 12px;
+}
+
+.roadmap-item {
+  align-items: flex-start;
+  display: grid;
+  gap: 16px;
+  grid-template-columns: 38px 1fr 22px;
+  padding: 18px;
+  position: relative;
+}
+
+.roadmap-item.current {
+  border-color: var(--green);
+}
+
+.roadmap-number {
+  align-items: center;
+  background: #73777a;
+  border-radius: 999px;
+  color: white;
+  display: inline-flex;
+  font-size: 14px;
+  font-weight: 900;
+  height: 32px;
+  justify-content: center;
+  width: 32px;
+}
+
+.roadmap-item.done .roadmap-number,
+.roadmap-item.current .roadmap-number {
+  background: var(--green);
+}
+
+.roadmap-title-row {
+  align-items: center;
+  display: flex;
+  gap: 12px;
+  justify-content: space-between;
+}
+
+.status-pill {
+  align-items: center;
+  background: #eef0ed;
+  border-radius: 999px;
+  color: #575f65;
+  display: inline-flex;
+  font-size: 11px;
+  font-weight: 900;
+  gap: 5px;
+  padding: 5px 9px;
+}
+
+.status-pill.current {
+  background: #e8f0eb;
+  color: var(--green);
+}
+
+.outline-action {
+  margin-top: 12px;
+}
+
+.roadmap-note {
+  background: #eef3ed;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  color: #2f5f46;
+  font-size: 13px;
+  margin: 14px 0 0;
+  padding: 10px 14px;
+}
+
+.intake-screen {
+  padding: 56px 32px;
+}
+
+.intake-panel {
+  margin: 0 auto;
+  max-width: 1120px;
+  min-height: 640px;
+  padding: 30px 42px 38px;
+}
+
+.intake-header,
+.intake-actions {
+  align-items: center;
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+}
+
+.back-link {
+  align-items: center;
+  color: #2f5f46;
+  display: inline-flex;
+  font-size: 14px;
+  font-weight: 800;
+  gap: 8px;
+}
+
+.intake-header span {
+  color: #1f272c;
+  font-size: 13px;
+  font-weight: 800;
+  justify-self: end;
+}
+
+.intake-progress {
+  display: grid;
+  gap: 7px;
+  grid-template-columns: repeat(5, 1fr);
+  margin: 28px 0 52px;
+}
+
+.intake-progress span {
+  background: #d8d8d6;
+  border-radius: 999px;
+  height: 7px;
+}
+
+.intake-progress .active {
+  background: var(--green);
+}
+
+.question-block {
+  text-align: center;
+}
+
+.question-icon {
+  height: 124px;
+  margin-bottom: 22px;
+  width: 124px;
+}
+
+.question-block h1 {
+  color: #1f272c;
+  font-size: 24px;
+  margin-bottom: 8px;
+}
+
+.question-block p {
+  font-size: 15px;
+  margin-bottom: 42px;
+}
+
+.goal-grid {
+  display: grid;
+  gap: 96px;
+  grid-template-columns: repeat(3, minmax(150px, 1fr));
+  margin: 0 auto 78px;
+  max-width: 880px;
+}
+
+.goal-card {
+  align-items: center;
+  background: var(--youth-card);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  color: #1f272c;
+  display: grid;
+  font-family: inherit;
+  justify-items: center;
+  min-height: 168px;
+  padding: 22px;
+  text-align: center;
+}
+
+.goal-card:hover {
+  border-color: var(--green);
+}
+
+.goal-card svg {
+  color: var(--green);
+}
+
+.goal-card strong {
+  font-size: 17px;
+  line-height: 1.15;
+}
+
+.goal-card span {
+  color: #3b4349;
+  font-size: 13px;
+  line-height: 1.35;
+}
+
+.intake-actions .read-button {
+  justify-self: start;
+}
+
+.intake-actions .youth-primary-action {
+  grid-column: 3;
+  justify-self: end;
+  min-width: 92px;
+}
+
+.ask-layout {
+  grid-template-columns: minmax(0, 1fr) 320px;
+}
+
+.assistant-intro {
+  align-items: flex-start;
+  display: flex;
+  gap: 16px;
+  margin-bottom: 26px;
+}
+
+.suggestions {
+  display: grid;
+  gap: 12px;
+  margin-bottom: 22px;
+}
+
+.suggestions button {
+  background: #f7f6f1;
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  color: #1f272c;
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 700;
+  min-height: 46px;
+  padding: 0 16px;
+  text-align: left;
+}
+
+.question-box {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: 1fr auto;
+}
+
+.question-box input {
+  background: white;
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  color: #1f272c;
+  font-family: inherit;
+  font-size: 15px;
+  min-height: 48px;
+  padding: 0 14px;
+}
+
+.guardrail-card {
+  align-self: start;
+}
+
+.directory-layout {
+  grid-template-columns: minmax(280px, 0.9fr) minmax(0, 1.1fr);
+}
+
+.map-panel {
+  align-items: center;
+  background:
+    linear-gradient(rgba(251, 250, 247, 0.78), rgba(251, 250, 247, 0.78)),
+    url("/youth4.jpg") center / cover;
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  color: var(--green);
+  display: grid;
+  min-height: 430px;
+  place-content: center;
+  text-align: center;
+}
+
+.map-panel strong {
+  color: #1f272c;
+  font-size: 22px;
+  margin-top: 12px;
+}
+
+.map-panel span {
+  color: #3b4349;
+  font-size: 14px;
+  margin-top: 6px;
+}
+
+.institution-list {
+  display: grid;
+  gap: 14px;
+}
+
+.institution-card {
+  align-items: center;
+  display: grid;
+  gap: 16px;
+  grid-template-columns: 38px 1fr auto;
+  padding: 18px;
+}
+
+.institution-card span {
+  color: var(--green);
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.institution-card button {
+  align-items: center;
+  background: transparent;
+  border: 1px solid var(--green);
+  border-radius: 5px;
+  color: var(--green);
+  display: inline-flex;
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 900;
+  gap: 7px;
+  min-height: 38px;
+  padding: 0 13px;
+}
+
+.milestone-card {
+  display: grid;
+  gap: 10px;
+}
+
+@media (max-width: 980px) {
+  .youth-app,
+  .welcome-card,
+  .two-column-heading,
+  .ask-layout,
+  .directory-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .youth-sidebar {
+    border-bottom: 1px solid var(--line);
+    border-right: 0;
+    min-height: auto;
+    position: static;
+  }
+
+  .youth-sidebar-spacer,
+  .youth-nav.secondary {
+    display: none;
+  }
+
+  .youth-nav {
+    grid-template-columns: repeat(4, 1fr);
+  }
+
+  .read-button,
+  .language-button {
+    width: max-content;
+  }
+
+  .youth-content {
+    padding: 28px 20px;
+  }
+
+  .next-step,
+  .quick-grid,
+  .progress-overview {
+    grid-template-columns: 1fr;
+  }
+
+  .small-action {
+    justify-self: start;
+  }
+
+  .goal-grid {
+    gap: 18px;
+  }
+}
+
+@media (max-width: 640px) {
+  .youth-nav {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .intake-screen {
+    padding: 18px;
+  }
+
+  .intake-panel {
+    min-height: auto;
+    padding: 22px;
+  }
+
+  .intake-header,
+  .intake-actions,
+  .goal-grid,
+  .roadmap-title-row,
+  .institution-card {
+    grid-template-columns: 1fr;
+  }
+
+  .intake-logo,
+  .intake-header span,
+  .intake-actions .read-button,
+  .intake-actions .youth-primary-action {
+    grid-column: auto;
+    justify-self: start;
+  }
+
+  .goal-grid {
+    margin-bottom: 34px;
+  }
+
+  .roadmap-item {
+    grid-template-columns: 34px 1fr;
+  }
+
+  .roadmap-item > svg {
+    display: none;
+  }
+
+  .question-box {
+    grid-template-columns: 1fr;
   }
 }

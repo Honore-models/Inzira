@@ -1,4 +1,10 @@
 {
   "/_not-found/page": "/_not-found",
-  "/page": "/"
+  "/page": "/",
+  "/youth/ask/page": "/youth/ask",
+  "/youth/find-help/page": "/youth/find-help",
+  "/youth/page": "/youth",
+  "/youth/onboarding/page": "/youth/onboarding",
+  "/youth/progress/page": "/youth/progress",
+  "/youth/steps/page": "/youth/steps"
 }

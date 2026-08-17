@@ -31,6 +31,42 @@
       "regex": "^/_not\\-found(?:/)?$",
       "routeKeys": {},
       "namedRegex": "^/_not\\-found(?:/)?$"
+    },
+    {
+      "page": "/youth",
+      "regex": "^/youth(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/youth(?:/)?$"
+    },
+    {
+      "page": "/youth/ask",
+      "regex": "^/youth/ask(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/youth/ask(?:/)?$"
+    },
+    {
+      "page": "/youth/find-help",
+      "regex": "^/youth/find\\-help(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/youth/find\\-help(?:/)?$"
+    },
+    {
+      "page": "/youth/onboarding",
+      "regex": "^/youth/onboarding(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/youth/onboarding(?:/)?$"
+    },
+    {
+      "page": "/youth/progress",
+      "regex": "^/youth/progress(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/youth/progress(?:/)?$"
+    },
+    {
+      "page": "/youth/steps",
+      "regex": "^/youth/steps(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/youth/steps(?:/)?$"
     }
   ],
   "dataRoutes": [],

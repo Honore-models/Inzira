@@ -77,7 +77,7 @@ export default function Home() {
           <a href="#problem">The problem</a>
           <a href="#demo">Live demo</a>
         </nav>
-        <a className="header-action" href="#demo">
+        <a className="header-action" href="/youth">
           Enter the app
         </a>
       </header>
@@ -93,7 +93,7 @@ export default function Home() {
           findable, sequenced, and easy to follow.
         </p>
         <div className="button-row" id="demo">
-          <a className="button primary" href="#youth">
+          <a className="button primary" href="/youth/onboarding">
             Enter as a youth
           </a>
           <a className="button secondary" href="#officer">
@@ -216,7 +216,7 @@ export default function Home() {
         <h2>Ready to see it in action?</h2>
         <p>Choose your entrance and explore Inzira.</p>
         <div className="button-row">
-          <a className="button primary" href="#youth">
+          <a className="button primary" href="/youth/onboarding">
             Enter as a youth
           </a>
           <a className="button secondary" href="#officer">
