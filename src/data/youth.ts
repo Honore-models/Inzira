@@ -87,16 +87,18 @@ export const institutions = [
     category: "Business",
     initials: "RDB",
     logoBg: "#1f6f4c",
+    logo: "/RDB_logo.png",
   },
   {
-    id: "wda",
-    title: "WDA / TVET Rwanda",
+    id: "rtb",
+    title: "RTB / TVET Rwanda",
     description: "Vocational training programs and skills certification",
     location: "Musanze",
     distance: "2.8 km",
     category: "Training",
-    initials: "WDA",
+    initials: "RTB",
     logoBg: "#2f5f46",
+    logo: "/RTB_logo.jpg",
   },
   {
     id: "bdf",
@@ -107,6 +109,7 @@ export const institutions = [
     category: "Loans",
     initials: "BDF",
     logoBg: "#15583b",
+    logo: "/BDF_logo.png",
   },
   {
     id: "rra",
@@ -117,14 +120,37 @@ export const institutions = [
     category: "Business",
     initials: "RRA",
     logoBg: "#3b6b52",
+    logo: "/RRA_logo.png",
   },
 ];
 
 export const askSuggestions = [
-  "What documents do I need for RDB registration?",
-  "Why do I need business registration before BDF?",
-  "Can I get tailoring training while I register?",
-  "When should I message my youth officer?",
+  "How much does it cost to register a business?",
+  "Where is the closest RDB office?",
+  "What is a TIN and how do I get it?",
+];
+
+export const askSampleExchange = {
+  question: "What documents do I need to register my business name?",
+  answerHeader: "To register your business name with RDB, you'll need:",
+  answer: [
+    "National ID",
+    "Business name (3 options in order of preference)",
+    "Physical address",
+    "Phone number or email",
+    "Activity description",
+  ],
+  source: {
+    label: "RDB - Business Name Registration Guide (2024)",
+    href: "#",
+  },
+};
+
+export const askCommonTopics = [
+  { label: "Business registration", icon: "building" },
+  { label: "Loans & guarantees", icon: "wallet" },
+  { label: "Training programs", icon: "graduation" },
+  { label: "Eligibility rules", icon: "clipboard" },
 ];
 
 export const seededMessages = [

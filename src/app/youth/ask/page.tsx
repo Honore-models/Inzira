@@ -1,66 +1,132 @@
-import { HelpCircle, Send, ShieldCheck } from "lucide-react";
+import Link from "next/link";
+import {
+  Building2,
+  ClipboardList,
+  ExternalLink,
+  GraduationCap,
+  Info,
+  Send,
+  ThumbsDown,
+  ThumbsUp,
+  Wallet,
+} from "lucide-react";
 import { YouthShell } from "@/components/youth/YouthShell";
-import { askSuggestions, seededMessages, youthCase } from "@/data/youth";
+import {
+  askCommonTopics,
+  askSampleExchange,
+  askSuggestions,
+} from "@/data/youth";
+
+const topicIcons = {
+  building: Building2,
+  wallet: Wallet,
+  graduation: GraduationCap,
+  clipboard: ClipboardList,
+};
 
 export default function YouthAsk() {
   return (
     <YouthShell active="Ask">
-      <header className="page-heading">
-        <h1>Ask</h1>
-        <p>Get answers grounded in verified program information.</p>
-      </header>
+      <div className="youth-page-wrap ask-page">
+        <header className="ask-page-heading">
+          <div>
+            <h1>Ask Inzira</h1>
+            <p>Ask anything about programs, requirements, or next steps.</p>
+          </div>
+          <button className="ask-how-link" type="button">
+            <Info aria-hidden size={16} />
+            How it works
+          </button>
+        </header>
 
-      <section className="ask-layout">
-        <div className="content-card chat-card">
-          <div className="assistant-intro">
-            <HelpCircle aria-hidden size={34} />
-            <div>
-              <h2>How can I help with your roadmap?</h2>
+        <div className="ask-layout">
+          <div className="ask-chat-column">
+            <div className="chat-thread">
+              <div className="user-message">{askSampleExchange.question}</div>
+
+              <article className="ai-response-card">
+                {('answerHeader' in askSampleExchange) && (
+                  <p className="ai-response-intro">{(askSampleExchange as any).answerHeader}</p>
+                )}
+                <ul>
+                  {askSampleExchange.answer.map((item) => (
+                    <li key={item}>{item}</li>
+                  ))}
+                </ul>
+
+                <footer className="ai-response-footer">
+                  <Link className="ai-source-link" href={askSampleExchange.source.href}>
+                    Source: {askSampleExchange.source.label}
+                    <ExternalLink aria-hidden size={14} />
+                  </Link>
+
+                  <div className="ai-feedback">
+                    <span>Is this answer helpful?</span>
+                    <button aria-label="Yes, helpful" type="button">
+                      <ThumbsUp aria-hidden size={16} />
+                    </button>
+                    <button aria-label="No, not helpful" type="button">
+                      <ThumbsDown aria-hidden size={16} />
+                    </button>
+                  </div>
+                </footer>
+              </article>
+            </div>
+
+            <div className="ask-suggestions">
+              {askSuggestions.map((item) => (
+                <button type="button" key={item}>
+                  {item}
+                </button>
+              ))}
+            </div>
+
+            <form className="ask-input">
+              <input aria-label="Ask a question" placeholder="Ask a question..." />
+              <button aria-label="Send question" type="submit">
+                <Send aria-hidden size={18} />
+              </button>
+            </form>
+
+            <div className="ask-disclaimer">
+              <Info aria-hidden size={16} />
               <p>
-                Ask about steps, documents, offices, or requirements. Financial
-                and legal decisions are sent to a real officer.
+                Inzira gives answers based only on verified official sources. For
+                financial, legal, or complex cases, we&apos;ll connect you to a real
+                officer.
               </p>
             </div>
           </div>
-          <div className="seeded-chat">
-            {seededMessages.map((message) => (
-              <article key={message.text}>
-                <strong>{message.from}</strong>
-                <p>{message.text}</p>
-                <span>{message.source}</span>
-              </article>
-            ))}
-          </div>
-          <div className="suggestions">
-            {askSuggestions.map((item) => (
-              <button type="button" key={item}>
-                {item}
-              </button>
-            ))}
-          </div>
-          <form className="question-box">
-            <input aria-label="Ask a question" placeholder="Type your question..." />
-            <button type="submit">
-              <Send aria-hidden size={17} />
-              Send
-            </button>
-          </form>
-        </div>
 
-        <aside className="content-card guardrail-card">
-          <ShieldCheck aria-hidden size={30} />
-          <h2>Human review stays in the loop</h2>
-          <p>
-            Inzira answers from verified sources. If a question could affect
-            money, legal status, or eligibility, your youth officer reviews it.
-          </p>
-          <div className="officer-mini-card">
-            <span>Your officer</span>
-            <strong>{youthCase.youth.officer}</strong>
-            <p>{youthCase.youth.district} District youth support</p>
-          </div>
-        </aside>
-      </section>
+          <aside className="ask-sidebar">
+            <div className="officer-notify-card">
+              <h2>Need to speak with a real person?</h2>
+              <p>
+                If your question needs a human review, we can notify your youth
+                officer to follow up with you.
+              </p>
+              <button type="button">Notify my officer</button>
+            </div>
+
+            <div className="common-topics">
+              <h2>Common topics</h2>
+              <ul>
+                {askCommonTopics.map((topic) => {
+                  const Icon = topicIcons[topic.icon as keyof typeof topicIcons];
+                  return (
+                    <li key={topic.label}>
+                      <button type="button">
+                        <Icon aria-hidden size={16} />
+                        {topic.label}
+                      </button>
+                    </li>
+                  );
+                })}
+              </ul>
+            </div>
+          </aside>
+        </div>
+      </div>
     </YouthShell>
   );
 }

@@ -29,7 +29,7 @@ export function YouthShell({
     <main className="youth-app">
       <aside className="youth-sidebar">
         <Link className="youth-logo" href="/youth">
-          Inzira
+          <img src="/inzira_logo.png" alt="Inzira" />
         </Link>
 
         <nav className="youth-nav" aria-label="Youth navigation">

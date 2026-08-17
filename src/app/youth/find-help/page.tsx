@@ -52,7 +52,11 @@ export default function YouthFindHelp() {
                 className="institution-logo"
                 style={{ backgroundColor: item.logoBg }}
               >
-                {item.initials}
+                {item.logo ? (
+                  <img src={item.logo} alt={`${item.initials} logo`} />
+                ) : (
+                  item.initials
+                )}
               </div>
 
               <div className="institution-body">

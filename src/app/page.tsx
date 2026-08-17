@@ -70,7 +70,7 @@ export default function Home() {
     <main>
       <header className="site-header">
         <a className="brand" href="#top" aria-label="Inzira home">
-          Inzira
+          <img src="/inzira_logo.png" alt="Inzira" />
         </a>
         <nav className="nav" aria-label="Primary navigation">
           <a href="#how-it-works">How it works</a>
@@ -123,7 +123,7 @@ export default function Home() {
           <p className="eyebrow">The problem</p>
           <h2>Everything a youth needs already exists. Finding it is the problem.</h2>
           <p>
-            RDB, BDF, and WDA all offer real, funded support for education,
+            RDB, BDF, and RTB all offer real, funded support for education,
             training, and business growth. But each institution assumes you
             already know what to do and in what order.
           </p>

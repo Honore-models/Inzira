@@ -14,7 +14,7 @@ export default function YouthOnboarding() {
             Back
           </Link>
           <Link href="/" className="intake-logo">
-            Inzira
+            <img src="/inzira_logo.png" alt="Inzira" />
           </Link>
           <span>Step 2 of 6</span>
         </header>
