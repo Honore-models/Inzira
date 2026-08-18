@@ -1,7 +1,7 @@
 "use client";
 
+import { useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { useSession, signOut } from "next-auth/react";
 import {
   Home,
@@ -9,8 +9,8 @@ import {
   MessageCircle,
   Sparkles,
   Users,
-  User,
 } from "lucide-react";
+import { ConfirmModal } from "@/components/ConfirmModal";
 
 const navItems = [
   { href: "/officer", label: "Dashboard", icon: Home },
@@ -27,10 +27,9 @@ export function OfficerShell({
   children: React.ReactNode;
 }) {
   const { data: session } = useSession();
-  const router = useRouter();
+  const [showLogout, setShowLogout] = useState(false);
 
   const userName = session?.user?.name || "Officer";
-  const userRole = session?.user?.role || "officer";
 
   function handleLogout() {
     signOut({ callbackUrl: "/" });
@@ -72,7 +71,7 @@ export function OfficerShell({
           <button
             className="officer-logout"
             type="button"
-            onClick={handleLogout}
+            onClick={() => setShowLogout(true)}
             title="Log out"
           >
             <LogOut aria-hidden size={16} />
@@ -81,6 +80,18 @@ export function OfficerShell({
         </div>
       </aside>
       <section className="officer-content">{children}</section>
+
+      <ConfirmModal
+        open={showLogout}
+        title="Log out?"
+        message="Are you sure you want to log out of the officer workspace? You will need to sign in again to access your dashboard."
+        confirmText="Log out"
+        cancelText="Stay logged in"
+        variant="danger"
+        icon="logout"
+        onConfirm={handleLogout}
+        onCancel={() => setShowLogout(false)}
+      />
     </main>
   );
 }
