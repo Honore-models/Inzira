@@ -2,22 +2,21 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { useSession, signOut } from "next-auth/react";
 import {
   Home,
-  Library,
   LogOut,
   MessageCircle,
   Sparkles,
   Users,
+  User,
 } from "lucide-react";
-import { officerProfile } from "@/data/officer";
 
 const navItems = [
   { href: "/officer", label: "Dashboard", icon: Home },
   { href: "/officer/intake", label: "Smart Intake", icon: Sparkles },
   { href: "/officer/youth", label: "Youth List", icon: Users },
-  { href: "/officer/messages", label: "Messages", icon: MessageCircle, badge: 3 },
-  { href: "/officer/library", label: "Verified Library", icon: Library },
+  { href: "/officer/messages", label: "Messages", icon: MessageCircle },
 ];
 
 export function OfficerShell({
@@ -27,12 +26,14 @@ export function OfficerShell({
   active: string;
   children: React.ReactNode;
 }) {
+  const { data: session } = useSession();
   const router = useRouter();
 
+  const userName = session?.user?.name || "Officer";
+  const userRole = session?.user?.role || "officer";
+
   function handleLogout() {
-    if (window.confirm("Log out of the officer workspace?")) {
-      router.push("/");
-    }
+    signOut({ callbackUrl: "/" });
   }
 
   return (
@@ -53,7 +54,6 @@ export function OfficerShell({
               >
                 <Icon aria-hidden size={18} />
                 <span>{item.label}</span>
-                {item.badge ? <small>{item.badge}</small> : null}
               </Link>
             );
           })}
@@ -62,11 +62,12 @@ export function OfficerShell({
         <div className="officer-sidebar-spacer" />
 
         <div className="officer-profile">
-          <img src={officerProfile.photo} alt={officerProfile.name} />
+          <span className="officer-avatar" style={{ background: "#1f6f4c" }}>
+            {userName.split(" ").map((w) => w[0]).join("")}
+          </span>
           <div>
-            <strong>{officerProfile.name}</strong>
-            <span>{officerProfile.role}</span>
-            <span>{officerProfile.district}</span>
+            <strong>{userName}</strong>
+            <span>Officer</span>
           </div>
           <button
             className="officer-logout"
@@ -81,30 +82,6 @@ export function OfficerShell({
       </aside>
       <section className="officer-content">{children}</section>
     </main>
-  );
-}
-
-export function OfficerAvatar({
-  avatar,
-  size = "",
-}: {
-  avatar: { label: string; bg: string; photo?: string };
-  size?: "small" | "large" | "";
-}) {
-  if (avatar.photo) {
-    return (
-      <span className={`officer-avatar photo ${size}`}>
-        <img src={avatar.photo} alt={avatar.label} />
-      </span>
-    );
-  }
-  return (
-    <span
-      className={`officer-avatar ${size}`}
-      style={{ background: avatar.bg }}
-    >
-      {avatar.label}
-    </span>
   );
 }
 
@@ -132,5 +109,29 @@ export function OfficerStepper({
         );
       })}
     </ol>
+  );
+}
+
+export function OfficerAvatar({
+  avatar,
+  size = "",
+}: {
+  avatar: { label: string; bg: string; photo?: string };
+  size?: "small" | "large" | "";
+}) {
+  if (avatar.photo) {
+    return (
+      <span className={`officer-avatar photo ${size}`}>
+        <img src={avatar.photo} alt={avatar.label} />
+      </span>
+    );
+  }
+  return (
+    <span
+      className={`officer-avatar ${size}`}
+      style={{ background: avatar.bg }}
+    >
+      {avatar.label}
+    </span>
   );
 }

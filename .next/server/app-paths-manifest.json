@@ -1,8 +1,9 @@
 {
-  "/api/cases/route": "app/api/cases/route.js",
   "/api/auth/[...nextauth]/route": "app/api/auth/[...nextauth]/route.js",
-  "/api/profile/route": "app/api/profile/route.js",
   "/api/cases/[caseId]/messages/route": "app/api/cases/[caseId]/messages/route.js",
-  "/api/cases/[caseId]/steps/route": "app/api/cases/[caseId]/steps/route.js",
-  "/api/auth/signup/route": "app/api/auth/signup/route.js"
+  "/officer/intake/page": "app/officer/intake/page.js",
+  "/officer/youth/page": "app/officer/youth/page.js",
+  "/officer/messages/page": "app/officer/messages/page.js",
+  "/officer/youth/[id]/page": "app/officer/youth/[id]/page.js",
+  "/auth/signin/page": "app/auth/signin/page.js"
 }

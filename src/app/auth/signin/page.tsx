@@ -31,7 +31,17 @@ export default function SignIn() {
       if (result?.error) {
         setError("Invalid email or password. Please try again.");
       } else {
-        router.push(callbackUrl);
+        // Fetch the session to get the user's role, then redirect to the right dashboard
+        const res = await fetch("/api/auth/session");
+        const session = await res.json();
+        const role = session?.user?.role;
+        if (role === "officer") {
+          router.push("/officer");
+        } else if (role === "youth") {
+          router.push("/youth");
+        } else {
+          router.push("/");
+        }
         router.refresh();
       }
     } catch {

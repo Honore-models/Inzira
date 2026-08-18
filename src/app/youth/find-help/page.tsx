@@ -1,17 +1,55 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { ChevronDown, Search, X } from "lucide-react";
 import { InstitutionCard } from "@/components/youth/InstitutionCard";
 import { YouthShell } from "@/components/youth/YouthShell";
-import { helpCategories, institutions } from "@/data/youth";
 
 const INITIAL_VISIBLE = 4;
 
+interface Institution {
+  id: string;
+  title: string;
+  description: string;
+  location: string;
+  category: string;
+  initials: string;
+  logo_bg: string;
+  logo_url: string | null;
+  details: {
+    fullDescription: string;
+    services: string[];
+    phone: string;
+    email: string;
+    hours: string;
+    address: string;
+  };
+}
+
+const helpCategories = ["All", "Business", "Training", "Loans"];
+
 export default function YouthFindHelp() {
   const [query, setQuery] = useState("");
-  const [category, setCategory] = useState(helpCategories[0]);
+  const [category, setCategory] = useState("All");
   const [visible, setVisible] = useState(INITIAL_VISIBLE);
+  const [institutions, setInstitutions] = useState<Institution[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    async function load() {
+      try {
+        const res = await fetch("/api/institutions");
+        if (res.ok) {
+          setInstitutions(await res.json());
+        }
+      } catch {
+        // Silently handle errors
+      } finally {
+        setLoading(false);
+      }
+    }
+    load();
+  }, []);
 
   const q = query.trim().toLowerCase();
   const filtered = institutions.filter((item) => {
@@ -22,8 +60,8 @@ export default function YouthFindHelp() {
       item.description,
       item.location,
       item.category,
-      item.details.fullDescription,
-      ...item.details.services,
+      item.details?.fullDescription || "",
+      ...(item.details?.services || []),
     ]
       .join(" ")
       .toLowerCase();
@@ -85,7 +123,12 @@ export default function YouthFindHelp() {
           </div>
         </div>
 
-        {filtered.length === 0 ? (
+        {loading ? (
+          <div className="yd-loading">
+            <div className="yd-loading-spinner" />
+            <p>Loading institutions…</p>
+          </div>
+        ) : filtered.length === 0 ? (
           <div className="find-help-empty">
             <p>No institutions match your search. Try a different term or category.</p>
           </div>

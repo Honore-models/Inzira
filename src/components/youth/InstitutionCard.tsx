@@ -6,27 +6,38 @@ import {
   Clock,
   Mail,
   MapPin,
-  Navigation,
   Phone,
 } from "lucide-react";
-import type { institutions } from "@/data/youth";
 
-type Institution = (typeof institutions)[number];
+interface InstitutionData {
+  id: string;
+  title: string;
+  description: string;
+  location: string;
+  category: string;
+  initials: string;
+  logo_bg: string;
+  logo_url: string | null;
+  details: {
+    fullDescription: string;
+    services: string[];
+    phone: string;
+    email: string;
+    hours: string;
+    address: string;
+  };
+}
 
-export function InstitutionCard({ item }: { item: Institution }) {
+export function InstitutionCard({ item }: { item: InstitutionData }) {
   const [open, setOpen] = useState(false);
 
   return (
     <article className="institution-card">
       <div
         className="institution-logo"
-        style={{ backgroundColor: item.logoBg }}
+        style={{ backgroundColor: item.logo_bg }}
       >
-        {item.logo ? (
-          <img src={item.logo} alt={`${item.initials} logo`} />
-        ) : (
-          item.initials
-        )}
+        {item.initials}
       </div>
 
       <div className="institution-body">
@@ -36,10 +47,6 @@ export function InstitutionCard({ item }: { item: Institution }) {
           <span>
             <MapPin aria-hidden size={14} />
             {item.location}
-          </span>
-          <span>
-            <Navigation aria-hidden size={14} />
-            {item.distance}
           </span>
         </div>
       </div>
@@ -57,14 +64,14 @@ export function InstitutionCard({ item }: { item: Institution }) {
         </button>
       </div>
 
-      {open ? (
+      {open && item.details ? (
         <div className="institution-details-panel">
           <p className="details-intro">{item.details.fullDescription}</p>
           <div className="details-grid">
             <div className="details-block services">
               <h3>Services</h3>
               <ul>
-                {item.details.services.map((service) => (
+                {item.details.services?.map((service) => (
                   <li key={service}>{service}</li>
                 ))}
               </ul>

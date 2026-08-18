@@ -36,11 +36,14 @@ export async function POST(request: Request) {
       );
     }
 
-    // Create auth user
-    const { data: authUser, error: authError } = await supabase.auth.signUp({
-      email,
-      password,
-    });
+    // Create auth user (admin API with email pre-confirmed, since we
+    // don't send confirmation emails)
+    const { data: authUser, error: authError } =
+      await supabase.auth.admin.createUser({
+        email,
+        password,
+        email_confirm: true,
+      });
 
     if (authError || !authUser.user) {
       return NextResponse.json(

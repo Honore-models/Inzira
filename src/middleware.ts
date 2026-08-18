@@ -7,9 +7,19 @@ export default auth((req) => {
   const isLoggedIn = !!req.auth;
   const userRole = req.auth?.user?.role;
 
-  // Public routes that don't require auth
-  const publicRoutes = ["/", "/auth/signin", "/auth/signup", "/auth/error"];
-  if (publicRoutes.some((route) => pathname === route)) {
+  // Root / landing page — always allow
+  if (pathname === "/") {
+    return NextResponse.next();
+  }
+
+  // Auth pages — allow through (but redirect logged-in users away)
+  const authPages = ["/auth/signin", "/auth/signup", "/auth/error"];
+  if (authPages.some((route) => pathname === route)) {
+    if (isLoggedIn) {
+      return NextResponse.redirect(
+        new URL(userRole === "officer" ? "/officer" : "/youth", req.url),
+      );
+    }
     return NextResponse.next();
   }
 

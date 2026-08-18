@@ -1,25 +1,107 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Check, ChevronDown, Clock, Lock, MapPin } from "lucide-react";
 import { ProgressMeter, YouthShell } from "@/components/youth/YouthShell";
-import { roadmapSteps, youthCase } from "@/data/youth";
 
 type StepState = "done" | "current" | "locked";
 
+interface Step {
+  id: string;
+  step_number: number;
+  title: string;
+  detail: string;
+  institution: string;
+  status: string;
+  state: string;
+  location: string | null;
+  source: string | null;
+}
+
+interface CaseData {
+  id: string;
+  current_step: number;
+  total_steps: number;
+  status: string;
+  youth: { goal: string } | null;
+  officer: { full_name: string } | null;
+}
+
 export default function YouthSteps() {
-  const [steps, setSteps] = useState<StepState[]>(
-    roadmapSteps.map((s) => s.state as StepState),
-  );
+  const [steps, setSteps] = useState<Step[]>([]);
+  const [youthCase, setYouthCase] = useState<CaseData | null>(null);
+  const [loading, setLoading] = useState(true);
   const [justCompleted, setJustCompleted] = useState(false);
 
-  const completedCount = steps.filter((s) => s === "done").length;
-  const percent = Math.round((completedCount / steps.length) * 100);
+  useEffect(() => {
+    async function load() {
+      try {
+        const casesRes = await fetch("/api/cases");
+        if (casesRes.ok) {
+          const cases = await casesRes.json();
+          if (cases.length > 0) {
+            const c = cases[0];
+            setYouthCase(c);
+            const stepsRes = await fetch(`/api/cases/${c.id}/steps`);
+            if (stepsRes.ok) {
+              setSteps(await stepsRes.json());
+            }
+          }
+        }
+      } catch {
+        // Silently handle errors
+      } finally {
+        setLoading(false);
+      }
+    }
+    load();
+  }, []);
+
+  const completedCount = steps.filter((s) => s.state === "done").length;
+  const percent =
+    steps.length > 0
+      ? Math.round((completedCount / steps.length) * 100)
+      : 0;
 
   function markDone(index: number) {
-    setSteps((prev) => prev.map((s, i) => (i === index ? "done" : s)));
+    setSteps((prev) =>
+      prev.map((s, i) =>
+        i === index ? { ...s, state: "done", status: "done" } : s,
+      ),
+    );
     setJustCompleted(true);
     window.setTimeout(() => setJustCompleted(false), 2500);
+  }
+
+  if (loading) {
+    return (
+      <YouthShell active="My Steps">
+        <div className="youth-page-wrap">
+          <div className="yd-loading">
+            <div className="yd-loading-spinner" />
+            <p>Loading your roadmap…</p>
+          </div>
+        </div>
+      </YouthShell>
+    );
+  }
+
+  if (steps.length === 0) {
+    return (
+      <YouthShell active="My Steps">
+        <div className="youth-page-wrap">
+          <header className="page-heading">
+            <h1>My Steps</h1>
+            <p>Your personalized roadmap</p>
+          </header>
+          <div className="content-card" style={{ padding: 40, textAlign: "center" }}>
+            <p style={{ color: "#545d65" }}>
+              No roadmap assigned yet. Your officer will create one for you soon.
+            </p>
+          </div>
+        </div>
+      </YouthShell>
+    );
   }
 
   return (
@@ -37,38 +119,48 @@ export default function YouthSteps() {
           />
         </header>
 
-        <section className="roadmap-summary">
-          <div>
-            <span>Goal</span>
-            <strong>{youthCase.youth.goal}</strong>
-          </div>
-          <div>
-            <span>Officer approval</span>
-            <strong>Reviewed by {youthCase.youth.officer}</strong>
-          </div>
-          <div>
-            <span>Last update</span>
-            <strong>{youthCase.progress.updated}</strong>
-          </div>
-        </section>
+        {youthCase && (
+          <section className="roadmap-summary">
+            <div>
+              <span>Goal</span>
+              <strong>{youthCase.youth?.goal || "Not set"}</strong>
+            </div>
+            <div>
+              <span>Officer approval</span>
+              <strong>
+                {youthCase.officer
+                  ? `Reviewed by ${youthCase.officer.full_name}`
+                  : "Pending assignment"}
+              </strong>
+            </div>
+            <div>
+              <span>Status</span>
+              <strong>{youthCase.status}</strong>
+            </div>
+          </section>
+        )}
 
-        <section className="roadmap-list" aria-label="Business roadmap steps">
-          {roadmapSteps.map((step, index) => (
-            <article className={`roadmap-item ${steps[index]}`} key={step.number}>
+        <section className="roadmap-list" aria-label="Roadmap steps">
+          {steps.map((step, index) => (
+            <article
+              className={`roadmap-item ${step.state}`}
+              key={step.id}
+            >
               <div className="roadmap-number">
-                {steps[index] === "done" ? <Check aria-hidden size={18} /> : step.number}
+                {step.state === "done" ? (
+                  <Check aria-hidden size={18} />
+                ) : (
+                  step.step_number
+                )}
               </div>
               <div className="roadmap-body">
                 <div className="roadmap-title-row">
                   <h2>{step.title}</h2>
-                  <span className={`status-pill ${steps[index]}`}>
-                    {steps[index] === "locked" && <Lock aria-hidden size={12} />}
-                    {steps[index] === "done"
-                      ? `Completed on ${new Date().toLocaleDateString("en-GB", {
-                          day: "numeric",
-                          month: "short",
-                        })}`
-                      : steps[index] === "current"
+                  <span className={`status-pill ${step.state}`}>
+                    {step.state === "locked" && <Lock aria-hidden size={12} />}
+                    {step.state === "done"
+                      ? "Completed"
+                      : step.state === "current"
                         ? "Current step"
                         : "Locked"}
                   </span>
@@ -80,8 +172,10 @@ export default function YouthSteps() {
                     {step.location}
                   </span>
                 )}
-                {step.source && <span className="source-line">{step.source}</span>}
-                {steps[index] === "current" && (
+                {step.source && (
+                  <span className="source-line">{step.source}</span>
+                )}
+                {step.state === "current" && (
                   <button
                     className="outline-action"
                     type="button"

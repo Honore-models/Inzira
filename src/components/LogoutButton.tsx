@@ -1,6 +1,6 @@
 "use client";
 
-import { useRouter } from "next/navigation";
+import { signOut } from "next-auth/react";
 import { LogOut } from "lucide-react";
 
 export function LogoutButton({
@@ -10,11 +10,9 @@ export function LogoutButton({
   className?: string;
   compact?: boolean;
 }) {
-  const router = useRouter();
-
   function handleLogout() {
     if (window.confirm("Log out of Inzira?")) {
-      router.push("/");
+      signOut({ callbackUrl: "/" });
     }
   }
 

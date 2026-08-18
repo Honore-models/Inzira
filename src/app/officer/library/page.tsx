@@ -1,8 +1,57 @@
+"use client";
+
+import { useEffect, useState } from "react";
 import { BadgeCheck, BookOpen } from "lucide-react";
 import { OfficerShell } from "@/components/officer/OfficerShell";
-import { institutions } from "@/data/youth";
+
+interface Institution {
+  id: string;
+  title: string;
+  description: string;
+  location: string;
+  category: string;
+  initials: string;
+  logo_bg: string;
+  logo_url: string | null;
+  details: {
+    phone: string;
+    email: string;
+  };
+}
 
 export default function OfficerLibrary() {
+  const [institutions, setInstitutions] = useState<Institution[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    async function load() {
+      try {
+        const res = await fetch("/api/institutions");
+        if (res.ok) {
+          setInstitutions(await res.json());
+        }
+      } catch {
+        // Silently handle errors
+      } finally {
+        setLoading(false);
+      }
+    }
+    load();
+  }, []);
+
+  if (loading) {
+    return (
+      <OfficerShell active="Verified Library">
+        <div className="officer-page-wrap">
+          <div className="yd-loading">
+            <div className="yd-loading-spinner" />
+            <p>Loading library…</p>
+          </div>
+        </div>
+      </OfficerShell>
+    );
+  }
+
   return (
     <OfficerShell active="Verified Library">
       <div className="officer-page-wrap">
@@ -21,13 +70,9 @@ export default function OfficerLibrary() {
               <header>
                 <span
                   className="library-logo"
-                  style={{ background: inst.logoBg }}
+                  style={{ background: inst.logo_bg }}
                 >
-                  {inst.logo ? (
-                    <img src={inst.logo} alt={`${inst.initials} logo`} />
-                  ) : (
-                    inst.initials
-                  )}
+                  {inst.initials}
                 </span>
                 <span className="library-verified">
                   <BadgeCheck aria-hidden size={14} />
@@ -47,7 +92,7 @@ export default function OfficerLibrary() {
                 </div>
                 <div>
                   <dt>Contact</dt>
-                  <dd>{inst.details.phone}</dd>
+                  <dd>{inst.details?.phone || "—"}</dd>
                 </div>
               </dl>
               <footer>

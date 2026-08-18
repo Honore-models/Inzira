@@ -2,10 +2,30 @@
 
 import { useState } from "react";
 import { Check, Clock, Lock, RefreshCw } from "lucide-react";
-import type { youthDetail } from "@/data/officer";
 
-type Detail = typeof youthDetail;
-type Tab = "roadmap" | "intake" | "activity";
+interface DetailStep {
+  number: number;
+  title: string;
+  detail: string;
+  institution: string;
+  status: string;
+  state: string;
+  location?: string;
+  source?: string;
+}
+
+interface YouthDetail {
+  avatar: { label: string; bg: string };
+  name: string;
+  goal: string;
+  location: string;
+  skills: string;
+  situation: string;
+  progress: number;
+  currentStep: number;
+  totalSteps: number;
+  steps: DetailStep[];
+}
 
 const activityLog = [
   { time: "Today, 09:32", action: "Viewed step details (2. Get TIN)" },
@@ -16,7 +36,9 @@ const activityLog = [
   { time: "May 8, 09:12", action: "Completed onboarding and set goal: Start a business" },
 ];
 
-export function YouthDetailTabs({ detail }: { detail: Detail }) {
+type Tab = "roadmap" | "intake" | "activity";
+
+export function YouthDetailTabs({ detail }: { detail: YouthDetail }) {
   const [tab, setTab] = useState<Tab>("roadmap");
 
   return (
@@ -51,11 +73,11 @@ export function YouthDetailTabs({ detail }: { detail: Detail }) {
             <header className="officer-card-header">
               <div>
                 <h2>Roadmap</h2>
-                <p>5 steps toward {detail.goal.toLowerCase()}</p>
+                <p>{detail.steps.length} steps toward {detail.goal.toLowerCase()}</p>
               </div>
             </header>
             <div className="detail-timeline">
-              {detail.roadmap.map((step) => (
+              {detail.steps.map((step) => (
                 <article className={`detail-step ${step.state}`} key={step.number}>
                   <div className="detail-step-node">
                     {step.state === "done" ? (
@@ -88,23 +110,23 @@ export function YouthDetailTabs({ detail }: { detail: Detail }) {
             <dl className="intake-readonly">
               <div>
                 <dt>Youth name</dt>
-                <dd>{detail.intakeNotes.name}</dd>
+                <dd>{detail.name}</dd>
               </div>
               <div>
                 <dt>Goal</dt>
-                <dd>{detail.intakeNotes.goal}</dd>
+                <dd>{detail.goal}</dd>
               </div>
               <div>
                 <dt>Skills / background</dt>
-                <dd>{detail.intakeNotes.skills}</dd>
+                <dd>{detail.skills || "—"}</dd>
               </div>
               <div>
                 <dt>Current situation</dt>
-                <dd>{detail.intakeNotes.situation}</dd>
+                <dd>{detail.situation || "—"}</dd>
               </div>
               <div>
                 <dt>Location</dt>
-                <dd>{detail.intakeNotes.location}</dd>
+                <dd>{detail.location}</dd>
               </div>
             </dl>
           </section>
@@ -137,17 +159,13 @@ export function YouthDetailTabs({ detail }: { detail: Detail }) {
             <h2>Progress</h2>
             <div className="detail-progress-head">
               <strong>
-                {detail.progress.completed} of {detail.progress.total} steps
+                {detail.currentStep} of {detail.totalSteps} steps
               </strong>
-              <span>{detail.progress.percent}%</span>
+              <span>{detail.progress}%</span>
             </div>
             <div className="detail-progress-track">
-              <span style={{ width: `${detail.progress.percent}%` }} />
+              <span style={{ width: `${detail.progress}%` }} />
             </div>
-            <p className="detail-last-activity">
-              <Clock aria-hidden size={14} />
-              Last activity: {detail.lastActivity} — {detail.lastActivityDetail}
-            </p>
           </section>
 
           <section className="officer-card detail-actions">
@@ -159,7 +177,7 @@ export function YouthDetailTabs({ detail }: { detail: Detail }) {
               type="button"
               onClick={() =>
                 window.alert(
-                  "Regenerate plan: the AI draft would be regenerated from the youth's intake notes. This is a demo, so nothing was changed.",
+                  "Regenerate plan: the AI draft would be regenerated from the youth's intake notes.",
                 )
               }
             >

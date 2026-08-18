@@ -9,9 +9,9 @@ import {
   Users,
   ShieldCheck,
 } from "lucide-react";
+import { useSession } from "next-auth/react";
 import { DateSelector } from "@/components/officer/DateSelector";
 import { OfficerAvatar, OfficerShell } from "@/components/officer/OfficerShell";
-import { officerProfile } from "@/data/officer";
 
 interface YouthCase {
   id: string;
@@ -37,6 +37,8 @@ const statIcons: Record<string, typeof Users> = {
 };
 
 export default function OfficerDashboard() {
+  const { data: session } = useSession();
+  const userName = session?.user?.name || "Officer";
   const [cases, setCases] = useState<YouthCase[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -110,7 +112,7 @@ export default function OfficerDashboard() {
       <div className="officer-page-wrap">
         <header className="officer-heading">
           <div>
-            <h1>Good morning, {officerProfile.name}</h1>
+            <h1>Good morning, {userName}</h1>
             <p>Here&apos;s what&apos;s happening in your caseload today.</p>
           </div>
           <DateSelector />

@@ -4,16 +4,19 @@ import { useState } from "react";
 import Link from "next/link";
 import {
   FileText,
-  GripVertical,
   MoreVertical,
   Plus,
   Sparkles,
   ShieldCheck,
   RefreshCw,
 } from "lucide-react";
-import type { aiDraftSteps } from "@/data/officer";
 
-type DraftStep = (typeof aiDraftSteps)[number];
+interface DraftStep {
+  number: number;
+  title: string;
+  detail: string;
+  badge: string;
+}
 
 const badges = ["RDB", "RRA", "Bank", "BDF", "Training", "RTB", "Ministry"];
 
