@@ -12,7 +12,7 @@ export const viewport: Viewport = {
 
 export const metadata: Metadata = {
   title: {
-    default: "Inzira — Guided Path for Rwandan Youth Employment",
+    default: "Inzira - Guided Path for Rwandan Youth Employment",
     template: "%s | Inzira",
   },
   description:
