@@ -4,8 +4,6 @@ import { useEffect, useState } from "react";
 import { Check, ChevronDown, Clock, Lock, MapPin } from "lucide-react";
 import { ProgressMeter, YouthShell } from "@/components/youth/YouthShell";
 
-type StepState = "done" | "current" | "locked";
-
 interface Step {
   id: string;
   step_number: number;
@@ -31,31 +29,34 @@ export default function YouthSteps() {
   const [steps, setSteps] = useState<Step[]>([]);
   const [youthCase, setYouthCase] = useState<CaseData | null>(null);
   const [loading, setLoading] = useState(true);
+  const [completing, setCompleting] = useState<string | null>(null);
   const [justCompleted, setJustCompleted] = useState(false);
+  const [error, setError] = useState("");
 
   useEffect(() => {
-    async function load() {
-      try {
-        const casesRes = await fetch("/api/cases");
-        if (casesRes.ok) {
-          const cases = await casesRes.json();
-          if (cases.length > 0) {
-            const c = cases[0];
-            setYouthCase(c);
-            const stepsRes = await fetch(`/api/cases/${c.id}/steps`);
-            if (stepsRes.ok) {
-              setSteps(await stepsRes.json());
-            }
+    loadSteps();
+  }, []);
+
+  async function loadSteps() {
+    try {
+      const casesRes = await fetch("/api/cases");
+      if (casesRes.ok) {
+        const cases = await casesRes.json();
+        if (cases.length > 0) {
+          const c = cases[0];
+          setYouthCase(c);
+          const stepsRes = await fetch(`/api/cases/${c.id}/steps`);
+          if (stepsRes.ok) {
+            setSteps(await stepsRes.json());
           }
         }
-      } catch {
-        // Silently handle errors
-      } finally {
-        setLoading(false);
       }
+    } catch {
+      // Silently handle errors
+    } finally {
+      setLoading(false);
     }
-    load();
-  }, []);
+  }
 
   const completedCount = steps.filter((s) => s.state === "done").length;
   const percent =
@@ -63,14 +64,38 @@ export default function YouthSteps() {
       ? Math.round((completedCount / steps.length) * 100)
       : 0;
 
-  function markDone(index: number) {
-    setSteps((prev) =>
-      prev.map((s, i) =>
-        i === index ? { ...s, state: "done", status: "done" } : s,
-      ),
-    );
-    setJustCompleted(true);
-    window.setTimeout(() => setJustCompleted(false), 2500);
+  async function markDone(step: Step) {
+    if (!youthCase || completing) return;
+    setCompleting(step.id);
+    setError("");
+
+    try {
+      const res = await fetch(`/api/cases/${youthCase.id}/steps`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          stepId: step.id,
+          status: "done",
+          state: "done",
+        }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        setError(data.error || "Could not complete step");
+        return;
+      }
+
+      // Reload all steps to get updated states
+      await loadSteps();
+      setJustCompleted(true);
+      window.setTimeout(() => setJustCompleted(false), 3000);
+    } catch {
+      setError("Something went wrong. Please try again.");
+    } finally {
+      setCompleting(null);
+    }
   }
 
   if (loading) {
@@ -135,13 +160,19 @@ export default function YouthSteps() {
             </div>
             <div>
               <span>Status</span>
-              <strong>{youthCase.status}</strong>
+              <strong>{youthCase.status === "active" ? "In progress" : youthCase.status}</strong>
             </div>
           </section>
         )}
 
+        {error && (
+          <div style={{ color: "#c0392b", fontSize: 13, padding: "8px 12px", background: "#fdf0ef", borderRadius: 8, marginBottom: 12 }}>
+            {error}
+          </div>
+        )}
+
         <section className="roadmap-list" aria-label="Roadmap steps">
-          {steps.map((step, index) => (
+          {steps.map((step) => (
             <article
               className={`roadmap-item ${step.state}`}
               key={step.id}
@@ -179,10 +210,11 @@ export default function YouthSteps() {
                   <button
                     className="outline-action"
                     type="button"
-                    onClick={() => markDone(index)}
+                    onClick={() => markDone(step)}
+                    disabled={completing === step.id}
                   >
                     <Clock aria-hidden size={15} />
-                    Mark as done
+                    {completing === step.id ? "Completing…" : "Mark as done"}
                   </button>
                 )}
               </div>

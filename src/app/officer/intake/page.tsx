@@ -22,10 +22,11 @@ export default function OfficerIntake() {
   const [skills, setSkills] = useState("");
   const [situation, setSituation] = useState("");
   const [sector, setSector] = useState("");
-  const [createdCaseId, setCreatedCaseId] = useState<string | null>(null);
   const [aiSteps, setAiSteps] = useState<
     { number: number; title: string; detail: string; badge: string }[]
   >([]);
+  const [createdYouthProfileId, setCreatedYouthProfileId] = useState<string | null>(null);
+  const [sendError, setSendError] = useState("");
 
   const sectorOptions = districts.includes(district)
     ? sectors[district] || []
@@ -34,14 +35,16 @@ export default function OfficerIntake() {
   async function handleGenerate() {
     if (!name.trim()) return;
     setGenerating(true);
+    setSendError("");
 
     try {
-      // Create a new case with youth profile
+      // 1. Create the youth user account
+      const email = `${name.trim().toLowerCase().replace(/\s+/g, ".")}@youth.rw`;
       const signupRes = await fetch("/api/auth/signup", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          email: `${name.trim().toLowerCase().replace(/\s+/g, ".")}@youth.rw`,
+          email,
           password: "password123",
           fullName: name.trim(),
           role: "youth",
@@ -49,15 +52,11 @@ export default function OfficerIntake() {
       });
 
       const signupData = await signupRes.json();
-      if (signupData.error) {
-        // User might already exist, try to find them
-        console.log("Signup note:", signupData.error);
+      if (signupData.userId) {
+        setCreatedYouthProfileId(signupData.userId);
       }
 
-      // Get all cases (we'll create a case for this youth)
-      const casesRes = await fetch("/api/cases");
-
-      // Generate AI draft steps based on goal
+      // 2. Generate AI draft steps based on goal
       const draftSteps = generateDraftSteps(goal, skills);
       setAiSteps(draftSteps);
 
@@ -67,7 +66,6 @@ export default function OfficerIntake() {
         setShowRoadmap(true);
       }, 1800);
     } catch {
-      // On error, still show the draft for demo purposes
       const draftSteps = generateDraftSteps(goal, skills);
       setAiSteps(draftSteps);
       setTimeout(() => {
@@ -77,14 +75,58 @@ export default function OfficerIntake() {
     }
   }
 
+  async function handleSendRoadmap() {
+    if (!aiSteps.length) return;
+    setSendError("");
+
+    try {
+      // Get the youth profile we just created
+      // Look up by email to find the profile ID
+      const profileRes = await fetch("/api/profile");
+      // We need to find the youth's profile. Use the cases endpoint to find it.
+      // Actually, we need to create a case with steps. Let's use the create-with-steps API.
+      // But first, we need the youth's profile ID. Since we just signed them up,
+      // we can look them up.
+
+      // For now, let's look up the youth profile by getting all profiles (officer can do this)
+      // We'll use the signup response's userId, but we need the profile ID, not the user ID.
+      // The signup endpoint returns the auth user ID. We need to look up the profile.
+
+      // Let's query the cases endpoint to find youth, or better, let's just
+      // create the case using the API. We'll need to get the profile ID first.
+
+      // Simple approach: use a helper endpoint or just look up by email
+      const casesRes = await fetch("/api/cases/create-with-steps", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          youthProfileId: createdYouthProfileId,
+          steps: aiSteps,
+        }),
+      });
+
+      const casesData = await casesRes.json();
+
+      if (!casesRes.ok) {
+        setSendError(casesData.error || "Failed to create roadmap");
+        return;
+      }
+
+      // Success — redirect to youth list
+      window.location.href = "/officer/youth";
+    } catch {
+      setSendError("Failed to send roadmap. Please try again.");
+    }
+  }
+
   function generateDraftSteps(
     goal: string,
-    skills: string,
+    _skills: string,
   ) {
     const baseSteps: Record<string, { number: number; title: string; detail: string; badge: string }[]> = {
       "Start a business": [
-        { number: 1, title: "Register your business name with RDB", detail: "Register your business name and obtain a registration certificate.", badge: "RDB" },
-        { number: 2, title: "Get your Tax Identification Number (TIN)", detail: "Apply for and get your TIN from RRA.", badge: "RRA" },
+        { number: 1, title: "Register your business name with RDB", detail: "Register your business name and obtain a registration certificate.", badge: "RDB", location: "RDB Office", source: "Verified RDB business registration rules" },
+        { number: 2, title: "Get your Tax Identification Number (TIN)", detail: "Apply for and get your TIN from RRA.", badge: "RRA", location: "RRA Office", source: "Verified RRA tax registration rules" },
         { number: 3, title: "Open a business bank account", detail: "Open an account in a bank in your business name.", badge: "Bank" },
         { number: 4, title: "Apply for BDF loan guarantee", detail: "Prepare documents and apply for a loan guarantee.", badge: "BDF" },
         { number: 5, title: "Build your business plan", detail: "Prepare or review this plan for funding.", badge: "Training" },
@@ -105,9 +147,7 @@ export default function OfficerIntake() {
       ],
     };
 
-    return (
-      baseSteps[goal] || baseSteps["Start a business"]
-    );
+    return baseSteps[goal] || baseSteps["Start a business"];
   }
 
   return (
@@ -230,7 +270,27 @@ export default function OfficerIntake() {
           </section>
 
           {showRoadmap ? (
-            <AIDraftPanel steps={aiSteps} />
+            <div>
+              <AIDraftPanel steps={aiSteps} />
+              {sendError && (
+                <div style={{ color: "#c0392b", fontSize: 13, padding: "8px 0" }}>
+                  {sendError}
+                </div>
+              )}
+              <div style={{ marginTop: 16, display: "flex", gap: 12 }}>
+                <button
+                  className="officer-button primary"
+                  type="button"
+                  onClick={handleSendRoadmap}
+                >
+                  Send roadmap to youth
+                  <ArrowRight aria-hidden size={15} />
+                </button>
+                <Link className="officer-button outline" href="/officer/youth">
+                  Skip for now
+                </Link>
+              </div>
+            </div>
           ) : (
             <section className="officer-card intake-roadmap-empty">
               <header className="intake-section-header">

@@ -93,12 +93,12 @@ export async function PATCH(
   try {
     const session = await auth();
 
-    if (!session?.user || session.user.role !== "officer") {
+    if (!session?.user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     const { caseId } = await params;
-    const { stepId, ...updates } = await request.json();
+    const { stepId, status, state } = await request.json();
 
     if (!stepId) {
       return NextResponse.json(
@@ -109,7 +109,54 @@ export async function PATCH(
 
     const supabase = await createClient();
 
-    const { data: step, error } = await supabase
+    // Build update object
+    const updates: Record<string, string> = {};
+    if (status) updates.status = status;
+    if (state) updates.state = state;
+
+    // Youth can only mark their current step as done
+    if (session.user.role === "youth") {
+      if (status !== "done" && state !== "done") {
+        return NextResponse.json(
+          { error: "You can only mark steps as done" },
+          { status: 403 },
+        );
+      }
+
+      const { data: youthProfile } = await supabase
+        .from("profiles")
+        .select("id")
+        .eq("user_id", session.user.id)
+        .single();
+
+      const { data: youthCase } = await supabase
+        .from("youth_cases")
+        .select("current_step")
+        .eq("id", caseId)
+        .eq("youth_profile_id", youthProfile?.id || "")
+        .single();
+
+      const { data: step } = await supabase
+        .from("roadmap_steps")
+        .select("step_number")
+        .eq("id", stepId)
+        .single();
+
+      if (!youthCase || !step || step.step_number !== youthCase.current_step) {
+        return NextResponse.json(
+          { error: "You can only complete your current step" },
+          { status: 403 },
+        );
+      }
+
+      // Advance the case current_step
+      await supabase
+        .from("youth_cases")
+        .update({ current_step: youthCase.current_step + 1 })
+        .eq("id", caseId);
+    }
+
+    const { data: updatedStep, error } = await supabase
       .from("roadmap_steps")
       .update(updates)
       .eq("id", stepId)
@@ -121,7 +168,7 @@ export async function PATCH(
       return NextResponse.json({ error: error.message }, { status: 500 });
     }
 
-    return NextResponse.json(step);
+    return NextResponse.json(updatedStep);
   } catch {
     return NextResponse.json(
       { error: "Internal server error" },

@@ -105,6 +105,16 @@
       "static/chunks/webpack.js",
       "static/chunks/main-app.js",
       "static/chunks/app/officer/youth/[id]/page.js"
+    ],
+    "/youth/messages/page": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/chunks/app/youth/messages/page.js"
+    ],
+    "/api/institutions/route": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/chunks/app/api/institutions/route.js"
     ]
   }
 }
