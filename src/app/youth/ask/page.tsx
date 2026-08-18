@@ -14,11 +14,7 @@ import {
   Wallet,
 } from "lucide-react";
 import { YouthShell } from "@/components/youth/YouthShell";
-import {
-  askCommonTopics,
-  askSampleExchange,
-  askSuggestions,
-} from "@/data/youth";
+import { askCommonTopics, askSuggestions } from "@/data/youth";
 
 const topicIcons = {
   building: Building2,
@@ -27,72 +23,95 @@ const topicIcons = {
   clipboard: ClipboardList,
 };
 
-type Exchange = {
-  question: string;
-  answerHeader: string;
-  answer: string[];
+type Source = {
+  institution: string;
+  document: string;
+  page: number | null;
+  documentId: string;
 };
 
-const cannedAnswers: Record<string, Exchange> = {
-  "How much does it cost to register a business?":
-    {
-      question: "How much does it cost to register a business?",
-      answerHeader: "Registering a business name with RDB is free.",
-      answer: [
-        "Business name registration is free of charge at RDB.",
-        "Bring your National ID and two alternative business names.",
-        "Licenses for certain activities may have fees — check with RDB.",
-      ],
-    },
-  "Where is the closest RDB office?":
-    {
-      question: "Where is the closest RDB office?",
-      answerHeader: "RDB has offices across Rwanda.",
-      answer: [
-        "Your nearest RDB office is in Nyarugenge, Kigali (Kigali City Tower).",
-        "You can also register online through the RDB e-services portal.",
-        "Some districts host RDB agents at the district offices.",
-      ],
-    },
-  "What is a TIN and how do I get it?":
-    {
-      question: "What is a TIN and how do I get it?",
-      answerHeader: "A TIN is your Tax Identification Number.",
-      answer: [
-        "The TIN is issued by RRA and is free to obtain.",
-        "You need it to open a business bank account and pay taxes.",
-        "Apply at any RRA office or online at rra.gov.rw with your National ID.",
-      ],
-    },
+type Exchange = {
+  question: string;
+  answer: string;
+  sources: Source[];
+  loading?: boolean;
+  error?: string;
 };
 
 export default function YouthAsk() {
   const [input, setInput] = useState("");
-  const [exchanges, setExchanges] = useState<Exchange[]>([
-    {
-      question: askSampleExchange.question,
-      answerHeader: askSampleExchange.answerHeader,
-      answer: askSampleExchange.answer,
-    },
-  ]);
+  const [exchanges, setExchanges] = useState<Exchange[]>([]);
   const [feedback, setFeedback] = useState<Record<string, string>>({});
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  function submit(question: string) {
+  async function submit(question: string) {
     const q = question.trim();
-    if (!q) return;
-    const answer =
-      cannedAnswers[q] ??
-      ({
-        question: q,
-        answerHeader: "Here's what I found from verified sources:",
-        answer: [
-          "Thank you for your question. This is a demonstration, so here is a general answer.",
-          "For the most accurate details, your youth officer can confirm your next step.",
-          "You can also check the Find Help page for the relevant institution.",
-        ],
-      } as Exchange);
-    setExchanges((prev) => [...prev, answer]);
+    if (!q || isSubmitting) return;
+
+    // Add the question immediately with a loading state
+    const loadingExchange: Exchange = {
+      question: q,
+      answer: "",
+      sources: [],
+      loading: true,
+    };
+    setExchanges((prev) => [...prev, loadingExchange]);
     setInput("");
+    setIsSubmitting(true);
+
+    try {
+      const res = await fetch("/api/ai/ask", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ question: q }),
+      });
+
+      if (!res.ok) {
+        const errorData = await res.json();
+        setExchanges((prev) =>
+          prev.map((ex) =>
+            ex.question === q && ex.loading
+              ? {
+                  ...ex,
+                  loading: false,
+                  error:
+                    errorData.error ||
+                    "Failed to get an answer. Please try again.",
+                }
+              : ex,
+          ),
+        );
+      } else {
+        const data = await res.json();
+        setExchanges((prev) =>
+          prev.map((ex) =>
+            ex.question === q && ex.loading
+              ? {
+                  ...ex,
+                  loading: false,
+                  answer: data.answer,
+                  sources: data.sources || [],
+                }
+              : ex,
+          ),
+        );
+      }
+    } catch {
+      setExchanges((prev) =>
+        prev.map((ex) =>
+          ex.question === q && ex.loading
+            ? {
+                ...ex,
+                loading: false,
+                error:
+                  "Failed to connect to Inzira AI. Please check your connection and try again.",
+              }
+            : ex,
+          ),
+        );
+    } finally {
+      setIsSubmitting(false);
+    }
   }
 
   function notifyOfficer() {
@@ -125,57 +144,118 @@ export default function YouthAsk() {
 
         <div className="ask-layout">
           <div className="ask-chat-column">
+            {exchanges.length === 0 && (
+              <div className="ask-empty-state">
+                <Info aria-hidden size={32} />
+                <h3>Ask a question to get started</h3>
+                <p>
+                  Inzira will search verified documents from RDB, RRA, BDF,
+                  RTB, and other institutions to answer your questions.
+                </p>
+              </div>
+            )}
+
             <div className="chat-thread">
-              {exchanges.map((exchange) => (
-                <div className="ask-exchange" key={exchange.question + exchange.answerHeader}>
+              {exchanges.map((exchange, index) => (
+                <div
+                  className="ask-exchange"
+                  key={`${exchange.question}-${index}`}
+                >
                   <div className="user-message">{exchange.question}</div>
 
-                  <article className="ai-response-card">
-                    <p className="ai-response-intro">{exchange.answerHeader}</p>
-                    <ul>
-                      {exchange.answer.map((item) => (
-                        <li key={item}>{item}</li>
-                      ))}
-                    </ul>
-
-                    <footer className="ai-response-footer">
-                      <Link className="ai-source-link" href={askSampleExchange.source.href}>
-                        Source: {askSampleExchange.source.label}
-                        <ExternalLink aria-hidden size={14} />
-                      </Link>
-
-                      <div className="ai-feedback">
-                        <span>Is this answer helpful?</span>
-                        <button
-                          aria-label="Yes, helpful"
-                          type="button"
-                          className={feedback[exchange.answerHeader] === "yes" ? "active" : ""}
-                          onClick={() =>
-                            setFeedback((f) => ({ ...f, [exchange.answerHeader]: "yes" }))
-                          }
-                        >
-                          <ThumbsUp aria-hidden size={16} />
-                        </button>
-                        <button
-                          aria-label="No, not helpful"
-                          type="button"
-                          className={feedback[exchange.answerHeader] === "no" ? "active" : ""}
-                          onClick={() =>
-                            setFeedback((f) => ({ ...f, [exchange.answerHeader]: "no" }))
-                          }
-                        >
-                          <ThumbsDown aria-hidden size={16} />
-                        </button>
+                  {exchange.loading ? (
+                    <article className="ai-response-card">
+                      <div className="ai-loading">
+                        <div className="yd-loading-spinner" />
+                        <p>Searching verified sources…</p>
                       </div>
-                    </footer>
-                  </article>
+                    </article>
+                  ) : exchange.error ? (
+                    <article className="ai-response-card">
+                      <p className="ai-response-intro" style={{ color: "#c0392b" }}>
+                        {exchange.error}
+                      </p>
+                    </article>
+                  ) : (
+                    <article className="ai-response-card">
+                      <p className="ai-response-intro">
+                        Here&apos;s what I found from verified sources:
+                      </p>
+                      <div className="ai-answer-text">
+                        {exchange.answer.split("\n").map((paragraph, i) =>
+                          paragraph.trim() ? (
+                            <p key={i}>{paragraph}</p>
+                          ) : null,
+                        )}
+                      </div>
+
+                      {exchange.sources.length > 0 && (
+                        <footer className="ai-response-footer">
+                          <div className="ai-sources-list">
+                            <span className="ai-sources-label">Sources:</span>
+                            {exchange.sources.map((source, si) => (
+                              <span className="ai-source-item" key={si}>
+                                {source.institution} – {source.document}
+                                {source.page
+                                  ? ` (Page ${source.page})`
+                                  : ""}
+                              </span>
+                            ))}
+                          </div>
+
+                          <div className="ai-feedback">
+                            <span>Is this answer helpful?</span>
+                            <button
+                              aria-label="Yes, helpful"
+                              type="button"
+                              className={
+                                feedback[exchange.question] === "yes"
+                                  ? "active"
+                                  : ""
+                              }
+                              onClick={() =>
+                                setFeedback((f) => ({
+                                  ...f,
+                                  [exchange.question]: "yes",
+                                }))
+                              }
+                            >
+                              <ThumbsUp aria-hidden size={16} />
+                            </button>
+                            <button
+                              aria-label="No, not helpful"
+                              type="button"
+                              className={
+                                feedback[exchange.question] === "no"
+                                  ? "active"
+                                  : ""
+                              }
+                              onClick={() =>
+                                setFeedback((f) => ({
+                                  ...f,
+                                  [exchange.question]: "no",
+                                }))
+                              }
+                            >
+                              <ThumbsDown aria-hidden size={16} />
+                            </button>
+                          </div>
+                        </footer>
+                      )}
+                    </article>
+                  )}
                 </div>
               ))}
             </div>
 
             <div className="ask-suggestions">
               {askSuggestions.map((item) => (
-                <button type="button" key={item} onClick={() => submit(item)}>
+                <button
+                  type="button"
+                  key={item}
+                  onClick={() => submit(item)}
+                  disabled={isSubmitting}
+                >
                   {item}
                 </button>
               ))}
@@ -193,8 +273,13 @@ export default function YouthAsk() {
                 placeholder="Ask a question..."
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
+                disabled={isSubmitting}
               />
-              <button aria-label="Send question" type="submit">
+              <button
+                aria-label="Send question"
+                type="submit"
+                disabled={isSubmitting || !input.trim()}
+              >
                 <Send aria-hidden size={18} />
               </button>
             </form>
@@ -202,9 +287,9 @@ export default function YouthAsk() {
             <div className="ask-disclaimer">
               <Info aria-hidden size={16} />
               <p>
-                Inzira gives answers based only on verified official sources. For
-                financial, legal, or complex cases, we&apos;ll connect you to a real
-                officer.
+                Inzira gives answers based only on verified official sources.
+                For financial, legal, or complex cases, we&apos;ll connect you
+                to a real officer.
               </p>
             </div>
           </div>
@@ -225,7 +310,8 @@ export default function YouthAsk() {
               <h2>Common topics</h2>
               <ul>
                 {askCommonTopics.map((topic) => {
-                  const Icon = topicIcons[topic.icon as keyof typeof topicIcons];
+                  const Icon =
+                    topicIcons[topic.icon as keyof typeof topicIcons];
                   return (
                     <li key={topic.label}>
                       <button type="button">{topic.label}</button>

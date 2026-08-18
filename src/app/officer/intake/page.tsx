@@ -13,6 +13,23 @@ import { OfficerShell } from "@/components/officer/OfficerShell";
 import { AIDraftPanel } from "@/components/officer/AIDraftPanel";
 import { goalOptions, districts, sectors } from "@/data/officer";
 
+interface AiRoadmapStep {
+  order: number;
+  title: string;
+  description: string;
+  institution: string;
+  location: string | null;
+  whatToBring: string[];
+  whyThisStep: string;
+  sources: { documentId: string; documentTitle: string; institution: string; page: number | null }[];
+}
+
+interface AiRoadmapResponse {
+  title: string;
+  summary: string;
+  steps: AiRoadmapStep[];
+}
+
 export default function OfficerIntake() {
   const [district, setDistrict] = useState("");
   const [showRoadmap, setShowRoadmap] = useState(false);
@@ -25,8 +42,10 @@ export default function OfficerIntake() {
   const [aiSteps, setAiSteps] = useState<
     { number: number; title: string; detail: string; badge: string; location?: string; source?: string }[]
   >([]);
+  const [aiRoadmap, setAiRoadmap] = useState<AiRoadmapResponse | null>(null);
   const [createdYouthProfileId, setCreatedYouthProfileId] = useState<string | null>(null);
   const [sendError, setSendError] = useState("");
+  const [aiError, setAiError] = useState("");
 
   const sectorOptions = districts.includes(district)
     ? sectors[district] || []
@@ -36,6 +55,7 @@ export default function OfficerIntake() {
     if (!name.trim()) return;
     setGenerating(true);
     setSendError("");
+    setAiError("");
 
     try {
       // 1. Create the youth user account
@@ -56,22 +76,50 @@ export default function OfficerIntake() {
         setCreatedYouthProfileId(signupData.userId);
       }
 
-      // 2. Generate AI draft steps based on goal
-      const draftSteps = generateDraftSteps(goal, skills);
-      setAiSteps(draftSteps);
+      // 2. Call the real AI roadmap generation API
+      const roadmapRes = await fetch("/api/ai/generate-roadmap", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          youth: {
+            name: name.trim(),
+            goal,
+            skillsBackground: skills,
+            district: district || "Kigali",
+            sector: sector || "",
+          },
+          officerNotes: situation,
+        }),
+      });
 
-      // Simulate AI generation delay
-      setTimeout(() => {
+      if (!roadmapRes.ok) {
+        const errorData = await roadmapRes.json();
+        setAiError(errorData.error || "Failed to generate roadmap. Please try again.");
         setGenerating(false);
-        setShowRoadmap(true);
-      }, 1800);
-    } catch {
-      const draftSteps = generateDraftSteps(goal, skills);
+        return;
+      }
+
+      const roadmap: AiRoadmapResponse = await roadmapRes.json();
+      setAiRoadmap(roadmap);
+
+      // Convert to the format expected by AIDraftPanel
+      const draftSteps = roadmap.steps.map((step) => ({
+        number: step.order,
+        title: step.title,
+        detail: step.description,
+        badge: step.institution,
+        location: step.location || undefined,
+        source: step.sources?.[0]
+          ? `${step.sources[0].institution} - ${step.sources[0].documentTitle}`
+          : undefined,
+      }));
+
       setAiSteps(draftSteps);
-      setTimeout(() => {
-        setGenerating(false);
-        setShowRoadmap(true);
-      }, 1800);
+      setShowRoadmap(true);
+    } catch {
+      setAiError("Failed to connect to the AI service. Please try again.");
+    } finally {
+      setGenerating(false);
     }
   }
 
@@ -119,36 +167,7 @@ export default function OfficerIntake() {
     }
   }
 
-  function generateDraftSteps(
-    goal: string,
-    _skills: string,
-  ) {
-    const baseSteps: Record<string, { number: number; title: string; detail: string; badge: string; location?: string; source?: string }[]> = {
-      "Start a business": [
-        { number: 1, title: "Register your business name with RDB", detail: "Register your business name and obtain a registration certificate.", badge: "RDB", location: "RDB Office", source: "Verified RDB business registration rules" },
-        { number: 2, title: "Get your Tax Identification Number (TIN)", detail: "Apply for and get your TIN from RRA.", badge: "RRA", location: "RRA Office", source: "Verified RRA tax registration rules" },
-        { number: 3, title: "Open a business bank account", detail: "Open an account in a bank in your business name.", badge: "Bank" },
-        { number: 4, title: "Apply for BDF loan guarantee", detail: "Prepare documents and apply for a loan guarantee.", badge: "BDF" },
-        { number: 5, title: "Build your business plan", detail: "Prepare or review this plan for funding.", badge: "Training" },
-      ],
-      "Get vocational training": [
-        { number: 1, title: "Find a TVET program matching your interests", detail: "Browse available vocational training programs.", badge: "RTB" },
-        { number: 2, title: "Check eligibility and requirements", detail: "Gather documents needed for enrollment.", badge: "RTB" },
-        { number: 3, title: "Apply for enrollment", detail: "Submit your application to the chosen program.", badge: "RTB" },
-        { number: 4, title: "Complete the training", detail: "Attend classes and complete coursework.", badge: "RTB" },
-        { number: 5, title: "Get certified", detail: "Receive your TVET certificate.", badge: "RTB" },
-      ],
-      "Find a job": [
-        { number: 1, title: "Create your CV", detail: "Prepare a professional CV highlighting your skills.", badge: "Training" },
-        { number: 2, title: "Register with employment services", detail: "Register for job matching services.", badge: "RDB" },
-        { number: 3, title: "Apply for open positions", detail: "Submit applications to relevant openings.", badge: "Various" },
-        { number: 4, title: "Prepare for interviews", detail: "Practice interview skills and prepare documents.", badge: "Training" },
-        { number: 5, title: "Start your new position", detail: "Begin employment and complete onboarding.", badge: "—" },
-      ],
-    };
 
-    return baseSteps[goal] || baseSteps["Start a business"];
-  }
 
   return (
     <OfficerShell active="Smart Intake">
@@ -263,14 +282,25 @@ export default function OfficerIntake() {
               </button>
               <span className="intake-generate-hint">
                 {generating
-                  ? "AI is generating your roadmap…"
+                  ? "AI is generating your roadmap from verified sources…"
                   : <>Click to generate a roadmap<br />using AI and verified sources.</>}
               </span>
             </div>
+            {aiError && (
+              <div style={{ color: "#c0392b", fontSize: 13, padding: "8px 0", marginTop: 8 }}>
+                {aiError}
+              </div>
+            )}
           </section>
 
           {showRoadmap ? (
             <div>
+              {aiRoadmap && (
+                <div style={{ marginBottom: 16 }}>
+                  <h3 style={{ fontSize: 16, fontWeight: 600, marginBottom: 4 }}>{aiRoadmap.title}</h3>
+                  <p style={{ fontSize: 13, color: "#545d65" }}>{aiRoadmap.summary}</p>
+                </div>
+              )}
               <AIDraftPanel steps={aiSteps} />
               {sendError && (
                 <div style={{ color: "#c0392b", fontSize: 13, padding: "8px 0" }}>
@@ -285,6 +315,13 @@ export default function OfficerIntake() {
                 >
                   Send roadmap to youth
                   <ArrowRight aria-hidden size={15} />
+                </button>
+                <button
+                  className="officer-button outline"
+                  type="button"
+                  onClick={() => { setShowRoadmap(false); setAiRoadmap(null); }}
+                >
+                  Regenerate
                 </button>
                 <Link className="officer-button outline" href="/officer/youth">
                   Skip for now
