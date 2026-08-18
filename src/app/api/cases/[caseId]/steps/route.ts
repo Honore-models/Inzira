@@ -154,6 +154,14 @@ export async function PATCH(
         .from("youth_cases")
         .update({ current_step: youthCase.current_step + 1 })
         .eq("id", caseId);
+
+      // Unlock the next step
+      const nextStepNum = youthCase.current_step + 1;
+      await supabase
+        .from("roadmap_steps")
+        .update({ status: "current", state: "current" })
+        .eq("case_id", caseId)
+        .eq("step_number", nextStepNum);
     }
 
     const { data: updatedStep, error } = await supabase

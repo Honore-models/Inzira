@@ -5,14 +5,14 @@ import { auth } from "@/lib/auth";
 export default auth((req) => {
   const { pathname } = req.nextUrl;
   const isLoggedIn = !!req.auth;
-  const userRole = req.auth?.user?.role;
+  const userRole = req.auth?.user?.role as string | undefined;
 
   // Root / landing page — always allow
   if (pathname === "/") {
     return NextResponse.next();
   }
 
-  // Auth pages — allow through (but redirect logged-in users away)
+  // Auth pages — allow through (but redirect logged-in users to their dashboard)
   const authPages = ["/auth/signin", "/auth/signup", "/auth/error"];
   if (authPages.some((route) => pathname === route)) {
     if (isLoggedIn) {
@@ -25,6 +25,19 @@ export default auth((req) => {
 
   // API routes that don't require auth
   if (pathname.startsWith("/api/seed") || pathname.startsWith("/api/auth")) {
+    return NextResponse.next();
+  }
+
+  // Onboarding page — only accessible by logged-in youth
+  if (pathname === "/onboarding") {
+    if (!isLoggedIn) {
+      return NextResponse.redirect(new URL("/auth/signin", req.url));
+    }
+    if (userRole !== "youth") {
+      return NextResponse.redirect(
+        new URL(userRole === "officer" ? "/officer" : "/", req.url),
+      );
+    }
     return NextResponse.next();
   }
 
@@ -49,13 +62,6 @@ export default auth((req) => {
 
 export const config = {
   matcher: [
-    /*
-     * Match all request paths except:
-     * - _next/static (static files)
-     * - _next/image (image optimization files)
-     * - favicon.ico (favicon file)
-     * - public files (images, etc.)
-     */
     "/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
   ],
 };

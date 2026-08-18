@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { useSession } from "next-auth/react";
 import {
   Clock,
   Sparkles,
@@ -9,9 +10,19 @@ import {
   Users,
   ShieldCheck,
 } from "lucide-react";
-import { useSession } from "next-auth/react";
 import { DateSelector } from "@/components/officer/DateSelector";
 import { OfficerAvatar, OfficerShell } from "@/components/officer/OfficerShell";
+import { getPhotoUrl } from "@/lib/photos";
+
+interface YouthProfile {
+  id: string;
+  full_name: string;
+  email: string;
+  goal: string;
+  district: string;
+  onboarding_completed: boolean;
+  youth_cases: { id: string; status: string; current_step: number; total_steps: number }[];
+}
 
 interface YouthCase {
   id: string;
@@ -19,14 +30,8 @@ interface YouthCase {
   current_step: number;
   total_steps: number;
   created_at: string;
-  youth: {
-    full_name: string;
-    goal: string;
-    district: string;
-  } | null;
-  officer: {
-    full_name: string;
-  } | null;
+  youth: { full_name: string; email: string; goal: string; district: string } | null;
+  officer: { full_name: string } | null;
 }
 
 const statIcons: Record<string, typeof Users> = {
@@ -39,50 +44,55 @@ const statIcons: Record<string, typeof Users> = {
 export default function OfficerDashboard() {
   const { data: session } = useSession();
   const userName = session?.user?.name || "Officer";
+  const [youth, setYouth] = useState<YouthProfile[]>([]);
   const [cases, setCases] = useState<YouthCase[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     async function load() {
       try {
-        const res = await fetch("/api/cases");
-        if (res.ok) {
-          const data = await res.json();
-          setCases(data);
-        }
+        const [youthRes, casesRes] = await Promise.all([
+          fetch("/api/youth"),
+          fetch("/api/cases"),
+        ]);
+        if (youthRes.ok) setYouth(await youthRes.json());
+        if (casesRes.ok) setCases(await casesRes.json());
       } catch {
         // Silently handle errors
       } finally {
         setLoading(false);
       }
     }
-
     load();
   }, []);
 
   const activeCases = cases.filter((c) => c.status === "active");
-  const pendingCases = cases.filter((c) => c.status === "active" && c.current_step > 0);
+  const pendingCases = cases.filter((c) => c.status === "pending" || (c.status === "active" && c.current_step > 0));
+  const waitingForRoadmap = youth.filter((y) => {
+    const hasCase = y.youth_cases && y.youth_cases.length > 0;
+    return y.onboarding_completed && !hasCase;
+  });
 
   const stats = [
     {
-      label: "Active youth",
-      value: String(activeCases.length),
-      change: "Currently in your caseload",
+      label: "Total youth",
+      value: String(youth.length),
+      change: "Registered in system",
       icon: "users",
       tone: "green",
     },
     {
-      label: "Pending approvals",
-      value: String(pendingCases.length),
-      change: "Requires your review",
-      icon: "clock",
+      label: "Need roadmap",
+      value: String(waitingForRoadmap.length),
+      change: "Waiting for officer",
+      icon: "sparkles",
       tone: "amber",
     },
     {
-      label: "Total cases",
-      value: String(cases.length),
-      change: "All time",
-      icon: "sparkles",
+      label: "Active cases",
+      value: String(activeCases.length),
+      change: "In progress",
+      icon: "clock",
       tone: "blue",
     },
     {
@@ -140,15 +150,40 @@ export default function OfficerDashboard() {
           <article className="officer-card pending-card">
             <header className="officer-card-header">
               <div>
-                <h2>Pending roadmap approvals</h2>
-                <p>Roadmaps waiting for your review</p>
+                <h2>Youth needing attention</h2>
+                <p>Youth who need a roadmap or follow-up</p>
               </div>
               <Link className="officer-text-link" href="/officer/youth">
                 View all
               </Link>
             </header>
             <div className="pending-list">
-              {activeCases.slice(0, 5).map((item) => (
+              {/* Youth waiting for roadmap */}
+              {waitingForRoadmap.slice(0, 3).map((y) => (
+                <Link
+                  className="pending-row"
+                  href="/officer/youth"
+                  key={y.id}
+                >
+                  <OfficerAvatar
+                    avatar={{
+                      label: y.full_name?.split(" ").map((w) => w[0]).join("") || "?",
+                      bg: "#1f6f4c",
+                      photo: getPhotoUrl(y.email) || undefined,
+                    }}
+                  />
+                  <div className="pending-row-body">
+                    <strong>{y.full_name}</strong>
+                    <span>{y.goal || "No goal set"} — Needs roadmap</span>
+                  </div>
+                  <div className="pending-row-meta">
+                    <span style={{ color: "#d4a017", fontSize: 12 }}>Waiting</span>
+                  </div>
+                </Link>
+              ))}
+
+              {/* Active cases */}
+              {activeCases.slice(0, 3).map((item) => (
                 <Link
                   className="pending-row"
                   href={`/officer/youth/${item.id}`}
@@ -158,6 +193,7 @@ export default function OfficerDashboard() {
                     avatar={{
                       label: item.youth?.full_name?.split(" ").map((w) => w[0]).join("") || "?",
                       bg: "#1f6f4c",
+                      photo: getPhotoUrl(item.youth?.email) || undefined,
                     }}
                   />
                   <div className="pending-row-body">
@@ -168,21 +204,17 @@ export default function OfficerDashboard() {
                     <span>
                       Step {item.current_step}/{item.total_steps}
                     </span>
-                    <i className="pending-dot" title="Needs review" />
+                    <i className="pending-dot" title="In progress" />
                   </div>
                 </Link>
               ))}
-              {activeCases.length === 0 && (
+
+              {waitingForRoadmap.length === 0 && activeCases.length === 0 && (
                 <p style={{ color: "#545d65", fontSize: 13, padding: "16px", textAlign: "center" }}>
-                  No active cases yet. Create one from the Smart Intake page.
+                  No youth in your caseload yet. Youth will appear here after they sign up.
                 </p>
               )}
             </div>
-            {activeCases.length > 5 && (
-              <footer className="pending-footer">
-                <Link href="/officer/youth">See all ({activeCases.length})</Link>
-              </footer>
-            )}
           </article>
 
           <article className="officer-card weekly-card">
@@ -202,8 +234,8 @@ export default function OfficerDashboard() {
                 <span>Completed</span>
               </div>
               <div className="caseload-stat">
-                <strong>{cases.filter((c) => c.status === "archived").length}</strong>
-                <span>Archived</span>
+                <strong>{waitingForRoadmap.length}</strong>
+                <span>Needs roadmap</span>
               </div>
             </div>
           </article>

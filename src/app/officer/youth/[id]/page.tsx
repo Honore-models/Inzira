@@ -2,8 +2,8 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { useParams } from "next/navigation";
-import { ArrowLeft, Check } from "lucide-react";
+import { useParams, useRouter } from "next/navigation";
+import { ArrowLeft, Check, MapPin, Sparkles, ClipboardList, Briefcase } from "lucide-react";
 import { OfficerAvatar, OfficerShell } from "@/components/officer/OfficerShell";
 import { YouthDetailTabs } from "@/components/officer/YouthDetailTabs";
 
@@ -20,6 +20,7 @@ interface CaseDetail {
     district: string;
     sector: string;
     skills: string;
+    skills_background: string;
     situation: string;
   } | null;
   officer: { full_name: string } | null;
@@ -38,9 +39,11 @@ interface CaseDetail {
 
 export default function OfficerYouthDetail() {
   const params = useParams();
+  const router = useRouter();
   const caseId = params.id as string;
   const [detail, setDetail] = useState<CaseDetail | null>(null);
   const [loading, setLoading] = useState(true);
+  const [generating, setGenerating] = useState(false);
 
   useEffect(() => {
     async function load() {
@@ -66,6 +69,12 @@ export default function OfficerYouthDetail() {
     }
     load();
   }, [caseId]);
+
+  async function handleGenerateRoadmap() {
+    setGenerating(true);
+    // Redirect to intake with the youth's data pre-filled
+    router.push(`/officer/intake?youthId=${caseId}`);
+  }
 
   if (loading) {
     return (
@@ -98,17 +107,123 @@ export default function OfficerYouthDetail() {
 
   const name = detail.youth?.full_name || "Unknown";
   const initials = name.split(" ").map((w) => w[0]).join("");
+  const isPending = detail.status === "pending";
+
+  // For pending cases — show submitted onboarding info
+  if (isPending) {
+    return (
+      <OfficerShell active="Youth List">
+        <div className="officer-page-wrap">
+          <Link className="officer-back-link" href="/officer/youth">
+            <ArrowLeft aria-hidden size={15} />
+            Back to list
+          </Link>
+
+          <header className="officer-profile-card">
+            <OfficerAvatar avatar={{ label: initials, bg: "#1f6f4c" }} size="large" />
+            <div className="officer-profile-copy">
+              <div className="officer-profile-title">
+                <h1>{name}</h1>
+                <span className="status-pill" style={{ background: "#fef9e7", color: "#8a6d00" }}>
+                  Waiting for roadmap
+                </span>
+              </div>
+              <p>{detail.youth?.email}</p>
+            </div>
+          </header>
+
+          {/* Submitted Information Card */}
+          <div className="officer-card" style={{ marginBottom: 16 }}>
+            <header className="officer-card-header">
+              <div>
+                <h2 style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                  <ClipboardList size={18} />
+                  Submitted Information
+                </h2>
+                <p>This youth submitted the following during onboarding</p>
+              </div>
+            </header>
+
+            <dl className="intake-readonly" style={{ display: "grid", gap: 0 }}>
+              <div style={{ padding: "12px 0", borderBottom: "1px solid #eef0ed" }}>
+                <dt style={{ color: "#777f87", fontSize: 12, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.04em", marginBottom: 4 }}>
+                  Goal
+                </dt>
+                <dd style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 14, fontWeight: 500 }}>
+                  <Briefcase size={16} style={{ color: "#1f6f4c" }} />
+                  {detail.youth?.goal || "Not specified"}
+                </dd>
+              </div>
+
+              <div style={{ padding: "12px 0", borderBottom: "1px solid #eef0ed" }}>
+                <dt style={{ color: "#777f87", fontSize: 12, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.04em", marginBottom: 4 }}>
+                  Skills / Background
+                </dt>
+                <dd style={{ fontSize: 14 }}>
+                  {detail.youth?.skills_background || detail.youth?.skills || "No skills listed"}
+                </dd>
+              </div>
+
+              <div style={{ padding: "12px 0", borderBottom: "1px solid #eef0ed" }}>
+                <dt style={{ color: "#777f87", fontSize: 12, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.04em", marginBottom: 4 }}>
+                  Location
+                </dt>
+                <dd style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 14 }}>
+                  <MapPin size={16} style={{ color: "#1f6f4c" }} />
+                  {detail.youth?.district || "Not specified"}
+                  {detail.youth?.sector ? ` • ${detail.youth.sector}` : ""}
+                </dd>
+              </div>
+
+              <div style={{ padding: "12px 0" }}>
+                <dt style={{ color: "#777f87", fontSize: 12, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.04em", marginBottom: 4 }}>
+                  Submitted
+                </dt>
+                <dd style={{ fontSize: 14 }}>
+                  {new Date(detail.created_at).toLocaleDateString("en-GB", {
+                    day: "numeric",
+                    month: "long",
+                    year: "numeric",
+                  })}
+                </dd>
+              </div>
+            </dl>
+          </div>
+
+          {/* Generate Roadmap CTA */}
+          <div className="officer-card" style={{ textAlign: "center", padding: 32 }}>
+            <Sparkles size={28} style={{ color: "#1f6f4c", marginBottom: 12 }} />
+            <h2 style={{ fontSize: 18, marginBottom: 8 }}>Ready to create a roadmap?</h2>
+            <p style={{ color: "#5f6860", fontSize: 14, marginBottom: 20, maxWidth: 400, margin: "0 auto 20px" }}>
+              Use Smart Intake to generate a personalized roadmap based on this youth&apos;s goals and situation.
+            </p>
+            <button
+              className="officer-button primary"
+              type="button"
+              onClick={handleGenerateRoadmap}
+              disabled={generating}
+              style={{ fontSize: 15, padding: "12px 28px" }}
+            >
+              <Sparkles aria-hidden size={16} />
+              {generating ? "Opening Smart Intake…" : "Generate Roadmap"}
+            </button>
+          </div>
+        </div>
+      </OfficerShell>
+    );
+  }
+
+  // For active cases — show the full detail with tabs
   const pct = detail.total_steps > 0
     ? Math.round((detail.current_step / detail.total_steps) * 100)
     : 0;
 
-  // Build detail object for YouthDetailTabs
   const tabsDetail = {
     avatar: { label: initials, bg: "#1f6f4c" },
     name,
     goal: detail.youth?.goal || "No goal",
     location: `${detail.youth?.district || ""}${detail.youth?.sector ? " • " + detail.youth.sector : ""}`,
-    skills: detail.youth?.skills || "No skills listed",
+    skills: detail.youth?.skills || detail.youth?.skills_background || "No skills listed",
     situation: detail.youth?.situation || "No situation notes",
     progress: pct,
     currentStep: detail.current_step,

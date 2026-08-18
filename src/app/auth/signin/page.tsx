@@ -10,6 +10,7 @@ export default function SignIn() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const callbackUrl = searchParams.get("callbackUrl") || "/";
+  const isNewYouth = searchParams.get("new") === "youth";
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -31,16 +32,20 @@ export default function SignIn() {
       if (result?.error) {
         setError("Invalid email or password. Please try again.");
       } else {
-        // Fetch the session to get the user's role, then redirect to the right dashboard
-        const res = await fetch("/api/auth/session");
-        const session = await res.json();
-        const role = session?.user?.role;
-        if (role === "officer") {
-          router.push("/officer");
-        } else if (role === "youth") {
-          router.push("/youth");
+        // After successful sign-in, check where to go
+        if (isNewYouth) {
+          // New youth — go to onboarding
+          router.push("/onboarding");
         } else {
-          router.push("/");
+          // Normal login — go to dashboard
+          const res = await fetch("/api/auth/session");
+          const session = await res.json();
+          const role = session?.user?.role;
+          if (role === "officer") {
+            router.push("/officer");
+          } else {
+            router.push("/youth");
+          }
         }
         router.refresh();
       }

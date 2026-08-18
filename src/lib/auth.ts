@@ -11,6 +11,7 @@ declare module "next-auth" {
       name: string;
       role: "youth" | "officer";
       profileId: string;
+      onboardingCompleted: boolean;
     };
   }
 
@@ -20,6 +21,7 @@ declare module "next-auth" {
     name: string;
     role: "youth" | "officer";
     profileId: string;
+    onboardingCompleted: boolean;
   }
 }
 
@@ -70,6 +72,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
           name: profile.full_name,
           role: profile.role,
           profileId: profile.id,
+          onboardingCompleted: profile.onboarding_completed || false,
         };
       },
     }),
@@ -87,6 +90,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         token.id = user.id;
         token.role = user.role as "youth" | "officer";
         token.profileId = user.profileId;
+        token.onboardingCompleted = (user as unknown as { onboardingCompleted: boolean }).onboardingCompleted;
       }
       return token;
     },
@@ -95,6 +99,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         session.user.id = token.id as string;
         session.user.role = token.role as "youth" | "officer";
         session.user.profileId = token.profileId as string;
+        session.user.onboardingCompleted = token.onboardingCompleted as boolean;
       }
       return session;
     },

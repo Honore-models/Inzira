@@ -93,10 +93,10 @@ export default function Home() {
           findable, sequenced, and easy to follow.
         </p>
         <div className="button-row" id="demo">
-          <a className="button primary" href="/auth/signup">
+          <a className="button primary" href="/auth/signup?role=youth">
             Enter as a youth
           </a>
-          <a className="button secondary" href="/auth/signup">
+          <a className="button secondary" href="/auth/signup?role=officer">
             Enter as an officer
           </a>
         </div>
@@ -216,10 +216,10 @@ export default function Home() {
         <h2>Ready to see it in action?</h2>
         <p>Choose your entrance and explore Inzira.</p>
         <div className="button-row">
-          <a className="button primary" href="/auth/signup">
+          <a className="button primary" href="/auth/signup?role=youth">
             Enter as a youth
           </a>
-          <a className="button secondary" href="/auth/signup">
+          <a className="button secondary" href="/auth/signup?role=officer">
             Enter as an officer
           </a>
         </div>

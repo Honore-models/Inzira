@@ -27,6 +27,10 @@ CREATE TABLE profiles (
   -- Officer-specific fields
   department TEXT,
   district_assigned TEXT,
+  photo_url TEXT,
+  onboarding_completed BOOLEAN DEFAULT FALSE,
+  skills_background TEXT,
+  onboarding_submitted_at TIMESTAMPTZ,
 
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
@@ -39,7 +43,7 @@ CREATE TABLE youth_cases (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   youth_profile_id UUID NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
   officer_profile_id UUID REFERENCES profiles(id) ON DELETE SET NULL,
-  status TEXT NOT NULL DEFAULT 'active' CHECK (status IN ('active', 'completed', 'archived')),
+  status TEXT NOT NULL DEFAULT 'active' CHECK (status IN ('pending', 'active', 'completed', 'archived')),
   current_step INTEGER DEFAULT 0,
   total_steps INTEGER DEFAULT 0,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),

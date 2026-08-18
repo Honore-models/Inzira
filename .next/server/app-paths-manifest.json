@@ -1,7 +1,12 @@
 {
-  "/youth/find-help/page": "app/youth/find-help/page.js",
+  "/api/auth/[...nextauth]/route": "app/api/auth/[...nextauth]/route.js",
+  "/api/youth/route": "app/api/youth/route.js",
+  "/api/cases/route": "app/api/cases/route.js",
+  "/api/profile/route": "app/api/profile/route.js",
+  "/api/cases/[caseId]/steps/route": "app/api/cases/[caseId]/steps/route.js",
   "/page": "app/page.js",
-  "/auth/signup/page": "app/auth/signup/page.js",
   "/auth/signin/page": "app/auth/signin/page.js",
-  "/youth/steps/page": "app/youth/steps/page.js"
+  "/youth/page": "app/youth/page.js",
+  "/officer/page": "app/officer/page.js",
+  "/officer/messages/page": "app/officer/messages/page.js"
 }

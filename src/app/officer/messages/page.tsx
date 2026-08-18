@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useSession } from "next-auth/react";
 import { Search } from "lucide-react";
 import { OfficerAvatar, OfficerShell } from "@/components/officer/OfficerShell";
+import { getPhotoUrl } from "@/lib/photos";
 import { ChatPanel } from "@/components/ChatPanel";
 
 interface ConversationCase {
@@ -137,6 +138,7 @@ export default function OfficerMessages() {
                         .map((w) => w[0])
                         .join("") || "?",
                     bg: "#1f6f4c",
+                    photo: getPhotoUrl(chat.youth?.email) || undefined,
                   }}
                 />
                 <div className="inbox-row-body">

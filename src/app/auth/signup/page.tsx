@@ -1,21 +1,27 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
+import { signIn } from "next-auth/react";
 import Link from "next/link";
 import {
   ArrowRight,
+  ArrowLeft,
   Briefcase,
-  GraduationCap,
   ShieldCheck,
   User,
 } from "lucide-react";
 
 export default function SignUp() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const presetRole = searchParams.get("role");
 
-  const [step, setStep] = useState<1 | 2>(1);
-  const [role, setRole] = useState<"youth" | "officer" | "">("");
+  // If role is in the URL, skip step 1
+  const [step, setStep] = useState<1 | 2>(presetRole ? 2 : 1);
+  const [role, setRole] = useState<"youth" | "officer" | "">(
+    presetRole === "youth" || presetRole === "officer" ? presetRole : "",
+  );
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -41,14 +47,29 @@ export default function SignUp() {
         return;
       }
 
-      // Redirect to sign in after successful signup
-      router.push("/auth/signin?registered=true");
+      if (role === "youth") {
+        // Auto-login the youth and go directly to onboarding
+        const loginResult = await signIn("credentials", {
+          email,
+          password,
+          redirect: false,
+        });
+        if (loginResult?.ok) {
+          router.push("/onboarding");
+        } else {
+          router.push("/auth/signin");
+        }
+      } else {
+        router.push("/auth/signin?registered=true");
+      }
     } catch {
       setError("Something went wrong. Please try again.");
     } finally {
       setLoading(false);
     }
   }
+
+  const roleLabel = role === "youth" ? "Youth" : "Youth Officer";
 
   return (
     <main className="ob-screen">
@@ -118,13 +139,26 @@ export default function SignUp() {
 
         {step === 2 && (
           <>
-            <h1 className="ob-title" style={{ textAlign: "center" }}>
-              Your details
-            </h1>
+            <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
+              {!presetRole && (
+                <button
+                  className="ob-btn ghost"
+                  type="button"
+                  onClick={() => setStep(1)}
+                  style={{ padding: "6px 8px", minHeight: "auto" }}
+                  aria-label="Go back"
+                >
+                  <ArrowLeft size={16} />
+                </button>
+              )}
+              <h1 className="ob-title" style={{ textAlign: "center", flex: 1 }}>
+                {presetRole ? `Join as a ${roleLabel}` : "Your details"}
+              </h1>
+            </div>
             <p className="ob-subtitle" style={{ textAlign: "center" }}>
               {role === "youth"
-                ? "Tell us a bit about yourself."
-                : "Set up your officer account."}
+                ? "Tell us a bit about yourself to get started."
+                : "Set up your officer account to manage cases."}
             </p>
 
             {error && (
@@ -179,24 +213,14 @@ export default function SignUp() {
                 </div>
               </label>
 
-              <div style={{ display: "flex", gap: 10, marginTop: 4 }}>
-                <button
-                  className="ob-btn ghost"
-                  type="button"
-                  onClick={() => setStep(1)}
-                >
-                  Back
-                </button>
-                <button
-                  className="ob-btn primary"
-                  type="submit"
-                  disabled={loading || !fullName || !email || password.length < 8}
-                  style={{ flex: 1 }}
-                >
-                  {loading ? "Creating account…" : "Create account"}
-                  {!loading && <ArrowRight aria-hidden size={15} />}
-                </button>
-              </div>
+              <button
+                className="ob-btn primary full"
+                type="submit"
+                disabled={loading || !fullName || !email || password.length < 8}
+              >
+                {loading ? "Creating account…" : `Create ${roleLabel} account`}
+                {!loading && <ArrowRight aria-hidden size={15} />}
+              </button>
             </form>
           </>
         )}

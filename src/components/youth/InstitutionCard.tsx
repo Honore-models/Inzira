@@ -37,7 +37,11 @@ export function InstitutionCard({ item }: { item: InstitutionData }) {
         className="institution-logo"
         style={{ backgroundColor: item.logo_bg }}
       >
-        {item.initials}
+        {item.logo_url ? (
+          <img src={item.logo_url} alt={`${item.initials} logo`} style={{ width: "100%", height: "100%", objectFit: "contain" }} />
+        ) : (
+          item.initials
+        )}
       </div>
 
       <div className="institution-body">

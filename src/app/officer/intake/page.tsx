@@ -23,7 +23,7 @@ export default function OfficerIntake() {
   const [situation, setSituation] = useState("");
   const [sector, setSector] = useState("");
   const [aiSteps, setAiSteps] = useState<
-    { number: number; title: string; detail: string; badge: string }[]
+    { number: number; title: string; detail: string; badge: string; location?: string; source?: string }[]
   >([]);
   const [createdYouthProfileId, setCreatedYouthProfileId] = useState<string | null>(null);
   const [sendError, setSendError] = useState("");
@@ -123,7 +123,7 @@ export default function OfficerIntake() {
     goal: string,
     _skills: string,
   ) {
-    const baseSteps: Record<string, { number: number; title: string; detail: string; badge: string }[]> = {
+    const baseSteps: Record<string, { number: number; title: string; detail: string; badge: string; location?: string; source?: string }[]> = {
       "Start a business": [
         { number: 1, title: "Register your business name with RDB", detail: "Register your business name and obtain a registration certificate.", badge: "RDB", location: "RDB Office", source: "Verified RDB business registration rules" },
         { number: 2, title: "Get your Tax Identification Number (TIN)", detail: "Apply for and get your TIN from RRA.", badge: "RRA", location: "RRA Office", source: "Verified RRA tax registration rules" },
