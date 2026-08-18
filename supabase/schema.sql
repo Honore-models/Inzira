@@ -131,6 +131,15 @@ ALTER TABLE messages ENABLE ROW LEVEL SECURITY;
 ALTER TABLE institutions ENABLE ROW LEVEL SECURITY;
 ALTER TABLE ai_roadmaps ENABLE ROW LEVEL SECURITY;
 
+-- Helper: check if the current user is an officer (SECURITY DEFINER avoids recursion)
+CREATE OR REPLACE FUNCTION public.is_officer()
+RETURNS BOOLEAN AS $$
+  SELECT EXISTS (
+    SELECT 1 FROM profiles
+    WHERE user_id = auth.uid() AND role = 'officer'
+  );
+$$ LANGUAGE sql SECURITY DEFINER STABLE;
+
 -- Profiles: users can read their own profile
 CREATE POLICY "Users can view own profile"
   ON profiles FOR SELECT
@@ -139,22 +148,12 @@ CREATE POLICY "Users can view own profile"
 -- Profiles: officers can view all youth profiles
 CREATE POLICY "Officers can view all profiles"
   ON profiles FOR SELECT
-  USING (
-    EXISTS (
-      SELECT 1 FROM profiles
-      WHERE user_id = auth.uid() AND role = 'officer'
-    )
-  );
+  USING (public.is_officer());
 
 -- Youth cases: officers can manage all, youth can view their own
 CREATE POLICY "Officers can manage all cases"
   ON youth_cases FOR ALL
-  USING (
-    EXISTS (
-      SELECT 1 FROM profiles
-      WHERE user_id = auth.uid() AND role = 'officer'
-    )
-  );
+  USING (public.is_officer());
 
 CREATE POLICY "Youth can view own cases"
   ON youth_cases FOR SELECT
@@ -167,12 +166,7 @@ CREATE POLICY "Youth can view own cases"
 -- Roadmap steps: follow youth_cases permissions
 CREATE POLICY "Officers can manage all roadmap steps"
   ON roadmap_steps FOR ALL
-  USING (
-    EXISTS (
-      SELECT 1 FROM profiles
-      WHERE user_id = auth.uid() AND role = 'officer'
-    )
-  );
+  USING (public.is_officer());
 
 CREATE POLICY "Youth can view own roadmap steps"
   ON roadmap_steps FOR SELECT
@@ -210,12 +204,7 @@ CREATE POLICY "Anyone can view institutions"
 -- AI Roadmaps: follow youth_cases permissions
 CREATE POLICY "Officers can manage roadmaps"
   ON ai_roadmaps FOR ALL
-  USING (
-    EXISTS (
-      SELECT 1 FROM profiles
-      WHERE user_id = auth.uid() AND role = 'officer'
-    )
-  );
+  USING (public.is_officer());
 
 CREATE POLICY "Youth can view own roadmaps"
   ON ai_roadmaps FOR SELECT
