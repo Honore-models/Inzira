@@ -4239,9 +4239,15 @@ p {
   }
 
   .ai-draft-row {
-    grid-template-columns: 26px 26px 1fr auto auto;
-    gap: 8px;
-    padding: 10px 12px;
+    gap: 10px;
+  }
+
+  .ai-step-detail {
+    padding-left: 0;
+  }
+
+  .ai-step-location {
+    padding-left: 0;
   }
 
   .ai-draft-actions {

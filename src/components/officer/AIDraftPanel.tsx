@@ -4,11 +4,11 @@ import { useState } from "react";
 import Link from "next/link";
 import {
   FileText,
-  MoreVertical,
   Plus,
   Sparkles,
   ShieldCheck,
   RefreshCw,
+  MapPin,
 } from "lucide-react";
 
 interface DraftStep {
@@ -16,6 +16,7 @@ interface DraftStep {
   title: string;
   detail: string;
   badge: string;
+  location?: string;
 }
 
 const badges = ["RDB", "RRA", "Bank", "BDF", "Training", "RTB", "Ministry"];
@@ -60,18 +61,26 @@ export function AIDraftPanel({ steps }: { steps: DraftStep[] }) {
       <div className="ai-draft-list">
         {draftSteps.map((step) => (
           <div className="ai-draft-row" key={step.number}>
-            <span className="ai-step-number">{step.number}</span>
-            <div className="ai-step-icon">
-              <FileText aria-hidden size={16} />
+            <div className="ai-step-left">
+              <span className="ai-step-number">{step.number}</span>
+              <div className="ai-step-connector" />
             </div>
-            <div className="ai-step-body">
-              <strong>{step.title}</strong>
-              <p>{step.detail}</p>
+            <div className="ai-step-card">
+              <div className="ai-step-header">
+                <div className="ai-step-icon">
+                  <FileText aria-hidden size={14} />
+                </div>
+                <strong className="ai-step-title">{step.title}</strong>
+                <span className="ai-badge">{step.badge}</span>
+              </div>
+              <p className="ai-step-detail">{step.detail}</p>
+              {step.location && (
+                <span className="ai-step-location">
+                  <MapPin aria-hidden size={12} />
+                  {step.location}
+                </span>
+              )}
             </div>
-            <span className="ai-badge">{step.badge}</span>
-            <button className="ai-more" type="button" aria-label="More options">
-              <MoreVertical aria-hidden size={16} />
-            </button>
           </div>
         ))}
       </div>
