@@ -100,6 +100,11 @@
       "static/chunks/webpack.js",
       "static/chunks/main-app.js",
       "static/chunks/app/youth/steps/page.js"
+    ],
+    "/officer/messages/page": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/chunks/app/officer/messages/page.js"
     ]
   }
 }
