@@ -1,7 +1,6 @@
 {
-  "/officer/intake/page": "app/officer/intake/page.js",
-  "/auth/signin/page": "app/auth/signin/page.js",
+  "/api/auth/[...nextauth]/route": "app/api/auth/[...nextauth]/route.js",
   "/page": "app/page.js",
-  "/officer/youth/page": "app/officer/youth/page.js",
-  "/officer/page": "app/officer/page.js"
+  "/auth/signup/page": "app/auth/signup/page.js",
+  "/auth/signin/page": "app/auth/signin/page.js"
 }

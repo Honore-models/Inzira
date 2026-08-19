@@ -1,8 +1,8 @@
-// File: C:\Users\HP\Desktop\Inzira\src\app\officer\youth\page.tsx
-import * as entry from '../../../../../src/app/officer/youth/page.js'
+// File: C:\Users\HP\Desktop\Inzira\src\app\auth\signup\page.tsx
+import * as entry from '../../../../../src/app/auth/signup/page.js'
 import type { ResolvingMetadata, ResolvingViewport } from 'next/dist/lib/metadata/types/metadata-interface.js'
 
-type TEntry = typeof import('../../../../../src/app/officer/youth/page.js')
+type TEntry = typeof import('../../../../../src/app/auth/signup/page.js')
 
 type SegmentParams<T extends Object = any> = T extends Record<string, any>
   ? { [K in keyof T]: T[K] extends string ? string | string[] | undefined : never }

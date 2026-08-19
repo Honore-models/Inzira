@@ -4,8 +4,20 @@
 -- Run this in Supabase SQL Editor AFTER enabling pgvector
 -- ============================================================
 
--- Enable pgvector extension (must be done by superuser)
+-- Ensure required extensions exist
 CREATE EXTENSION IF NOT EXISTS vector;
+
+-- ============================================================
+-- HELPER FUNCTION: is_officer()
+-- May already exist from schema.sql; use CREATE OR REPLACE
+-- ============================================================
+CREATE OR REPLACE FUNCTION public.is_officer()
+RETURNS BOOLEAN AS $$
+  SELECT EXISTS (
+    SELECT 1 FROM profiles
+    WHERE user_id = auth.uid() AND role = 'officer'
+  );
+$$ LANGUAGE sql SECURITY DEFINER STABLE;
 
 -- ============================================================
 -- DOCUMENTS TABLE
