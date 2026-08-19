@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { Suspense, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { signIn } from "next-auth/react";
 import Link from "next/link";
@@ -12,7 +12,7 @@ import {
   User,
 } from "lucide-react";
 
-export default function SignUp() {
+function SignUpForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const presetRole = searchParams.get("role");
@@ -235,5 +235,13 @@ export default function SignUp() {
         </p>
       </section>
     </main>
+  );
+}
+
+export default function SignUp() {
+  return (
+    <Suspense fallback={<main className="ob-screen"><section className="ob-panel"><p>Loading…</p></section></main>}>
+      <SignUpForm />
+    </Suspense>
   );
 }

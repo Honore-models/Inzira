@@ -14,6 +14,8 @@ import {
   chatCompletion,
   ASK_SYSTEM_PROMPT,
   buildAskUserPrompt,
+  isQuestionRelevant,
+  OFF_TOPIC_MESSAGE,
 } from "@/lib/ai";
 import type { AskRequest, AskResponse } from "@/lib/ai";
 
@@ -49,7 +51,16 @@ export async function POST(request: Request) {
       );
     }
 
-    // 3. Generate BGE-M3 embedding for the question
+    // 3. Topic relevance check — catch off-topic before hitting the LLM
+    if (!isQuestionRelevant(question)) {
+      const offTopicResponse: AskResponse = {
+        answer: OFF_TOPIC_MESSAGE,
+        sources: [],
+      };
+      return NextResponse.json(offTopicResponse);
+    }
+
+    // 4. Generate BGE-M3 embedding for the question
     let queryEmbedding: number[];
     try {
       queryEmbedding = await generateEmbedding(question);
@@ -61,7 +72,7 @@ export async function POST(request: Request) {
       );
     }
 
-    // 4. Hybrid retrieval: vector + keyword + metadata
+    // 5. Hybrid retrieval: vector + keyword + metadata
     let retrievedChunks;
     try {
       retrievedChunks = await hybridSearch({
@@ -76,7 +87,7 @@ export async function POST(request: Request) {
       );
     }
 
-    // 5. Check if we found relevant information
+    // 6. Check if we found relevant information
     if (retrievedChunks.length === 0) {
       const noInfoResponse: AskResponse = {
         answer:
@@ -87,11 +98,11 @@ export async function POST(request: Request) {
       return NextResponse.json(noInfoResponse);
     }
 
-    // 6. Build the prompt with retrieved context
+    // 7. Build the prompt with retrieved context
     const contextString = formatContextForPrompt(retrievedChunks);
     const userPrompt = buildAskUserPrompt(question, contextString);
 
-    // 7. Call Gemma 4 via OpenRouter for the answer
+    // 8. Call Gemma 4 via OpenRouter for the answer
     let answer: string;
     try {
       const completion = await chatCompletion({
@@ -116,7 +127,7 @@ export async function POST(request: Request) {
       );
     }
 
-    // 8. Extract and return sources from the database (not from the LLM)
+    // 9. Extract and return sources from the database (not from the LLM)
     const sources = extractSources(retrievedChunks);
 
     const response: AskResponse = {

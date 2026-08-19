@@ -1,12 +1,12 @@
 "use client";
 
-import { useState } from "react";
+import { Suspense, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { signIn } from "next-auth/react";
 import Link from "next/link";
 import { ArrowRight, ShieldCheck } from "lucide-react";
 
-export default function SignIn() {
+function SignInForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const callbackUrl = searchParams.get("callbackUrl") || "/";
@@ -129,5 +129,13 @@ export default function SignIn() {
         </p>
       </section>
     </main>
+  );
+}
+
+export default function SignIn() {
+  return (
+    <Suspense fallback={<main className="ob-screen"><section className="ob-panel"><p>Loading…</p></section></main>}>
+      <SignInForm />
+    </Suspense>
   );
 }

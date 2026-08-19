@@ -23,6 +23,8 @@ export {
   buildRoadmapUserPrompt,
 } from "./prompts";
 export { ingestDocument } from "./ingestion";
+export { isQuestionRelevant, OFF_TOPIC_MESSAGE } from "./relevance";
+export { ALLOWED_TOPICS, TOPIC_SCOPE_DESCRIPTION } from "./prompts";
 export type {
   DocumentRecord,
   DocumentChunk,
