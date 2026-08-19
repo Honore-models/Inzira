@@ -1,7 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import {
   ArrowRight,
   ClipboardList,
@@ -30,7 +31,25 @@ interface AiRoadmapResponse {
   steps: AiRoadmapStep[];
 }
 
-export default function OfficerIntake() {
+interface YouthProfileData {
+  profile: {
+    id: string;
+    full_name: string;
+    goal: string;
+    skills: string;
+    skills_background: string;
+    situation: string;
+    district: string;
+    sector: string;
+  };
+  cases: { id: string; status: string }[];
+  aiRoadmaps: { id: string; status: string; title: string; steps_data: unknown }[];
+}
+
+function IntakeForm() {
+  const searchParams = useSearchParams();
+  const youthIdParam = searchParams.get("youthId");
+
   const [district, setDistrict] = useState("");
   const [showRoadmap, setShowRoadmap] = useState(false);
   const [generating, setGenerating] = useState(false);
@@ -43,13 +62,56 @@ export default function OfficerIntake() {
     { number: number; title: string; detail: string; badge: string; location?: string; source?: string }[]
   >([]);
   const [aiRoadmap, setAiRoadmap] = useState<AiRoadmapResponse | null>(null);
-  const [createdYouthProfileId, setCreatedYouthProfileId] = useState<string | null>(null);
+  const [aiRoadmapId, setAiRoadmapId] = useState<string | null>(null);
+  const [resolvedYouthProfileId, setResolvedYouthProfileId] = useState<string | null>(null);
+  const [resolvedCaseId, setResolvedCaseId] = useState<string | null>(null);
   const [sendError, setSendError] = useState("");
   const [aiError, setAiError] = useState("");
+  const [sending, setSending] = useState(false);
+  const [preFilling, setPreFilling] = useState(false);
+  const [preFilled, setPreFilled] = useState(false);
 
   const sectorOptions = districts.includes(district)
     ? sectors[district] || []
     : [];
+
+  // Pre-fill form from youthId param
+  useEffect(() => {
+    if (!youthIdParam || preFilled) return;
+
+    async function loadYouth() {
+      setPreFilling(true);
+      try {
+        const res = await fetch(`/api/youth/${youthIdParam}`);
+        if (res.ok) {
+          const data: YouthProfileData = await res.json();
+          const p = data.profile;
+          setName(p.full_name || "");
+          setGoal(p.goal || goalOptions[0] || "");
+          setSkills(p.skills_background || p.skills || "");
+          setSituation(p.situation || "");
+          setDistrict(p.district || "");
+          setSector(p.sector || "");
+          setResolvedYouthProfileId(p.id);
+
+          // Find the existing case
+          const existingCase = data.cases.find(
+            (c) => c.status === "pending" || c.status === "active",
+          );
+          if (existingCase) {
+            setResolvedCaseId(existingCase.id);
+          }
+
+          setPreFilled(true);
+        }
+      } catch {
+        // silently fail — form stays empty
+      } finally {
+        setPreFilling(false);
+      }
+    }
+    loadYouth();
+  }, [youthIdParam, preFilled]);
 
   async function handleGenerate() {
     if (!name.trim()) return;
@@ -58,25 +120,35 @@ export default function OfficerIntake() {
     setAiError("");
 
     try {
-      // 1. Create the youth user account
-      const email = `${name.trim().toLowerCase().replace(/\s+/g, ".")}@youth.rw`;
-      const signupRes = await fetch("/api/auth/signup", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          email,
-          password: "password123",
-          fullName: name.trim(),
-          role: "youth",
-        }),
-      });
+      // If no existing youth profile, create one
+      let youthProfileId = resolvedYouthProfileId;
 
-      const signupData = await signupRes.json();
-      if (signupData.userId) {
-        setCreatedYouthProfileId(signupData.userId);
+      if (!youthProfileId) {
+        const email = `${name.trim().toLowerCase().replace(/\s+/g, ".")}@youth.rw`;
+        const signupRes = await fetch("/api/auth/signup", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            email,
+            password: "password123",
+            fullName: name.trim(),
+            role: "youth",
+          }),
+        });
+
+        const signupData = await signupRes.json();
+        // signup returns userId (auth user id), we need to look up the profile
+        if (signupRes.ok) {
+          const profileRes = await fetch("/api/youth");
+          if (profileRes.ok) {
+            const allYouth = await profileRes.json();
+            const found = allYouth.find((y: { user_id: string }) => y.user_id === signupData.userId);
+            if (found) youthProfileId = found.id;
+          }
+        }
       }
 
-      // 2. Call the real AI roadmap generation API
+      // Call the real AI roadmap generation API
       const roadmapRes = await fetch("/api/ai/generate-roadmap", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -89,6 +161,8 @@ export default function OfficerIntake() {
             sector: sector || "",
           },
           officerNotes: situation,
+          youthProfileId: youthProfileId || undefined,
+          caseId: resolvedCaseId || undefined,
         }),
       });
 
@@ -99,8 +173,10 @@ export default function OfficerIntake() {
         return;
       }
 
-      const roadmap: AiRoadmapResponse = await roadmapRes.json();
+      const roadmap: AiRoadmapResponse & { roadmapId?: string } = await roadmapRes.json();
       setAiRoadmap(roadmap);
+      if (roadmap.roadmapId) setAiRoadmapId(roadmap.roadmapId);
+      if (youthProfileId) setResolvedYouthProfileId(youthProfileId);
 
       // Convert to the format expected by AIDraftPanel
       const draftSteps = roadmap.steps.map((step) => ({
@@ -123,51 +199,44 @@ export default function OfficerIntake() {
     }
   }
 
-  async function handleSendRoadmap() {
-    if (!aiSteps.length) return;
+  async function handleApproveAndSend() {
+    if (!aiSteps.length || !resolvedYouthProfileId || !aiRoadmapId) {
+      setSendError("Please generate a roadmap first, then approve and send.");
+      return;
+    }
+    setSending(true);
     setSendError("");
 
     try {
-      // Get the youth profile we just created
-      // Look up by email to find the profile ID
-      const profileRes = await fetch("/api/profile");
-      // We need to find the youth's profile. Use the cases endpoint to find it.
-      // Actually, we need to create a case with steps. Let's use the create-with-steps API.
-      // But first, we need the youth's profile ID. Since we just signed them up,
-      // we can look them up.
-
-      // For now, let's look up the youth profile by getting all profiles (officer can do this)
-      // We'll use the signup response's userId, but we need the profile ID, not the user ID.
-      // The signup endpoint returns the auth user ID. We need to look up the profile.
-
-      // Let's query the cases endpoint to find youth, or better, let's just
-      // create the case using the API. We'll need to get the profile ID first.
-
-      // Simple approach: use a helper endpoint or just look up by email
-      const casesRes = await fetch("/api/cases/create-with-steps", {
+      const res = await fetch("/api/ai/approve-roadmap", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          youthProfileId: createdYouthProfileId,
-          steps: aiSteps,
+          youthProfileId: resolvedYouthProfileId,
+          roadmapId: aiRoadmapId,
+          goal,
+          skillsBackground: skills,
+          district: district || "",
+          sector: sector || "",
+          situation,
         }),
       });
 
-      const casesData = await casesRes.json();
-
-      if (!casesRes.ok) {
-        setSendError(casesData.error || "Failed to create roadmap");
+      if (!res.ok) {
+        const data = await res.json();
+        setSendError(data.error || "Failed to approve roadmap");
+        setSending(false);
         return;
       }
 
-      // Success — redirect to youth list
-      window.location.href = "/officer/youth";
+      const data = await res.json();
+      // Redirect to the youth detail page
+      window.location.href = `/officer/youth/${data.caseId}`;
     } catch {
-      setSendError("Failed to send roadmap. Please try again.");
+      setSendError("Failed to approve roadmap. Please try again.");
+      setSending(false);
     }
   }
-
-
 
   return (
     <OfficerShell active="Smart Intake">
@@ -176,8 +245,9 @@ export default function OfficerIntake() {
           <div>
             <h1>Smart Intake</h1>
             <p>
-              Enter information about the youth. The AI will generate a roadmap
-              based on verified programs.
+              {preFilled
+                ? `Generating roadmap for ${name}`
+                : "Enter information about the youth. The AI will generate a roadmap based on verified programs."}
             </p>
           </div>
           <div className="intake-top-actions">
@@ -196,9 +266,19 @@ export default function OfficerIntake() {
               </div>
               <div>
                 <h2>1. Intake Notes</h2>
-                <p>Provide details about the youth.</p>
+                <p>
+                  {preFilled
+                    ? "Pre-filled from youth profile. Edit if needed."
+                    : "Provide details about the youth."}
+                </p>
               </div>
             </header>
+
+            {preFilling && (
+              <div style={{ padding: "16px 0", color: "#545d65", fontSize: 13 }}>
+                Loading youth information…
+              </div>
+            )}
 
             <div className="intake-form-grid">
               <label className="intake-field full">
@@ -278,7 +358,7 @@ export default function OfficerIntake() {
                 disabled={generating || !name.trim()}
               >
                 <Sparkles aria-hidden size={15} />
-                {generating ? "Generating…" : "Generate roadmap"}
+                {generating ? "Generating…" : preFilled ? "Generate roadmap" : "Generate roadmap"}
               </button>
               <span className="intake-generate-hint">
                 {generating
@@ -311,15 +391,20 @@ export default function OfficerIntake() {
                 <button
                   className="officer-button primary"
                   type="button"
-                  onClick={handleSendRoadmap}
+                  onClick={handleApproveAndSend}
+                  disabled={sending || !aiRoadmapId}
                 >
-                  Send roadmap to youth
-                  <ArrowRight aria-hidden size={15} />
+                  {sending ? "Approving…" : "Approve and send to youth"}
+                  {!sending && <ArrowRight aria-hidden size={15} />}
                 </button>
                 <button
                   className="officer-button outline"
                   type="button"
-                  onClick={() => { setShowRoadmap(false); setAiRoadmap(null); }}
+                  onClick={() => {
+                    setShowRoadmap(false);
+                    setAiRoadmap(null);
+                    setAiRoadmapId(null);
+                  }}
                 >
                   Regenerate
                 </button>
@@ -346,8 +431,9 @@ export default function OfficerIntake() {
                 </div>
                 <h3>No roadmap yet</h3>
                 <p>
-                  Fill in the intake notes and click &ldquo;Generate roadmap&rdquo;
-                  to create a step-by-step plan for this youth.
+                  {preFilled
+                    ? "Click &ldquo;Generate roadmap&rdquo; to create a step-by-step plan for this youth."
+                    : "Fill in the intake notes and click &ldquo;Generate roadmap&rdquo; to create a step-by-step plan for this youth."}
                 </p>
               </div>
 
@@ -365,5 +451,22 @@ export default function OfficerIntake() {
         </div>
       </div>
     </OfficerShell>
+  );
+}
+
+export default function OfficerIntake() {
+  return (
+    <Suspense fallback={
+      <OfficerShell active="Smart Intake">
+        <div className="officer-page-wrap">
+          <div className="yd-loading">
+            <div className="yd-loading-spinner" />
+            <p>Loading Smart Intake…</p>
+          </div>
+        </div>
+      </OfficerShell>
+    }>
+      <IntakeForm />
+    </Suspense>
   );
 }

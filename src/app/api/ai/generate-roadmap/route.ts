@@ -44,8 +44,8 @@ function validateRoadmapJSON(data: unknown): RoadmapResponse {
     throw new Error("Invalid roadmap: missing or empty summary");
   }
 
-  if (!Array.isArray(obj.steps) || obj.steps.length === 0) {
-    throw new Error("Invalid roadmap: missing or empty steps array");
+  if (!Array.isArray(obj.steps) || obj.steps.length < 3) {
+    throw new Error("Invalid roadmap: must have at least 3 steps");
   }
 
   const validatedSteps: RoadmapStep[] = obj.steps.map((step, index) => {
@@ -116,7 +116,7 @@ export async function POST(request: Request) {
       );
     }
 
-    const { youth, officerNotes, caseId } = body;
+    const { youth, officerNotes, caseId, youthProfileId } = body as GenerateRoadmapRequest & { youthProfileId?: string };
 
     if (!youth.name || !youth.goal) {
       return NextResponse.json(
@@ -232,30 +232,75 @@ export async function POST(request: Request) {
       );
     }
 
-    // 10. If a caseId is provided, save the roadmap to the database as DRAFT
-    if (caseId) {
-      const supabase = await createClient();
+    // 10. Save the roadmap to the database as DRAFT
+    const supabase = await createClient();
 
-      const { error: roadmapError } = await supabase
+    // If no caseId, find or create one for this youth profile
+    let savedCaseId = caseId;
+    if (!savedCaseId && youthProfileId) {
+      const { data: existingCase } = await supabase
+        .from("youth_cases")
+        .select("id")
+        .eq("youth_profile_id", youthProfileId)
+        .in("status", ["pending", "active"])
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .single();
+
+      if (existingCase) {
+        savedCaseId = existingCase.id;
+      } else {
+        const officerProfile = await supabase
+          .from("profiles")
+          .select("id")
+          .eq("user_id", session.user.id)
+          .single();
+
+        const { data: newCase } = await supabase
+          .from("youth_cases")
+          .insert({
+            youth_profile_id: youthProfileId,
+            officer_profile_id: officerProfile?.data?.id || null,
+            status: "pending",
+            current_step: 0,
+            total_steps: 0,
+          })
+          .select()
+          .single();
+
+        savedCaseId = newCase?.id;
+      }
+    }
+
+    let savedRoadmapId: string | null = null;
+    if (savedCaseId) {
+      const { data: savedRoadmap, error: roadmapError } = await supabase
         .from("ai_roadmaps")
         .insert({
-          case_id: caseId,
+          case_id: savedCaseId,
           title: roadmap.title,
           summary: roadmap.summary,
           steps_data: roadmap.steps,
           sources: roadmap.steps.flatMap((s) => s.sources || []),
           officer_notes: officerNotes || null,
-          status: "draft", // Always starts as DRAFT
-        });
+          status: "draft",
+          youth_profile_id: youthProfileId || null,
+        })
+        .select()
+        .single();
 
       if (roadmapError) {
         console.error("Failed to save roadmap:", roadmapError);
-        // Still return the roadmap even if saving fails
+      } else if (savedRoadmap) {
+        savedRoadmapId = savedRoadmap.id;
       }
     }
 
-    // 11. Return the roadmap (status: draft — officer must review)
-    return NextResponse.json(roadmap);
+    // 11. Return the roadmap with the saved ID (status: draft — officer must review)
+    return NextResponse.json({
+      ...roadmap,
+      roadmapId: savedRoadmapId,
+    });
   } catch (error) {
     console.error("Generate roadmap endpoint error:", error);
     return NextResponse.json(

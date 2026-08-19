@@ -75,7 +75,11 @@ RULES:
 8. Personalize the roadmap using the youth's actual goal, skills/background, location, and officer notes.
 9. Do not repeat steps that the youth has already completed when the provided information confirms completion.
 10. Every roadmap step must contain its supporting source.
-11. The generated roadmap is a DRAFT.
+11. CRITICAL — MINIMUM STEPS:
+You MUST generate at least 3 steps. 4-5 steps is preferred for a complete roadmap.
+If the goal is simple (e.g. business registration), still break it into meaningful sub-steps (e.g. registration, TIN, bank account, funding).
+
+The generated roadmap is a DRAFT.
 12. A human youth officer must review and approve the roadmap before the youth can see it.
 13. The officer is the final decision-maker.
 

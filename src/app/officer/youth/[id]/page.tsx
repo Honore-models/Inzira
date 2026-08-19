@@ -3,63 +3,83 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
-import { ArrowLeft, Check, MapPin, Sparkles, ClipboardList, Briefcase } from "lucide-react";
+import {
+  ArrowLeft,
+  Check,
+  Lock,
+  MapPin,
+  Sparkles,
+  ClipboardList,
+  Briefcase,
+  Clock,
+} from "lucide-react";
 import { OfficerAvatar, OfficerShell } from "@/components/officer/OfficerShell";
-import { YouthDetailTabs } from "@/components/officer/YouthDetailTabs";
 
-interface CaseDetail {
+interface YouthProfile {
+  id: string;
+  user_id: string;
+  email: string;
+  full_name: string;
+  goal: string;
+  skills: string;
+  skills_background: string;
+  situation: string;
+  district: string;
+  sector: string;
+  onboarding_completed: boolean;
+}
+
+interface CaseStep {
+  id: string;
+  step_number: number;
+  title: string;
+  detail: string;
+  institution: string;
+  status: string;
+  state: string;
+  location: string | null;
+  source: string | null;
+}
+
+interface YouthCase {
   id: string;
   status: string;
   current_step: number;
   total_steps: number;
   created_at: string;
-  youth: {
-    full_name: string;
-    email: string;
-    goal: string;
-    district: string;
-    sector: string;
-    skills: string;
-    skills_background: string;
-    situation: string;
-  } | null;
-  officer: { full_name: string } | null;
-  steps: {
-    id: string;
-    step_number: number;
-    title: string;
-    detail: string;
-    institution: string;
-    status: string;
-    state: string;
-    location: string | null;
-    source: string | null;
-  }[];
+  steps: CaseStep[];
+}
+
+interface AiRoadmap {
+  id: string;
+  title: string;
+  summary: string;
+  steps_data: unknown;
+  status: string;
+  created_at: string;
+}
+
+interface YouthDetailData {
+  profile: YouthProfile;
+  cases: YouthCase[];
+  aiRoadmaps: AiRoadmap[];
 }
 
 export default function OfficerYouthDetail() {
   const params = useParams();
   const router = useRouter();
-  const caseId = params.id as string;
-  const [detail, setDetail] = useState<CaseDetail | null>(null);
+  const youthId = params.id as string;
+  const [detail, setDetail] = useState<YouthDetailData | null>(null);
   const [loading, setLoading] = useState(true);
   const [generating, setGenerating] = useState(false);
+  const [aiError, setAiError] = useState("");
 
   useEffect(() => {
     async function load() {
       try {
-        const [caseRes, stepsRes] = await Promise.all([
-          fetch("/api/cases"),
-          fetch(`/api/cases/${caseId}/steps`),
-        ]);
-
-        if (caseRes.ok) {
-          const cases = await caseRes.json();
-          const found = cases.find((c: { id: string }) => c.id === caseId);
-          const steps = stepsRes.ok ? await stepsRes.json() : [];
-          if (found) {
-            setDetail({ ...found, steps });
-          }
+        const res = await fetch(`/api/youth/${youthId}`);
+        if (res.ok) {
+          setDetail(await res.json());
         }
       } catch {
         // Silently handle errors
@@ -68,12 +88,13 @@ export default function OfficerYouthDetail() {
       }
     }
     load();
-  }, [caseId]);
+  }, [youthId]);
 
   async function handleGenerateRoadmap() {
     setGenerating(true);
-    // Redirect to intake with the youth's data pre-filled
-    router.push(`/officer/intake?youthId=${caseId}`);
+    setAiError("");
+    // Redirect to intake with youthId so form is pre-filled
+    router.push(`/officer/intake?youthId=${youthId}`);
   }
 
   if (loading) {
@@ -105,12 +126,20 @@ export default function OfficerYouthDetail() {
     );
   }
 
-  const name = detail.youth?.full_name || "Unknown";
-  const initials = name.split(" ").map((w) => w[0]).join("");
-  const isPending = detail.status === "pending";
+  const { profile, cases, aiRoadmaps } = detail;
+  const name = profile.full_name || "Unknown";
+  const initials = name
+    .split(" ")
+    .map((w) => w[0])
+    .join("");
+  const activeCase = cases.find((c) => c.status === "active");
+  const pendingCase = cases.find((c) => c.status === "pending");
+  const hasActiveRoadmap = activeCase && activeCase.total_steps > 0;
+  const draftRoadmap = aiRoadmaps.find((r) => r.status === "draft");
+  const approvedRoadmap = aiRoadmaps.find((r) => r.status === "approved");
 
-  // For pending cases — show submitted onboarding info
-  if (isPending) {
+  // CASE 1: No case at all — just submitted onboarding
+  if (!cases.length || (pendingCase && !activeCase && !draftRoadmap)) {
     return (
       <OfficerShell active="Youth List">
         <div className="officer-page-wrap">
@@ -128,7 +157,7 @@ export default function OfficerYouthDetail() {
                   Waiting for roadmap
                 </span>
               </div>
-              <p>{detail.youth?.email}</p>
+              <p>{profile.email}</p>
             </div>
           </header>
 
@@ -151,7 +180,7 @@ export default function OfficerYouthDetail() {
                 </dt>
                 <dd style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 14, fontWeight: 500 }}>
                   <Briefcase size={16} style={{ color: "#1f6f4c" }} />
-                  {detail.youth?.goal || "Not specified"}
+                  {profile.goal || "Not specified"}
                 </dd>
               </div>
 
@@ -160,7 +189,7 @@ export default function OfficerYouthDetail() {
                   Skills / Background
                 </dt>
                 <dd style={{ fontSize: 14 }}>
-                  {detail.youth?.skills_background || detail.youth?.skills || "No skills listed"}
+                  {profile.skills_background || profile.skills || "No skills listed"}
                 </dd>
               </div>
 
@@ -170,23 +199,19 @@ export default function OfficerYouthDetail() {
                 </dt>
                 <dd style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 14 }}>
                   <MapPin size={16} style={{ color: "#1f6f4c" }} />
-                  {detail.youth?.district || "Not specified"}
-                  {detail.youth?.sector ? ` • ${detail.youth.sector}` : ""}
+                  {profile.district || "Not specified"}
+                  {profile.sector ? ` • ${profile.sector}` : ""}
                 </dd>
               </div>
 
-              <div style={{ padding: "12px 0" }}>
-                <dt style={{ color: "#777f87", fontSize: 12, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.04em", marginBottom: 4 }}>
-                  Submitted
-                </dt>
-                <dd style={{ fontSize: 14 }}>
-                  {new Date(detail.created_at).toLocaleDateString("en-GB", {
-                    day: "numeric",
-                    month: "long",
-                    year: "numeric",
-                  })}
-                </dd>
-              </div>
+              {profile.situation && (
+                <div style={{ padding: "12px 0" }}>
+                  <dt style={{ color: "#777f87", fontSize: 12, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.04em", marginBottom: 4 }}>
+                    Situation
+                  </dt>
+                  <dd style={{ fontSize: 14 }}>{profile.situation}</dd>
+                </div>
+              )}
             </dl>
           </div>
 
@@ -197,6 +222,9 @@ export default function OfficerYouthDetail() {
             <p style={{ color: "#5f6860", fontSize: 14, marginBottom: 20, maxWidth: 400, margin: "0 auto 20px" }}>
               Use Smart Intake to generate a personalized roadmap based on this youth&apos;s goals and situation.
             </p>
+            {aiError && (
+              <p style={{ color: "#c0392b", fontSize: 13, marginBottom: 12 }}>{aiError}</p>
+            )}
             <button
               className="officer-button primary"
               type="button"
@@ -213,32 +241,14 @@ export default function OfficerYouthDetail() {
     );
   }
 
-  // For active cases — show the full detail with tabs
-  const pct = detail.total_steps > 0
-    ? Math.round((detail.current_step / detail.total_steps) * 100)
-    : 0;
+  // CASE 2: Has an active case with roadmap steps
+  const pct =
+    activeCase && activeCase.total_steps > 0
+      ? Math.round((activeCase.current_step / activeCase.total_steps) * 100)
+      : 0;
 
-  const tabsDetail = {
-    avatar: { label: initials, bg: "#1f6f4c" },
-    name,
-    goal: detail.youth?.goal || "No goal",
-    location: `${detail.youth?.district || ""}${detail.youth?.sector ? " • " + detail.youth.sector : ""}`,
-    skills: detail.youth?.skills || detail.youth?.skills_background || "No skills listed",
-    situation: detail.youth?.situation || "No situation notes",
-    progress: pct,
-    currentStep: detail.current_step,
-    totalSteps: detail.total_steps,
-    steps: detail.steps.map((s) => ({
-      number: s.step_number,
-      title: s.title,
-      detail: s.detail,
-      institution: s.institution,
-      status: s.status,
-      state: s.state,
-      location: s.location || undefined,
-      source: s.source || undefined,
-    })),
-  };
+  const currentCase = activeCase || pendingCase || cases[0];
+  const steps = currentCase?.steps || [];
 
   return (
     <OfficerShell active="Youth List">
@@ -249,21 +259,189 @@ export default function OfficerYouthDetail() {
         </Link>
 
         <header className="officer-profile-card">
-          <OfficerAvatar avatar={tabsDetail.avatar} size="large" />
+          <OfficerAvatar avatar={{ label: initials, bg: "#1f6f4c" }} size="large" />
           <div className="officer-profile-copy">
             <div className="officer-profile-title">
               <h1>{name}</h1>
-              <span className={`status-pill ${detail.status === "active" ? "on-track" : ""}`}>
-                {detail.status}
+              <span className={`status-pill ${currentCase?.status === "active" ? "on-track" : ""}`}>
+                {currentCase?.status === "active" ? "Active" : currentCase?.status || "Pending"}
               </span>
             </div>
             <p>
-              {tabsDetail.goal} • {tabsDetail.location}
+              {profile.goal || "No goal"} • {profile.district || "No location"}
+              {profile.sector ? ` • ${profile.sector}` : ""}
             </p>
           </div>
         </header>
 
-        <YouthDetailTabs detail={tabsDetail} />
+        {/* Progress */}
+        {currentCase && currentCase.total_steps > 0 && (
+          <div className="officer-card" style={{ marginBottom: 16, padding: 16 }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+              <strong style={{ fontSize: 14 }}>Progress</strong>
+              <span style={{ fontSize: 13, color: "#545d65" }}>
+                Step {currentCase.current_step} of {currentCase.total_steps} • {pct}%
+              </span>
+            </div>
+            <div className="progress-bar-wrap" style={{ height: 8, borderRadius: 4, background: "#eef0ed", overflow: "hidden" }}>
+              <div
+                className="progress-bar-fill"
+                style={{
+                  width: `${pct}%`,
+                  height: "100%",
+                  background: "#1f6f4c",
+                  borderRadius: 4,
+                  transition: "width 0.3s ease",
+                }}
+              />
+            </div>
+          </div>
+        )}
+
+        {/* Roadmap Timeline */}
+        {steps.length > 0 ? (
+          <div className="officer-card" style={{ marginBottom: 16 }}>
+            <header className="officer-card-header">
+              <div>
+                <h2>Roadmap</h2>
+                <p>{steps.length} steps toward {(profile.goal || "their goal").toLowerCase()}</p>
+              </div>
+              {approvedRoadmap && (
+                <span className="status-badge active" style={{ fontSize: 12 }}>Approved</span>
+              )}
+            </header>
+            <div className="detail-timeline" style={{ padding: "0 16px 16px" }}>
+              {steps.map((step) => (
+                <article
+                  className={`detail-step ${step.state}`}
+                  key={step.id}
+                  style={{
+                    display: "flex",
+                    alignItems: "flex-start",
+                    gap: 12,
+                    padding: "12px 0",
+                    borderBottom: "1px solid #eef0ed",
+                    opacity: step.state === "locked" ? 0.5 : 1,
+                  }}
+                >
+                  <div
+                    className="detail-step-node"
+                    style={{
+                      width: 32,
+                      height: 32,
+                      borderRadius: "50%",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      fontSize: 13,
+                      fontWeight: 600,
+                      flexShrink: 0,
+                      background:
+                        step.state === "done"
+                          ? "#1f6f4c"
+                          : step.state === "current"
+                            ? "#e8f5e9"
+                            : "#f0f2ef",
+                      color:
+                        step.state === "done"
+                          ? "#fff"
+                          : step.state === "current"
+                            ? "#1f6f4c"
+                            : "#a0a8a5",
+                    }}
+                  >
+                    {step.state === "done" ? (
+                      <Check size={16} />
+                    ) : step.state === "locked" ? (
+                      <Lock size={14} />
+                    ) : (
+                      step.step_number
+                    )}
+                  </div>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <strong style={{ fontSize: 14, display: "block", marginBottom: 2 }}>
+                      {step.title}
+                    </strong>
+                    <p style={{ fontSize: 13, color: "#545d65", margin: 0, lineHeight: 1.5 }}>
+                      {step.detail}
+                    </p>
+                    <div style={{ display: "flex", gap: 12, marginTop: 6, flexWrap: "wrap" }}>
+                      <span style={{ fontSize: 12, color: "#777f87" }}>
+                        <Briefcase size={12} style={{ marginRight: 4, verticalAlign: -2 }} />
+                        {step.institution}
+                      </span>
+                      {step.location && (
+                        <span style={{ fontSize: 12, color: "#777f87" }}>
+                          <MapPin size={12} style={{ marginRight: 4, verticalAlign: -2 }} />
+                          {step.location}
+                        </span>
+                      )}
+                      {step.state === "done" && (
+                        <span style={{ fontSize: 12, color: "#1f6f4c", fontWeight: 500 }}>
+                          ✓ Completed
+                        </span>
+                      )}
+                      {step.state === "current" && (
+                        <span style={{ fontSize: 12, color: "#d4a017", fontWeight: 500 }}>
+                          <Clock size={12} style={{ marginRight: 4, verticalAlign: -2 }} />
+                          Current step
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                  <span className={`status-badge ${step.state}`} style={{ flexShrink: 0, fontSize: 11 }}>
+                    {step.state === "done" ? "Done" : step.state === "current" ? "Current" : "Locked"}
+                  </span>
+                </article>
+              ))}
+            </div>
+          </div>
+        ) : (
+          /* No roadmap yet */
+          <div className="officer-card" style={{ textAlign: "center", padding: 32, marginBottom: 16 }}>
+            <Sparkles size={28} style={{ color: "#1f6f4c", marginBottom: 12 }} />
+            <h2 style={{ fontSize: 18, marginBottom: 8 }}>No roadmap yet</h2>
+            <p style={{ color: "#5f6860", fontSize: 14, marginBottom: 20 }}>
+              Generate a personalized roadmap using Smart Intake and verified sources.
+            </p>
+            {aiError && (
+              <p style={{ color: "#c0392b", fontSize: 13, marginBottom: 12 }}>{aiError}</p>
+            )}
+            <button
+              className="officer-button primary"
+              type="button"
+              onClick={handleGenerateRoadmap}
+              disabled={generating}
+            >
+              <Sparkles aria-hidden size={16} />
+              {generating ? "Opening Smart Intake…" : "Generate Roadmap"}
+            </button>
+          </div>
+        )}
+
+        {/* Intake info */}
+        <div className="officer-card" style={{ marginBottom: 16 }}>
+          <header className="officer-card-header">
+            <div>
+              <h2>Intake Notes</h2>
+              <p>Recorded during onboarding</p>
+            </div>
+          </header>
+          <dl className="intake-readonly" style={{ padding: "0 16px 16px" }}>
+            <div style={{ padding: "12px 0", borderBottom: "1px solid #eef0ed" }}>
+              <dt style={{ color: "#777f87", fontSize: 12, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.04em", marginBottom: 4 }}>Goal</dt>
+              <dd style={{ fontSize: 14, fontWeight: 500 }}>{profile.goal || "—"}</dd>
+            </div>
+            <div style={{ padding: "12px 0", borderBottom: "1px solid #eef0ed" }}>
+              <dt style={{ color: "#777f87", fontSize: 12, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.04em", marginBottom: 4 }}>Skills</dt>
+              <dd style={{ fontSize: 14 }}>{profile.skills_background || profile.skills || "—"}</dd>
+            </div>
+            <div style={{ padding: "12px 0" }}>
+              <dt style={{ color: "#777f87", fontSize: 12, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.04em", marginBottom: 4 }}>Location</dt>
+              <dd style={{ fontSize: 14 }}>{profile.district || "—"}{profile.sector ? ` • ${profile.sector}` : ""}</dd>
+            </div>
+          </dl>
+        </div>
 
         <aside className="officer-banner">
           <span className="officer-banner-icon">

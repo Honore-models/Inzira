@@ -222,13 +222,18 @@ export default function OfficerYouthList() {
                       <td>
                         {youthCase ? (
                           <Link
-                            className={status === "waiting" ? "generate-link" : "officer-text-link"}
+                            className={status === "waiting" || status === "new" ? "generate-link" : "officer-text-link"}
                             href={`/officer/youth/${youthCase.id}`}
                           >
-                            {status === "waiting" ? "Generate Roadmap" : "View"}
+                            {status === "waiting" || status === "new" ? "Generate Roadmap" : "View"}
                           </Link>
                         ) : (
-                          <span className="no-case">No case</span>
+                          <Link
+                            className="generate-link"
+                            href={`/officer/intake?youthId=${y.id}`}
+                          >
+                            Generate Roadmap
+                          </Link>
                         )}
                       </td>
                     </tr>

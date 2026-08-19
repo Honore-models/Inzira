@@ -88,6 +88,7 @@ export interface GenerateRoadmapRequest {
   youth: RoadmapYouth;
   officerNotes: string;
   caseId?: string;
+  youthProfileId?: string;
 }
 
 export interface AskRequest {
