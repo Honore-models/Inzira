@@ -24,7 +24,13 @@ export default auth((req) => {
   }
 
   // API routes that don't require auth
-  if (pathname.startsWith("/api/seed") || pathname.startsWith("/api/auth")) {
+  if (
+    pathname.startsWith("/api/seed") ||
+    pathname.startsWith("/api/ai/seed") ||
+    pathname.startsWith("/api/ai/documents") ||
+    pathname.startsWith("/api/ai/test") ||
+    pathname.startsWith("/api/auth")
+  ) {
     return NextResponse.next();
   }
 

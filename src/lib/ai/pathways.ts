@@ -25,7 +25,7 @@ export interface PathwayStep {
 /**
  * Verified pathway rules for business registration in Rwanda.
  * These are maintained by the Inzira team and verified against
- * official RDB, RRA, and BDF documentation.
+ * official RDB, RRA, BRD, and RTB documentation.
  */
 export const PATHWAYS: PathwayRule[] = [
   {
@@ -35,17 +35,17 @@ export const PATHWAYS: PathwayRule[] = [
       {
         order: 1,
         institution: "RDB",
-        title: "Register business name with RDB",
+        title: "Register business with RDB",
         description:
-          "Register your business name and obtain a registration certificate from the Rwanda Development Board.",
+          "Register your business (Enterprise or Domestic Company) with the Rwanda Development Board. Registration is free. Processing typically takes a few hours.",
         requiredDocuments: [
-          "National ID",
-          "Three business name options",
+          "National ID or passport",
+          "Three business name options (for Enterprise)",
           "Physical address",
           "Phone number or email",
           "Activity description",
         ],
-        notes: "Business name registration is free of charge.",
+        notes: "Enterprise registration is for businesses with turnover under RWF 10,000/day. Your TIN is issued automatically with your registration certificate.",
       },
       {
         order: 2,
@@ -53,9 +53,9 @@ export const PATHWAYS: PathwayRule[] = [
         title: "Obtain Tax Identification Number (TIN)",
         requiredBefore: ["business-registration-rdb"],
         description:
-          "Apply for and obtain your TIN from the Rwanda Revenue Authority. This is required before opening a bank account.",
+          "Your TIN is issued automatically when you register through RDB — no separate application needed for most small businesses.",
         requiredDocuments: ["National ID", "Business registration certificate"],
-        notes: "TIN registration is free. Can be done online at rra.gov.rw.",
+        notes: "TIN registration is free. Only businesses with turnover over RWF 20 million/year need separate VAT registration.",
       },
       {
         order: 3,
@@ -74,11 +74,11 @@ export const PATHWAYS: PathwayRule[] = [
       },
       {
         order: 4,
-        institution: "BDF",
-        title: "Apply for BDF loan guarantee",
+        institution: "BRD",
+        title: "Apply for BRD loan guarantee",
         requiredBefore: ["business-registration-bank"],
         description:
-          "Apply for a loan guarantee from the Business Development Fund to access affordable financing.",
+          "Apply for a loan guarantee from the Development Bank of Rwanda (formerly BDF) to access affordable financing.",
         requiredDocuments: [
           "National ID",
           "Business registration certificate",
@@ -89,7 +89,7 @@ export const PATHWAYS: PathwayRule[] = [
           "District endorsement letter",
         ],
         notes:
-          "Loan guarantees cover up to 80% of the loan. Processing takes 2-4 weeks.",
+          "BRD covers up to 50% collateral for general SMEs, and up to 75% for youth and women-owned businesses. Processing takes 2-4 weeks.",
       },
       {
         order: 5,
@@ -98,7 +98,47 @@ export const PATHWAYS: PathwayRule[] = [
         description:
           "Develop or refine a business plan to guide your operations and strengthen funding applications.",
         requiredDocuments: [],
-        notes: "BDF and other institutions offer free business advisory services.",
+        notes: "BRD and other institutions offer free business advisory services.",
+      },
+    ],
+  },
+  {
+    id: "youth-funding",
+    name: "Youth Fund Single-Digit Interest Loans",
+    steps: [
+      {
+        order: 1,
+        institution: "RDB",
+        title: "Register business with RDB",
+        description:
+          "Register your business with the Rwanda Development Board. Your TIN is issued automatically.",
+        requiredDocuments: ["National ID or passport"],
+        notes: "Registration is free and takes a few hours.",
+      },
+      {
+        order: 2,
+        institution: "Bank",
+        title: "Open business bank account",
+        requiredBefore: ["youth-funding-rdb"],
+        description:
+          "Open a business bank account for your registered business.",
+        requiredDocuments: ["National ID", "Business registration certificate", "TIN"],
+      },
+      {
+        order: 3,
+        institution: "BRD",
+        title: "Apply for Youth Fund loan",
+        requiredBefore: ["youth-funding-bank"],
+        description:
+          "Apply for the Youth Fund loan at 9% interest with 90% collateral guarantee. Loan amounts capped at RWF 10 million.",
+        requiredDocuments: [
+          "National ID",
+          "Business registration certificate",
+          "Repayment plan",
+          "Evidence of working with business support institutions",
+        ],
+        notes:
+          "You only need to provide 10% collateral. Successful repayment earns a 10% grant bonus. Repayment begins 3 months after disbursement.",
       },
     ],
   },
@@ -111,9 +151,9 @@ export const PATHWAYS: PathwayRule[] = [
         institution: "RTB",
         title: "Choose a TVET program",
         description:
-          "Research and select a vocational training program that matches your interests and career goals.",
+          "Research and select a vocational training program. RTB offers TVET from level 1 to level 5 through VTCs, TSSs, and IPRCs.",
         requiredDocuments: [],
-        notes: "Visit your nearest TVET center or check available programs.",
+        notes: "Visit your nearest TVET center or check available programs at rtb.gov.rw.",
       },
       {
         order: 2,
@@ -140,9 +180,9 @@ export const PATHWAYS: PathwayRule[] = [
         institution: "RTB",
         title: "Complete training and certification",
         description:
-          "Attend classes, complete coursework, and receive your TVET certificate.",
+          "Attend classes, complete coursework, and receive your TVET certificate. 84% of graduates find jobs within 9 months.",
         requiredDocuments: [],
-        notes: "Duration varies by program (3 months to 2 years).",
+        notes: "Duration varies by program (3 months to 2 years). RTB also offers short 6-12 month courses for NEET youth.",
       },
     ],
   },

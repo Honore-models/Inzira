@@ -1,7 +1,7 @@
 // ============================================================
 // POST /api/ai/seed
-// Seeds the RAG system with initial verified documents
-// for the Inzira prototype (RDB, RRA, BDF, RTB)
+// Seeds the RAG system with verified government documents
+// for the Inzira prototype
 // ============================================================
 
 import { NextResponse } from "next/server";
@@ -11,275 +11,148 @@ export async function POST() {
   try {
     const results = [];
 
-    // 1. RDB - Business Registration Guide
-    const rdbResult = await ingestDocument({
-      title: "Business Registration Guide",
+    // 1. RDB - Enterprise (Sole Trader) Registration
+    const rdbEnterpriseResult = await ingestDocument({
+      title: "Registering as an Enterprise (Sole Trader)",
       institution: "RDB",
       description:
-        "Complete guide to registering a business name with the Rwanda Development Board",
-      text: `BUSINESS NAME REGISTRATION WITH RDB
+        "Guide to registering as an individual trader with RDB Office of the Registrar General",
+      text: `Registering as an Enterprise (Sole Trader)
+Institution: RDB (Rwanda Development Board) — Office of the Registrar General (ORG)
+Title: Registering as an Enterprise (Sole Trader)
 
-The Rwanda Development Board (RDB) is the national agency responsible for business registration, investment promotion, and private sector development.
+For someone starting a small business alone (like a carpentry or tailoring workshop), the simplest option is registering as an "Enterprise" (individual trader) — this applies to businesses with turnover under RWF 10,000/day. Registration is completely free of charge, whether done online or in person. It can be done online via the RDB portal (businessprocedures.rdb.rw / urs.rdb.rw), or in person at the RDB building (Office of the Registrar General, KG 220 St, Kigali). Processing typically takes a few hours. You'll need a copy of your national ID or passport. After registration, your Tax Identification Number (TIN) is issued automatically together with your registration certificate, since RDB and RRA systems are integrated.
 
-WHO CAN REGISTER:
-Any Rwandan citizen aged 18 or above can register a business name. Foreign investors can also register through RDB with additional requirements.
-
-REQUIRED DOCUMENTS:
-1. National ID (original and copy)
-2. Three business name options in order of preference
-3. Physical address of the business
-4. Phone number and/or email address
-5. Description of business activity
-
-REGISTRATION PROCESS:
-Step 1: Visit the nearest RDB office or use the RDB e-services portal online at rdb.rw
-Step 2: Fill out the business name reservation form
-Step 3: Pay the reservation fee (business name reservation is FREE)
-Step 4: Wait for name approval (usually 1-3 business days)
-Step 5: Complete full registration and receive your registration certificate
-
-FEES:
-- Business name reservation: FREE
-- Business name registration: FREE
-- License fees vary by business activity type
-
-TIMELINE:
-- Name reservation: 1-3 business days
-- Full registration: 1-5 business days after name approval
-
-LOCATIONS:
-- RDB Main Office: Kigali City Tower, Avenue du Travail, Kigali
-- Phone: +250 788 185 400
-- Email: info@rdb.rw
-- Hours: Monday - Friday, 8:00 AM - 5:00 PM
-- Online portal: rdb.rw
-
-IMPORTANT NOTES:
-- You can register online through the RDB e-services portal
-- Some district offices have RDB agents who can assist
-- After registration, you will need a TIN from RRA for tax purposes
-- Certain business activities require additional licenses from relevant ministries`,
-      fileName: "rdb_business_registration_guide.txt",
+Source: rdb.rw, org.rdb.rw, businessprocedures.rdb.rw
+Verified date: 2026-08-19`,
+      fileName: "rdb_enterprise_registration.txt",
       metadata: {
-        version: "2024",
+        version: "2026",
         documentType: "registration_guide",
+        source: "rdb.rw, org.rdb.rw, businessprocedures.rdb.rw",
+        verifiedDate: "2026-08-19",
       },
     });
-    results.push(rdbResult);
+    results.push(rdbEnterpriseResult);
 
-    // 2. RRA - TIN Registration Guide
+    // 2. RDB - Company Registration
+    const rdbCompanyResult = await ingestDocument({
+      title: "Registering a Domestic Company",
+      institution: "RDB",
+      description:
+        "Guide to registering a domestic company with RDB Office of the Registrar General",
+      text: `Registering a Domestic Company
+Institution: RDB — Office of the Registrar General (ORG)
+Title: Registering a Domestic Company
+
+If a business grows beyond a sole trader (e.g. hiring employees, forming a partnership), it should register as a "Domestic Company" instead. Registration is free. Requirements: copy of ID/passport for all shareholders/directors, two completed copies of the Memorandum of Association, shareholders' and directors' particulars, and a local physical registered address. Business registration services are typically delivered within 6 hours once the application meets requirements.
+
+Source: org.rdb.rw/business-registration/
+Verified date: 2026-08-19`,
+      fileName: "rdb_company_registration.txt",
+      metadata: {
+        version: "2026",
+        documentType: "registration_guide",
+        source: "org.rdb.rw/business-registration/",
+        verifiedDate: "2026-08-19",
+      },
+    });
+    results.push(rdbCompanyResult);
+
+    // 3. RRA - TIN & VAT
     const rraResult = await ingestDocument({
-      title: "TIN Registration Requirements",
+      title: "Tax Registration and VAT Threshold",
       institution: "RRA",
       description:
-        "Guide to obtaining a Tax Identification Number from the Rwanda Revenue Authority",
-      text: `TAX IDENTIFICATION NUMBER (TIN) REGISTRATION
+        "Guide to Tax Identification Number and VAT requirements from Rwanda Revenue Authority",
+      text: `Tax Registration and VAT Threshold
+Institution: RRA (Rwanda Revenue Authority)
+Title: Tax Registration and VAT Threshold
 
-The Rwanda Revenue Authority (RRA) is the national tax administration. It issues Tax Identification Numbers (TINs) which are mandatory for doing business in Rwanda.
+A Tax Identification Number (TIN) is issued automatically when you register your business through RDB — no separate application is needed for most small businesses. A business only needs to register separately for VAT if turnover exceeds RWF 20 million in a year, or RWF 5 million in a single quarter — this does not apply to most small, newly started businesses. Businesses that do register for VAT must also acquire an Electronic Billing Machine (EBM).
 
-WHAT IS A TIN:
-A Tax Identification Number (TIN) is a unique identification number assigned to taxpayers by RRA. It is required for:
-- Opening a business bank account
-- Filing tax returns
-- Importing and exporting goods
-- Applying for government contracts
-- Any business transaction requiring tax compliance
-
-WHO NEEDS A TIN:
-- All registered businesses
-- Self-employed individuals
-- Employees earning above the tax threshold
-- Anyone conducting taxable transactions
-
-REQUIRED DOCUMENTS:
-1. National ID (original and copy)
-2. Business registration certificate (if applicable)
-3. Completed TIN application form (available at RRA offices)
-4. Passport-size photo
-
-REGISTRATION PROCESS:
-Step 1: Visit any RRA office or use the online portal at rra.gov.rw
-Step 2: Fill out the TIN application form
-Step 3: Submit required documents
-Step 4: Receive your TIN (same day for in-person, 1-2 days online)
-
-FEES:
-- TIN registration: FREE
-
-LOCATIONS:
-- RRA Headquarters: Boulevard de l'Umuganda, Kigali
-- Phone: +250 788 180 000
-- Email: info@rra.gov.rw
-- Hours: Monday - Friday, 7:00 AM - 6:00 PM
-- Online portal: rra.gov.rw
-
-IMPORTANT NOTES:
-- TIN is FREE to obtain
-- You need a TIN before opening a business bank account
-- Keep your TIN safe - it is used for all tax filings
-- Update your information with RRA if your business details change
-- Annual tax filing is mandatory once registered`,
-      fileName: "rra_tin_registration_guide.txt",
+Source: rra.gov.rw, tax-handbook.rra.gov.rw
+Verified date: 2026-08-19`,
+      fileName: "rra_tax_vat_guide.txt",
       metadata: {
-        version: "2024",
+        version: "2026",
         documentType: "tax_registration",
+        source: "rra.gov.rw, tax-handbook.rra.gov.rw",
+        verifiedDate: "2026-08-19",
       },
     });
     results.push(rraResult);
 
-    // 3. BDF - Loan Guarantee Program
-    const bdfResult = await ingestDocument({
-      title: "Business Development Fund Loan Guarantee Program",
-      institution: "BDF",
+    // 4. BRD (formerly BDF) - Loan Guarantee
+    const brdResult = await ingestDocument({
+      title: "SME and Youth Loan Guarantee Fund",
+      institution: "BRD",
       description:
-        "Guide to BDF loan guarantees for youth and small businesses",
-      text: `BDF LOAN GUARANTEE PROGRAM FOR YOUTH AND SMALL BUSINESSES
+        "Guide to BRD loan guarantees for youth and SMEs (formerly BDF)",
+      text: `SME and Youth Loan Guarantee Fund
+Institution: BRD (Development Bank of Rwanda) — formerly BDF (Business Development Fund), merged into BRD in July 2025
+Title: SME and Youth Loan Guarantee Fund
 
-The Business Development Fund (BDF) provides loan guarantees and affordable financing to small businesses and young entrepreneurs who may not qualify for traditional bank loans.
+BRD provides partial credit guarantees to help small business owners access bank loans even without full collateral. Under the enhanced guarantee product, BRD covers up to 50% of collateral for general SMEs, and up to 75% for special groups including women and youth-owned SMEs — meaning young entrepreneurs face a lower collateral barrier than the general population. To date, this program (as BDF) had supported over 40,000 businesses with credit guarantees before the 2025 merger into BRD.
 
-WHAT IS BDF:
-BDF is a government fund that guarantees loans from commercial banks, making it easier for small businesses and youth entrepreneurs to access financing.
-
-WHO IS ELIGIBLE:
-- Rwandan youth aged 18-35
-- Small and medium enterprises (SMEs)
-- Startups with a viable business plan
-- Existing businesses seeking growth capital
-- Women entrepreneurs (priority category)
-
-ELIGIBILITY REQUIREMENTS:
-1. Must be a Rwandan citizen aged 18-35 for youth category
-2. Must have a registered business (RDB registration required)
-3. Must have a valid TIN from RRA
-4. Must have a viable business plan
-5. Must open a business bank account
-6. Must demonstrate ability to repay (income projections or collateral)
-
-REQUIRED DOCUMENTS:
-1. National ID
-2. Business registration certificate from RDB
-3. Tax Identification Number (TIN) from RRA
-4. Business plan or proposal
-5. Bank statements (if existing business)
-6. Quotations for equipment or supplies (if applicable)
-7. District local government endorsement letter
-
-LOAN GUARANTEE PROCESS:
-Step 1: Ensure you have RDB registration and TIN
-Step 2: Prepare your business plan
-Step 3: Visit a BDF office or partner bank
-Step 4: Submit your application with required documents
-Step 5: BDF reviews your application (2-4 weeks)
-Step 6: If approved, BDF guarantees your loan with a commercial bank
-Step 7: Receive your loan from the partner bank
-
-LOAN DETAILS:
-- Maximum guarantee: Up to RWF 10,000,000
-- Guarantee coverage: Up to 80% of the loan
-- Interest rate: Subsidized rates (lower than commercial rates)
-- Repayment period: Up to 5 years depending on the loan
-
-LOCATIONS:
-- BDF Main Office: KK 15 Rd, Kigali
-- Phone: +250 788 180 300
-- Email: info@bdf.rw
-- Hours: Monday - Friday, 8:00 AM - 5:00 PM
-
-IMPORTANT NOTES:
-- You must have your business registered with RDB BEFORE applying
-- You must have a TIN from RRA BEFORE applying
-- You must open a business bank account BEFORE receiving the loan
-- BDF provides free business advisory services
-- Visit a BDF advisor before submitting your application for guidance
-- The process takes 2-4 weeks from submission to disbursement`,
-      fileName: "bdf_loan_guarantee_guide.txt",
+Source: brd.rw, allafrica.com (BDF Introduces Enhanced Partial Credit Guarantee Product)
+Verified date: 2026-08-19
+Note: This program was known as "BDF" before July 2025; some public materials may still reference the old name.`,
+      fileName: "brd_loan_guarantee_guide.txt",
       metadata: {
-        version: "2024",
+        version: "2026",
         documentType: "financing_guide",
+        source: "brd.rw, allafrica.com",
+        verifiedDate: "2026-08-19",
+        previousName: "BDF",
       },
     });
-    results.push(bdfResult);
+    results.push(brdResult);
 
-    // 4. RTB - TVET Training Programs
+    // 5. Youth & Artist Loan Fund
+    const youthFundResult = await ingestDocument({
+      title: "Youth Fund — Single-Digit Interest Loans",
+      institution: "Ministry of Youth and Arts",
+      description:
+        "Guide to the 2026 Youth Fund offering low-interest loans for youth and artists",
+      text: `Youth Fund — Single-Digit Interest Loans
+Institution: Ministry of Youth and Arts, implemented via BRD
+Title: Youth Fund — Single-Digit Interest Loans
+
+A newer fund (2026) offers youth and artists loans at 9% interest, with 90% of the required collateral guaranteed by the fund — meaning the applicant only needs to provide 10% collateral themselves, either as assets or cash. Loan amounts are capped at RWF 10 million. Applicants must submit a repayment plan and show they already work with institutions that provide business support. Youth can also group into cooperatives to meet the 10% collateral requirement together, or build savings over time to cover it. Successful, on-time repayment earns a 10% grant bonus of the loan amount. Repayment begins three months after disbursement.
+
+Source: allafrica.com (Rwanda: New Youth Fund Targets Offering Single-Digit Loans, May 2026)
+Verified date: 2026-08-19`,
+      fileName: "youth_fund_loan_guide.txt",
+      metadata: {
+        version: "2026",
+        documentType: "financing_guide",
+        source: "allafrica.com",
+        verifiedDate: "2026-08-19",
+      },
+    });
+    results.push(youthFundResult);
+
+    // 6. RTB - TVET Training
     const rtbResult = await ingestDocument({
-      title: "TVET Vocational Training Programs",
+      title: "Vocational Training Enrollment",
       institution: "RTB",
       description:
-        "Guide to vocational training programs and skills certification from RTB/TVET Rwanda",
-      text: `TVET VOCATIONAL TRAINING PROGRAMS
+        "Guide to TVET vocational training programs from Rwanda TVET Board",
+      text: `Vocational Training Enrollment
+Institution: RTB (Rwanda TVET Board) — the current authority overseeing TVET, having taken over most operational functions previously under WDA
+Title: Vocational Training Enrollment
 
-RTB / TVET Rwanda coordinates technical and vocational education and training across Rwanda. It connects young people to skills programs, national certificates, and work-based learning opportunities.
+RTB oversees Technical and Vocational Education and Training (TVET) from level 1 to level 5, delivered through Vocational Training Centres (VTCs), Technical Secondary Schools (TSSs), and IPRCs (Integrated Polytechnic Regional Centres — one in each province plus Kigali). RTB also runs a Skills Development Fund offering short 6-12 month vocational courses (manufacturing, transport, energy, agriculture, ICT, hospitality) specifically targeting youth not in employment, education, or training (NEET). According to RTB's own data, roughly 84% of youth completing these short courses found jobs within 9 months of graduating.
 
-WHAT IS TVET:
-Technical and Vocational Education and Training (TVET) provides practical skills for employment. Programs focus on hands-on learning in trades like carpentry, tailoring, electronics, agriculture, and more.
-
-WHO CAN ENROLL:
-- Rwandan youth aged 16 and above
-- Adults seeking new skills or career changes
-- Anyone without formal education requirements for university
-- People with disabilities (special programs available)
-
-AVAILABLE TRAINING AREAS:
-1. Construction and building trades
-2. Textile and garment making
-3. Agriculture and agri-processing
-4. Information and communication technology
-5. Electrical and electronics
-6. Automotive mechanics
-7. Hospitality and tourism
-8. Hairdressing and beauty
-9. Food processing and nutrition
-10. Renewable energy installation
-
-ENROLLMENT REQUIREMENTS:
-1. National ID
-2. Primary or secondary school certificate (varies by program)
-3. Age 16+ for most programs
-4. Some programs have specific prerequisites
-5. Application form (available at TVET centers)
-
-TRAINING DURATION:
-- Short courses: 3-6 months
-- Certificate programs: 1-2 years
-- Diploma programs: 2-3 years
-
-FEES:
-- Government-funded programs: Subsidized or FREE for eligible youth
-- Some programs require materials fee (varies by trade)
-- Financial aid available for qualifying students
-
-CERTIFICATION:
-- National TVET certificates are recognized by employers
-- Competency-based assessment system
-- Certificates issued by RTB
-- International recognition through mutual agreements
-
-LOCATIONS:
-- TVET Headquarters: Kigali
-- Regional TVET centers in all provinces
-- District-level training centers
-- Phone: +250 788 305 100
-- Email: info@rtb.rw
-- Hours: Monday - Friday, 7:30 AM - 5:00 PM
-
-HOW TO APPLY:
-Step 1: Visit your nearest TVET center or regional office
-Step 2: Speak with a career guidance counselor
-Step 3: Choose a program that matches your interests and goals
-Step 4: Complete the application form
-Step 5: Submit required documents
-Step 6: Attend orientation and start training
-
-IMPORTANT NOTES:
-- TVET programs lead to direct employment or self-employment
-- Many graduates start their own businesses
-- Industry partnerships provide internship opportunities
-- Evening and weekend classes available in some centers
-- Contact your local TVET center for current program availability`,
+Source: rtb.gov.rw, allafrica.com (Rwanda: 84% Youth With Vocational Training Get Jobs)
+Verified date: 2026-08-19`,
       fileName: "rtb_vocational_training_guide.txt",
       metadata: {
-        version: "2024",
+        version: "2026",
         documentType: "training_guide",
+        source: "rtb.gov.rw, allafrica.com",
+        verifiedDate: "2026-08-19",
       },
     });
     results.push(rtbResult);
