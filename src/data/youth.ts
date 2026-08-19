@@ -65,10 +65,10 @@ export const roadmapSteps = [
     detail: "This unlocks after your registration and TIN are ready.",
   },
   {
-    id: "bdf",
+    id: "brd",
     number: 5,
-    title: "Apply for a BDF loan guarantee",
-    institution: "BDF",
+    title: "Apply for BRD loan guarantee",
+    institution: "BRD",
     status: "Locked",
     state: "locked",
     detail: "This unlocks after the business bank account is open.",
@@ -90,17 +90,18 @@ export const institutions = [
     logo: "/RDB_logo.png",
     details: {
       fullDescription:
-        "The Rwanda Development Board is the national agency responsible for business registration, investment promotion, and private sector development. It is the first stop when registering your business name and getting the licenses you need to operate legally.",
+        "The Rwanda Development Board is the national agency responsible for business registration, investment promotion, and private sector development. It is the first stop when registering your business name and getting the licenses you need to operate legally. Registration is free of charge.",
       services: [
-        "Business name registration",
+        "Enterprise (sole trader) registration",
+        "Domestic company registration",
         "Company and investment licenses",
         "Startup support and incubation",
-        "Investment incentives and guidance",
+        "Online registration via businessprocedures.rdb.rw",
       ],
       phone: "+250 788 185 400",
       email: "info@rdb.rw",
       hours: "Mon – Fri, 8:00 AM – 5:00 PM",
-      address: "Kigali City Tower, Avenue du Travail, Kigali",
+      address: "Office of the Registrar General, KG 220 St, Kigali",
     },
   },
   {
@@ -129,26 +130,26 @@ export const institutions = [
     },
   },
   {
-    id: "bdf",
-    title: "BDF - Business Development Fund",
-    description: "Loan guarantees for youth and small businesses",
+    id: "brd",
+    title: "BRD - Development Bank of Rwanda",
+    description: "Loan guarantees for youth and small businesses (formerly BDF)",
     location: "Musanze",
     distance: "3.5 km",
     category: "Loans",
-    initials: "BDF",
+    initials: "BRD",
     logoBg: "#15583b",
     logo: "/BDF_logo.png",
     details: {
       fullDescription:
-        "The Business Development Fund provides loan guarantees and affordable financing to small businesses and young entrepreneurs who may not qualify for traditional bank loans. It also offers business advisory services to help you prepare strong applications.",
+        "The Development Bank of Rwanda (BRD, formerly BDF) provides partial credit guarantees to help small business owners access bank loans. BRD covers up to 50% collateral for general SMEs, and up to 75% for youth and women-owned businesses. Over 40,000 businesses have been supported with credit guarantees.",
       services: [
         "Loan guarantees for SMEs",
-        "Youth and women financing",
+        "Youth and women financing (up to 75% collateral coverage)",
         "Business advisory and coaching",
         "Loan application support",
       ],
       phone: "+250 788 180 300",
-      email: "info@bdf.rw",
+      email: "info@brd.rw",
       hours: "Mon – Fri, 8:00 AM – 5:00 PM",
       address: "KK 15 Rd, Kigali",
     },
@@ -165,11 +166,11 @@ export const institutions = [
     logo: "/RRA_logo.png",
     details: {
       fullDescription:
-        "The Rwanda Revenue Authority is the national tax administration. It issues Tax Identification Numbers (TINs), processes tax registration, and provides guidance on tax obligations so you can comply as your business grows.",
+        "The Rwanda Revenue Authority is the national tax administration. A TIN is issued automatically when you register your business through RDB — no separate application is needed for most small businesses. VAT registration is only required if turnover exceeds RWF 20 million/year.",
       services: [
-        "TIN registration",
+        "Automatic TIN issuance (via RDB integration)",
+        "VAT registration (turnover over RWF 20M/year)",
         "Tax filing and compliance support",
-        "Taxpayer education",
         "E-services online portal",
       ],
       phone: "+250 788 180 000",
@@ -181,23 +182,24 @@ export const institutions = [
 ];
 
 export const askSuggestions = [
-  "How much does it cost to register a business?",
-  "Where is the closest RDB office?",
-  "What is a TIN and how do I get it?",
+  "How do I register my business as a sole trader?",
+  "Do I need to apply separately for a TIN?",
+  "What loan guarantees are available for youth?",
+  "How can I get vocational training?",
 ];
 
 export const askSampleExchange = {
-  question: "What documents do I need to register my business name?",
-  answerHeader: "To register your business name with RDB, you'll need:",
+  question: "How do I register my business as a sole trader?",
+  answerHeader: "To register as an Enterprise (sole trader) with RDB:",
   answer: [
-    "National ID",
-    "Business name (3 options in order of preference)",
-    "Physical address",
-    "Phone number or email",
-    "Activity description",
+    "Registration is completely free of charge",
+    "Apply online at businessprocedures.rdb.rw or in person at RDB",
+    "You need a copy of your national ID or passport",
+    "Processing typically takes a few hours",
+    "Your TIN is issued automatically with your registration certificate",
   ],
   source: {
-    label: "RDB - Business Name Registration Guide (2024)",
+    label: "RDB - Enterprise Registration Guide (2026)",
     href: "#",
   },
 };
@@ -251,7 +253,7 @@ export const conversations = [
     id: "alice-umutoni",
     name: "Alice Umutoni",
     role: "Training Advisor",
-    location: "WDA",
+    location: "RTB",
     time: "May 10",
     preview: "Information about the tailoring training program you asked for.",
     avatar: { kind: "initials", label: "AU", bg: "#15583b" },

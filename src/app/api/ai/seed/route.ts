@@ -6,9 +6,15 @@
 
 import { NextResponse } from "next/server";
 import { ingestDocument } from "@/lib/ai/ingestion";
+import { createClient } from "@/lib/supabase/server";
 
 export async function POST() {
   try {
+    // Clear existing documents to prevent duplicates on re-seed
+    const supabase = await createClient();
+    await supabase.from("document_chunks").delete().neq("id", "00000000-0000-0000-0000-000000000000");
+    await supabase.from("documents").delete().neq("id", "00000000-0000-0000-0000-000000000000");
+
     const results = [];
 
     // 1. RDB - Enterprise (Sole Trader) Registration

@@ -193,10 +193,10 @@ export const youthDetail = {
     },
     {
       number: 4,
-      title: "Apply for BDF loan guarantee",
+      title: "Apply for BRD loan guarantee",
       state: "locked",
       status: "Locked",
-      institution: "BDF",
+      institution: "BRD",
     },
     {
       number: 5,
@@ -249,32 +249,32 @@ export const sectors: Record<string, string[]> = {
 export const aiDraftSteps = [
   {
     number: 1,
-    title: "Register your business name with RDB",
-    detail: "Register your business name and obtain a registration certificate.",
+    title: "Register business with RDB",
+    detail: "Register as an Enterprise or Domestic Company. Registration is free and takes a few hours. Your TIN is issued automatically.",
     badge: "RDB",
   },
   {
     number: 2,
-    title: "Get your Tax Identification Number (TIN)",
-    detail: "Apply for and get your TIN from RRA.",
+    title: "Obtain Tax Identification Number (TIN)",
+    detail: "TIN is issued automatically when you register through RDB. No separate application needed for most small businesses.",
     badge: "RRA",
   },
   {
     number: 3,
-    title: "Open a business bank account",
+    title: "Open business bank account",
     detail: "Open an account in a bank in your business name.",
     badge: "Bank",
   },
   {
     number: 4,
-    title: "Apply for BDF loan guarantee",
-    detail: "Prepare documents and apply for a loan guarantee.",
-    badge: "BDF",
+    title: "Apply for BRD loan guarantee",
+    detail: "BRD covers up to 75% collateral for youth-owned businesses. Apply with your registration, TIN, and business plan.",
+    badge: "BRD",
   },
   {
     number: 5,
     title: "Build your business plan",
-    detail: "Prepare or review this plan for funding.",
+    detail: "Prepare or review this plan for funding. BRD offers free business advisory services.",
     badge: "Training",
   },
 ];

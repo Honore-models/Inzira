@@ -95,11 +95,6 @@
       "static/chunks/webpack.js",
       "static/chunks/main-app.js",
       "static/chunks/app/officer/youth/page.js"
-    ],
-    "/api/ai/test/route": [
-      "static/chunks/webpack.js",
-      "static/chunks/main-app.js",
-      "static/chunks/app/api/ai/test/route.js"
     ]
   }
 }

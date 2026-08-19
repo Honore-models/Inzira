@@ -1,8 +1,11 @@
 {
+  "/api/auth/[...nextauth]/route": "app/api/auth/[...nextauth]/route.js",
+  "/api/youth/route": "app/api/youth/route.js",
+  "/api/cases/route": "app/api/cases/route.js",
   "/api/ai/documents/route": "app/api/ai/documents/route.js",
   "/youth/page": "app/youth/page.js",
-  "/officer/page": "app/officer/page.js",
   "/youth/ask/page": "app/youth/ask/page.js",
+  "/officer/page": "app/officer/page.js",
   "/officer/intake/page": "app/officer/intake/page.js",
   "/officer/youth/page": "app/officer/youth/page.js"
 }
