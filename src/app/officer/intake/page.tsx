@@ -200,26 +200,41 @@ function IntakeForm() {
   }
 
   async function handleApproveAndSend() {
-    if (!aiSteps.length || !resolvedYouthProfileId || !aiRoadmapId) {
-      setSendError("Please generate a roadmap first, then approve and send.");
+    if (!aiSteps.length || !resolvedYouthProfileId) {
+      setSendError("Please generate a roadmap and ensure the youth profile is loaded, then approve and send.");
       return;
     }
     setSending(true);
     setSendError("");
 
     try {
+      // Always send the full roadmap data — this ensures the approve endpoint
+      // can work even if the roadmap wasn't saved to the DB during generation
+      const body: Record<string, unknown> = {
+        youthProfileId: resolvedYouthProfileId,
+        goal,
+        skillsBackground: skills,
+        district: district || "",
+        sector: sector || "",
+        situation,
+      };
+
+      if (aiRoadmapId) {
+        // Roadmap was saved to DB during generation
+        body.roadmapId = aiRoadmapId;
+      } else {
+        // Roadmap only exists in client state — send it inline
+        body.roadmapData = {
+          title: aiRoadmap?.title || "Personalized Roadmap",
+          summary: aiRoadmap?.summary || "A roadmap generated from verified sources.",
+          steps: aiRoadmap?.steps || [],
+        };
+      }
+
       const res = await fetch("/api/ai/approve-roadmap", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          youthProfileId: resolvedYouthProfileId,
-          roadmapId: aiRoadmapId,
-          goal,
-          skillsBackground: skills,
-          district: district || "",
-          sector: sector || "",
-          situation,
-        }),
+        body: JSON.stringify(body),
       });
 
       if (!res.ok) {
@@ -392,7 +407,7 @@ function IntakeForm() {
                   className="officer-button primary"
                   type="button"
                   onClick={handleApproveAndSend}
-                  disabled={sending || !aiRoadmapId}
+                  disabled={sending || !resolvedYouthProfileId}
                 >
                   {sending ? "Approving…" : "Approve and send to youth"}
                   {!sending && <ArrowRight aria-hidden size={15} />}

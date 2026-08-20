@@ -2,15 +2,40 @@
 // POST /api/ai/approve-roadmap
 // Officer approves a draft roadmap, creates case + steps,
 // and makes it visible to the youth.
+//
+// Accepts EITHER:
+//   - roadmapId: fetches existing roadmap from DB
+//   - roadmapData: inline roadmap (title, summary, steps) to save + approve in one shot
 // ============================================================
 
 import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 
+interface RoadmapStepData {
+  order: number;
+  title: string;
+  description: string;
+  institution: string;
+  location: string | null;
+  whatToBring: string[];
+  whyThisStep: string;
+  sources: {
+    documentId: string;
+    documentTitle: string;
+    institution: string;
+    page: number | null;
+  }[];
+}
+
 interface ApproveRequest {
   youthProfileId: string;
-  roadmapId: string;
+  roadmapId?: string;
+  roadmapData?: {
+    title: string;
+    summary: string;
+    steps: RoadmapStepData[];
+  };
   goal?: string;
   skillsBackground?: string;
   district?: string;
@@ -33,11 +58,27 @@ export async function POST(request: Request) {
     }
 
     const body: ApproveRequest = await request.json();
-    const { youthProfileId, roadmapId, goal, skillsBackground, district, sector, situation } = body;
+    const {
+      youthProfileId,
+      roadmapId,
+      roadmapData,
+      goal,
+      skillsBackground,
+      district,
+      sector,
+      situation,
+    } = body;
 
-    if (!youthProfileId || !roadmapId) {
+    if (!youthProfileId) {
       return NextResponse.json(
-        { error: "youthProfileId and roadmapId are required" },
+        { error: "youthProfileId is required" },
+        { status: 400 },
+      );
+    }
+
+    if (!roadmapId && (!roadmapData || !roadmapData.steps || roadmapData.steps.length === 0)) {
+      return NextResponse.json(
+        { error: "Either roadmapId or roadmapData with steps is required" },
         { status: 400 },
       );
     }
@@ -51,28 +92,46 @@ export async function POST(request: Request) {
       .eq("user_id", session.user.id)
       .single();
 
-    // Fetch the AI roadmap
-    const { data: roadmap, error: roadmapError } = await supabase
-      .from("ai_roadmaps")
-      .select("*")
-      .eq("id", roadmapId)
-      .single();
+    // -------------------------------------------------------
+    // Get or create the roadmap record
+    // -------------------------------------------------------
+    let finalRoadmapId: string | null | undefined = roadmapId;
+    let stepsData: RoadmapStepData[];
 
-    if (roadmapError || !roadmap) {
-      return NextResponse.json(
-        { error: "Roadmap not found" },
-        { status: 404 },
-      );
+    if (roadmapId) {
+      // Fetch existing roadmap from DB
+      const { data: roadmap, error: roadmapError } = await supabase
+        .from("ai_roadmaps")
+        .select("*")
+        .eq("id", roadmapId)
+        .single();
+
+      if (roadmapError || !roadmap) {
+        return NextResponse.json(
+          { error: "Roadmap not found" },
+          { status: 404 },
+        );
+      }
+
+      if (roadmap.status === "approved" || roadmap.status === "sent") {
+        return NextResponse.json(
+          { error: "Roadmap is already approved" },
+          { status: 400 },
+        );
+      }
+
+      stepsData = roadmap.steps_data as RoadmapStepData[];
+    } else {
+      // Use inline roadmapData — save it as approved directly
+      stepsData = roadmapData!.steps;
+
+      // We still need a case to link to (created below)
+      finalRoadmapId = null; // will be set after creating the roadmap record
     }
 
-    if (roadmap.status === "approved" || roadmap.status === "sent") {
-      return NextResponse.json(
-        { error: "Roadmap is already approved" },
-        { status: 400 },
-      );
-    }
-
-    // Check if there's already an active case for this youth
+    // -------------------------------------------------------
+    // Create or reuse a youth_case
+    // -------------------------------------------------------
     const { data: existingCase } = await supabase
       .from("youth_cases")
       .select("id, total_steps")
@@ -91,7 +150,7 @@ export async function POST(request: Request) {
         .from("youth_cases")
         .update({
           officer_profile_id: officerProfile?.id || null,
-          total_steps: (roadmap.steps_data as unknown[])?.length || 0,
+          total_steps: stepsData.length,
           current_step: 1,
           status: "active",
         })
@@ -103,7 +162,7 @@ export async function POST(request: Request) {
         .insert({
           youth_profile_id: youthProfileId,
           officer_profile_id: officerProfile?.id || null,
-          total_steps: (roadmap.steps_data as unknown[])?.length || 0,
+          total_steps: stepsData.length,
           current_step: 1,
           status: "active",
         })
@@ -111,6 +170,7 @@ export async function POST(request: Request) {
         .single();
 
       if (caseError || !newCase) {
+        console.error("Failed to create case:", caseError);
         return NextResponse.json(
           { error: caseError?.message || "Failed to create case" },
           { status: 500 },
@@ -119,37 +179,52 @@ export async function POST(request: Request) {
       caseId = newCase.id;
     }
 
-    // Link the roadmap to the case
-    await supabase
-      .from("ai_roadmaps")
-      .update({
-        case_id: caseId,
-        status: "approved",
-        approved_at: new Date().toISOString(),
-        youth_profile_id: youthProfileId,
-      })
-      .eq("id", roadmapId);
+    // -------------------------------------------------------
+    // Save or update the roadmap record
+    // -------------------------------------------------------
+    if (finalRoadmapId) {
+      // Update existing roadmap → approved
+      await supabase
+        .from("ai_roadmaps")
+        .update({
+          case_id: caseId,
+          status: "approved",
+          approved_at: new Date().toISOString(),
+          youth_profile_id: youthProfileId,
+        })
+        .eq("id", finalRoadmapId);
+    } else {
+      // Create a new roadmap record from inline data
+      const sources = stepsData.flatMap((s) => s.sources || []);
+      const { data: savedRoadmap } = await supabase
+        .from("ai_roadmaps")
+        .insert({
+          case_id: caseId,
+          title: roadmapData!.title,
+          summary: roadmapData!.summary,
+          steps_data: stepsData,
+          sources,
+          status: "approved",
+          approved_at: new Date().toISOString(),
+          youth_profile_id: youthProfileId,
+          officer_notes: situation || null,
+        })
+        .select()
+        .single();
 
+      if (savedRoadmap) {
+        finalRoadmapId = savedRoadmap.id;
+      }
+    }
+
+    // -------------------------------------------------------
     // Delete any existing steps for this case (if re-approving)
+    // -------------------------------------------------------
     await supabase.from("roadmap_steps").delete().eq("case_id", caseId);
 
-    // Create roadmap steps from the AI-generated data
-    const stepsData = roadmap.steps_data as {
-      order: number;
-      title: string;
-      description: string;
-      institution: string;
-      location: string | null;
-      whatToBring: string[];
-      whyThisStep: string;
-      sources: {
-        documentId: string;
-        documentTitle: string;
-        institution: string;
-        page: number | null;
-      }[];
-    }[];
-
+    // -------------------------------------------------------
+    // Create roadmap_steps from the AI-generated data
+    // -------------------------------------------------------
     if (!stepsData || stepsData.length === 0) {
       return NextResponse.json(
         { error: "Roadmap has no steps to approve" },
@@ -181,13 +256,16 @@ export async function POST(request: Request) {
       .insert(roadmapSteps);
 
     if (stepsError) {
+      console.error("Failed to create steps:", stepsError);
       return NextResponse.json(
         { error: stepsError.message },
         { status: 500 },
       );
     }
 
+    // -------------------------------------------------------
     // Update the youth's profile with intake data
+    // -------------------------------------------------------
     const profileUpdates: Record<string, unknown> = {
       onboarding_completed: true,
       onboarding_submitted_at: new Date().toISOString(),
@@ -206,6 +284,7 @@ export async function POST(request: Request) {
     return NextResponse.json({
       message: "Roadmap approved and sent to youth",
       caseId,
+      roadmapId: finalRoadmapId || null,
       stepsCreated: roadmapSteps.length,
     });
   } catch (error) {
