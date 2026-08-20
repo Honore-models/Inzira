@@ -284,6 +284,7 @@ export async function POST(request: Request) {
     return NextResponse.json({
       message: "Roadmap approved and sent to youth",
       caseId,
+      youthProfileId,
       roadmapId: finalRoadmapId || null,
       stepsCreated: roadmapSteps.length,
     });

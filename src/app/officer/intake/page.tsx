@@ -245,8 +245,8 @@ function IntakeForm() {
       }
 
       const data = await res.json();
-      // Redirect to the youth detail page
-      window.location.href = `/officer/youth/${data.caseId}`;
+      // Redirect to the youth detail page (uses youth profile ID, not case ID)
+      window.location.href = `/officer/youth/${data.youthProfileId}`;
     } catch {
       setSendError("Failed to approve roadmap. Please try again.");
       setSending(false);
