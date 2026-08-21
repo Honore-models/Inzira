@@ -7,8 +7,11 @@ export const AI_CONFIG = {
   // OpenRouter API (single key for both embeddings and generation)
   openrouterApiKey: process.env.OPENROUTER_API_KEY || "",
 
-  // Generation model (Gemma 4 26B A4B via OpenRouter)
-  chatModel: process.env.AI_MODEL || "google/gemma-4-26b-a4b-it:free",
+  // Generation model
+  chatModel: process.env.AI_MODEL || "openai/gpt-oss-20b:free",
+
+  // Fallback model (used when primary is rate-limited)
+  chatModelFallback: process.env.AI_MODEL_FALLBACK || "z-ai/glm-5.2:free",
 
   // Embedding model (BGE-M3 via OpenRouter)
   embeddingModel: process.env.EMBEDDING_MODEL || "BAAI/bge-m3",
@@ -34,6 +37,10 @@ export const AI_CONFIG = {
   // Generation settings
   maxTokens: 2048,
   temperature: 0.3,
+
+  // Retry settings for rate-limited models
+  maxRetries: 3,
+  retryBaseDelayMs: 2000,
 } as const;
 
 /**

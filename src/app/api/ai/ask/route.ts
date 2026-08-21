@@ -113,10 +113,16 @@ export async function POST(request: Request) {
       });
       answer = completion.choices[0]?.message?.content || "";
     } catch (chatError) {
-      console.error("Gemma chat completion failed:", chatError);
+      console.error("Chat completion failed:", chatError);
+      const msg = chatError instanceof Error ? chatError.message : "";
+      const isRateLimit = msg.includes("429") || msg.includes("rate") || msg.includes("Rate limit");
       return NextResponse.json(
-        { error: "Failed to generate an answer. Please try again." },
-        { status: 500 },
+        {
+          error: isRateLimit
+            ? "The AI service is temporarily busy. Please wait a moment and try again."
+            : "Failed to generate an answer. Please try again.",
+        },
+        { status: isRateLimit ? 429 : 500 },
       );
     }
 

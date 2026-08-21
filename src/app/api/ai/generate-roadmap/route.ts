@@ -195,10 +195,16 @@ export async function POST(request: Request) {
       });
       rawResponse = completion.choices[0]?.message?.content || "";
     } catch (chatError) {
-      console.error("Gemma roadmap generation failed:", chatError);
+      console.error("Roadmap generation failed:", chatError);
+      const msg = chatError instanceof Error ? chatError.message : "";
+      const isRateLimit = msg.includes("429") || msg.includes("rate") || msg.includes("Rate limit");
       return NextResponse.json(
-        { error: "Failed to generate roadmap. Please try again." },
-        { status: 500 },
+        {
+          error: isRateLimit
+            ? "The AI service is temporarily busy. Please wait a moment and try again."
+            : "Failed to generate roadmap. Please try again.",
+        },
+        { status: isRateLimit ? 429 : 500 },
       );
     }
 

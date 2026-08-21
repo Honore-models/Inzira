@@ -1,12 +1,7 @@
 {
-  "/api/profile/route": "app/api/profile/route.js",
   "/api/auth/[...nextauth]/route": "app/api/auth/[...nextauth]/route.js",
-  "/api/cases/route": "app/api/cases/route.js",
-  "/api/cases/[caseId]/steps/route": "app/api/cases/[caseId]/steps/route.js",
-  "/api/ai/ask/route": "app/api/ai/ask/route.js",
   "/page": "app/page.js",
+  "/auth/signin/page": "app/auth/signin/page.js",
   "/youth/page": "app/youth/page.js",
-  "/youth/ask/page": "app/youth/ask/page.js",
-  "/youth/steps/page": "app/youth/steps/page.js",
-  "/auth/signin/page": "app/auth/signin/page.js"
+  "/youth/ask/page": "app/youth/ask/page.js"
 }
