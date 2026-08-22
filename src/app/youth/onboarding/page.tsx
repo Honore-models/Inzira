@@ -1,9 +1,6 @@
 "use client";
 
-"use client";
-
 import { useState } from "react";
-import { useRouter } from "next/navigation";
 import Link from "next/link";
 import {
   ArrowLeft,
@@ -40,27 +37,17 @@ const goalOptions = [
   },
 ];
 
-const districts = [
-  "Gasabo District",
-  "Kicukiro District",
-  "Nyarugenge District",
-];
-
-const sectorsByDistrict: Record<string, string[]> = {
-  "Gasabo District": ["Kimihurura", "Kacyiru", "Gisozi", "Remera", "Kibagabaga"],
-  "Kicukiro District": ["Kicukiro", "Nyarugunga", "Gatenga", "Kanombe", "Niboye"],
-  "Nyarugenge District": ["Nyarugenge", "Gitega", "Kanyinya", "Kimisagara", "Nyamirambo"],
-};
+import { districtNames, getSectorsForDistrict } from "@/data/rwanda-locations";
 
 export default function YouthOnboarding() {
   const [step, setStep] = useState(1);
   const [name, setName] = useState("");
   const [goal, setGoal] = useState("");
   const [skills, setSkills] = useState("");
-  const [district, setDistrict] = useState(districts[0]);
+  const [district, setDistrict] = useState(districtNames[0]);
   const [sector, setSector] = useState("");
 
-  const sectorOptions = districts.includes(district) ? sectorsByDistrict[district] || [] : [];
+  const sectorOptions = getSectorsForDistrict(district);
 
   function next() {
     if (step === 4) {
@@ -258,8 +245,8 @@ export default function YouthOnboarding() {
                         setSector("");
                       }}
                     >
-                      {districts.map((d) => (
-                        <option key={d}>{d}</option>
+                      {districtNames.map((d) => (
+                        <option key={d} value={d}>{d} District</option>
                       ))}
                     </select>
                   </div>
@@ -272,7 +259,7 @@ export default function YouthOnboarding() {
                     <select value={sector} onChange={(e) => setSector(e.target.value)}>
                       <option value="">Select a sector</option>
                       {sectorOptions.map((s) => (
-                        <option key={s}>{s}</option>
+                        <option key={s} value={s}>{s}</option>
                       ))}
                     </select>
                   </div>
