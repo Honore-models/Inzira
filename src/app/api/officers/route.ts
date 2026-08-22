@@ -45,7 +45,7 @@ export async function GET() {
     // Fetch all officers
     const { data: officers, error } = await supabase
       .from("profiles")
-      .select("id, full_name, email, department, district_assigned, photo_url")
+      .select("id, full_name, email, department, district_assigned")
       .eq("role", "officer")
       .order("full_name");
 

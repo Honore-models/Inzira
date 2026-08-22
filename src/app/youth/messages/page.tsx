@@ -12,7 +12,6 @@ interface Officer {
   email: string;
   department: string | null;
   district_assigned: string | null;
-  photo_url: string | null;
   case: {
     id: string;
     status: string;
