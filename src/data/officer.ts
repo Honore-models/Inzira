@@ -234,17 +234,18 @@ export const goalOptions = [
   "Continue education",
 ];
 
-export const districts = [
-  "Gasabo District",
-  "Kicukiro District",
-  "Nyarugenge District",
-];
+import { rwandaDistricts } from "@/data/rwanda-locations";
 
-export const sectors: Record<string, string[]> = {
-  "Gasabo District": ["Kimihurura", "Kacyiru", "Gisozi", "Remera", "Kibagabaga"],
-  "Kicukiro District": ["Kicukiro", "Nyarugunga", "Gatenga", "Kanombe", "Niboye"],
-  "Nyarugenge District": ["Nyarugenge", "Gitega", "Kanyinya", "Kimisagara", "Nyamirambo"],
-};
+// Re-export all 30 districts with "District" suffix for the onboarding UI
+export const districts = rwandaDistricts.map((d) => `${d.name} District`);
+
+// Re-export sectors keyed by "District Name District" for the onboarding UI
+export const sectors: Record<string, string[]> = Object.fromEntries(
+  rwandaDistricts.map((d) => [
+    `${d.name} District`,
+    [...d.sectors].sort(),
+  ]),
+);
 
 export const aiDraftSteps = [
   {
