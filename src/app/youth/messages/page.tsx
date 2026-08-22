@@ -230,7 +230,7 @@ export default function YouthMessages() {
                   <span
                     className="officer-avatar small"
                     style={{
-                      background: hasCase ? "#1f6f4c" : "#5f6860",
+                      background: "#1f6f4c",
                       flexShrink: 0,
                     }}
                   >

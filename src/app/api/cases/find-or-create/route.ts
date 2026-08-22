@@ -56,7 +56,7 @@ export async function POST(request: Request) {
       .insert({
         youth_profile_id: myProfile.id,
         officer_profile_id: officerProfileId,
-        status: "pending",
+        status: "active",
         current_step: 0,
         total_steps: 0,
       })
