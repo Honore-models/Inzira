@@ -20,7 +20,7 @@ const navItems = [
 ];
 
 const secondaryNavItems = [
-  { href: "/youth/messages", label: "Messages", icon: MessageCircle, badge: 2 },
+  { href: "/youth/messages", label: "Messages", icon: MessageCircle },
   { href: "/youth/profile", label: "My Profile", icon: UserRound },
 ];
 
@@ -67,7 +67,6 @@ export function YouthShell({
               >
                 <Icon aria-hidden size={18} />
                 <span>{item.label}</span>
-                {item.badge ? <small>{item.badge}</small> : null}
               </Link>
             );
           })}
