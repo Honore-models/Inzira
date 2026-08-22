@@ -26,6 +26,7 @@ interface YouthProfile {
 
 interface YouthCase {
   id: string;
+  youth_profile_id: string;
   status: string;
   current_step: number;
   total_steps: number;
@@ -186,7 +187,7 @@ export default function OfficerDashboard() {
               {activeCases.slice(0, 3).map((item) => (
                 <Link
                   className="pending-row"
-                  href={`/officer/youth/${item.id}`}
+                  href={`/officer/youth/${item.youth_profile_id}`}
                   key={item.id}
                 >
                   <OfficerAvatar
