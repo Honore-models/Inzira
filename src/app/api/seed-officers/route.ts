@@ -14,18 +14,22 @@ export async function POST() {
   try {
     const supabase = getSupabaseAdmin();
 
-    // Check if any officers already exist
+    // Get existing officers and delete their auth users + profiles
     const { data: existingOfficers } = await supabase
       .from("profiles")
-      .select("id")
-      .eq("role", "officer")
-      .limit(1);
+      .select("id, user_id")
+      .eq("role", "officer");
 
     if (existingOfficers && existingOfficers.length > 0) {
-      return NextResponse.json({
-        message: "Officers already exist in the database",
-        count: existingOfficers.length,
-      });
+      // Delete auth users for existing officers
+      for (const officer of existingOfficers) {
+        await supabase.auth.admin.deleteUser(officer.user_id);
+      }
+      // Delete profiles
+      await supabase
+        .from("profiles")
+        .delete()
+        .eq("role", "officer");
     }
 
     const passwordHash = await bcrypt.hash("password123", 12);
@@ -63,10 +67,11 @@ export async function POST() {
         });
 
       if (authError || !authUser.user) {
+        console.error(`Failed to create auth user for ${officer.email}:`, authError);
         continue;
       }
 
-      // Create profile
+      // Create profile with all required fields
       const { error: profileError } = await supabase.from("profiles").insert({
         user_id: authUser.user.id,
         email: officer.email,
@@ -75,11 +80,15 @@ export async function POST() {
         password_hash: passwordHash,
         department: officer.department,
         district_assigned: officer.districtAssigned,
+        onboarding_completed: true,
       });
 
-      if (!profileError) {
-        created.push(officer.email);
+      if (profileError) {
+        console.error(`Failed to create profile for ${officer.email}:`, profileError);
+        continue;
       }
+
+      created.push(officer.email);
     }
 
     return NextResponse.json({
