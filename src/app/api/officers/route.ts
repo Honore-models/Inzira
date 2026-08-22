@@ -10,22 +10,36 @@ export async function GET() {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    // Use admin client to bypass RLS — access control is handled in API layer
-    const supabase = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.SUPABASE_SERVICE_ROLE_KEY!,
-      { auth: { autoRefreshToken: false, persistSession: false } },
-    );
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+    if (!supabaseUrl || !supabaseKey) {
+      return NextResponse.json(
+        { error: "Missing Supabase environment variables" },
+        { status: 500 },
+      );
+    }
+
+    const supabase = createClient(supabaseUrl, supabaseKey, {
+      auth: { autoRefreshToken: false, persistSession: false },
+    });
 
     // Get current user's profile ID
-    const { data: myProfile } = await supabase
+    const { data: myProfile, error: profileLookupError } = await supabase
       .from("profiles")
       .select("id")
       .eq("user_id", session.user.id)
       .single();
 
-    if (!myProfile) {
-      return NextResponse.json({ error: "Profile not found" }, { status: 404 });
+    if (profileLookupError || !myProfile) {
+      return NextResponse.json(
+        {
+          error: "Profile not found",
+          details: profileLookupError?.message || "No profile for this user",
+          userId: session.user.id,
+        },
+        { status: 404 },
+      );
     }
 
     // Fetch all officers

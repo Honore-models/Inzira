@@ -29,6 +29,7 @@ export default function YouthMessages() {
   const [activeCaseId, setActiveCaseId] = useState<string | null>(null);
   const [activeOfficerName, setActiveOfficerName] = useState("");
   const [connecting, setConnecting] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     loadOfficers();
@@ -37,11 +38,17 @@ export default function YouthMessages() {
   async function loadOfficers() {
     try {
       const res = await fetch("/api/officers");
+      const data = await res.json();
       if (res.ok) {
-        setOfficers(await res.json());
+        setOfficers(data);
+        setError(null);
+      } else {
+        console.error("Officers API error:", data);
+        setError(data.error || "Failed to load officers");
       }
-    } catch {
-      // Silently handle errors
+    } catch (err) {
+      console.error("Failed to fetch officers:", err);
+      setError("Could not connect to server");
     } finally {
       setLoading(false);
     }
@@ -289,7 +296,7 @@ export default function YouthMessages() {
               );
             })}
             {filtered.length === 0 && (
-              <p
+              <div
                 style={{
                   color: "#777f87",
                   fontSize: 14,
@@ -297,10 +304,19 @@ export default function YouthMessages() {
                   textAlign: "center",
                 }}
               >
-                {officers.length === 0
-                  ? "No youth officers available yet. Your officer will be assigned after your case is reviewed."
-                  : "No officers match your search."}
-              </p>
+                {error ? (
+                  <div>
+                    <p style={{ color: "#c0392b", fontWeight: 600, marginBottom: 8 }}>
+                      Error: {error}
+                    </p>
+                    <p>Please try refreshing the page.</p>
+                  </div>
+                ) : officers.length === 0 ? (
+                  <p>No youth officers available yet. Your officer will be assigned after your case is reviewed.</p>
+                ) : (
+                  <p>No officers match your search.</p>
+                )}
+              </div>
             )}
           </div>
         </section>

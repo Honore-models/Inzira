@@ -28,7 +28,8 @@ export default auth((req) => {
     pathname.startsWith("/api/seed") ||
     pathname.startsWith("/api/ai/seed") ||
     pathname.startsWith("/api/ai/documents") ||
-    pathname.startsWith("/api/auth")
+    pathname.startsWith("/api/auth") ||
+    pathname === "/api/debug"
   ) {
     return NextResponse.next();
   }
