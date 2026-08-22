@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
-import { createClient } from "@/lib/supabase/server";
+import { createClient } from "@supabase/supabase-js";
 
 export async function POST(request: Request) {
   try {
@@ -16,17 +16,24 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "officerProfileId is required" }, { status: 400 });
     }
 
-    const supabase = await createClient();
+    const supabase = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!,
+      { auth: { autoRefreshToken: false, persistSession: false } },
+    );
 
     // Get current youth's profile ID
-    const { data: myProfile } = await supabase
+    const { data: myProfile, error: profileError } = await supabase
       .from("profiles")
       .select("id")
       .eq("user_id", session.user.id)
       .single();
 
-    if (!myProfile) {
-      return NextResponse.json({ error: "Profile not found" }, { status: 404 });
+    if (profileError || !myProfile) {
+      return NextResponse.json(
+        { error: "Profile not found", details: profileError?.message },
+        { status: 404 },
+      );
     }
 
     // Check if a case already exists between this youth and officer
@@ -57,13 +64,15 @@ export async function POST(request: Request) {
       .single();
 
     if (error) {
+      console.error("Failed to create case:", error);
       return NextResponse.json({ error: error.message }, { status: 500 });
     }
 
     return NextResponse.json({ case: newCase, created: true });
-  } catch {
+  } catch (error) {
+    console.error("find-or-create error:", error);
     return NextResponse.json(
-      { error: "Internal server error" },
+      { error: "Internal server error", details: String(error) },
       { status: 500 },
     );
   }

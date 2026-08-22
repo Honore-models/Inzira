@@ -1155,6 +1155,7 @@ p {
 .youth-content:has(.youth-page-wrap) {
   display: flex;
   justify-content: center;
+  align-items: flex-start;
 }
 
 .youth-page-wrap {

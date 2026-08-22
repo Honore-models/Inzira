@@ -55,6 +55,7 @@ export default function YouthMessages() {
 
   async function handleContactOfficer(officer: Officer) {
     setConnecting(officer.id);
+    setError(null);
     try {
       if (officer.case) {
         // Already have a case — open chat directly
@@ -67,16 +68,19 @@ export default function YouthMessages() {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ officerProfileId: officer.id }),
         });
-        if (res.ok) {
-          const data = await res.json();
+        const data = await res.json();
+        if (res.ok && data.case) {
           setActiveCaseId(data.case.id);
           setActiveOfficerName(officer.full_name);
-          // Reload officers to update the case status
           loadOfficers();
+        } else {
+          console.error("Failed to create case:", data);
+          setError(data.error || "Could not start conversation. Please try again.");
         }
       }
-    } catch {
-      // Silently handle errors
+    } catch (err) {
+      console.error("Failed to contact officer:", err);
+      setError("Could not connect to server. Please try again.");
     } finally {
       setConnecting(null);
     }
@@ -164,6 +168,22 @@ export default function YouthMessages() {
               }}
             />
           </div>
+
+          {/* Error banner */}
+          {error && (
+            <div
+              style={{
+                padding: "10px 16px",
+                background: "#fdf2f2",
+                borderBottom: "1px solid #f5c6c6",
+                color: "#c0392b",
+                fontSize: 13,
+                fontWeight: 500,
+              }}
+            >
+              {error}
+            </div>
+          )}
 
           {/* Officers list */}
           <div style={{ display: "flex", flexDirection: "column" }}>
