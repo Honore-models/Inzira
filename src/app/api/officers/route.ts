@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
-import { createClient } from "@/lib/supabase/server";
+import { createClient } from "@supabase/supabase-js";
 
 export async function GET() {
   try {
@@ -10,9 +10,14 @@ export async function GET() {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const supabase = await createClient();
+    // Use admin client to bypass RLS — access control is handled in API layer
+    const supabase = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!,
+      { auth: { autoRefreshToken: false, persistSession: false } },
+    );
 
-    // Get current youth's profile ID
+    // Get current user's profile ID
     const { data: myProfile } = await supabase
       .from("profiles")
       .select("id")
@@ -54,9 +59,9 @@ export async function GET() {
     );
 
     return NextResponse.json(officersWithCases);
-  } catch {
+  } catch (error) {
     return NextResponse.json(
-      { error: "Internal server error" },
+      { error: "Internal server error", details: String(error) },
       { status: 500 },
     );
   }
