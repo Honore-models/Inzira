@@ -8,6 +8,7 @@ import {
   LogOut,
   MessageCircle,
   Sparkles,
+  UserRound,
   Users,
 } from "lucide-react";
 import { ConfirmModal } from "@/components/ConfirmModal";
@@ -17,6 +18,7 @@ const navItems = [
   { href: "/officer/intake", label: "Smart Intake", icon: Sparkles },
   { href: "/officer/youth", label: "Youth List", icon: Users },
   { href: "/officer/messages", label: "Messages", icon: MessageCircle },
+  { href: "/officer/profile", label: "Profile", icon: UserRound },
 ];
 
 export function OfficerShell({

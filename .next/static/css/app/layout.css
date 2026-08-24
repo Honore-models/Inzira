@@ -1176,6 +1176,7 @@ p {
 .youth-content:has(.youth-page-wrap) {
   display: flex;
   justify-content: center;
+  align-items: flex-start;
 }
 
 .youth-page-wrap {
@@ -5265,6 +5266,585 @@ p {
     flex-wrap: wrap;
     max-width: calc(100vw - 48px);
     justify-content: center;
+  }
+}
+
+/* ============================================================
+   PROFILE PAGES
+   ============================================================ */
+
+/* Youth profile */
+.profile-header {
+  margin-bottom: 8px;
+}
+
+.profile-header-top {
+  align-items: center;
+  display: flex;
+  gap: 16px;
+  justify-content: space-between;
+}
+
+.profile-avatar-section {
+  align-items: center;
+  display: flex;
+  gap: 18px;
+}
+
+.profile-photo {
+  border-radius: 999px;
+  height: 64px;
+  object-fit: cover;
+  width: 64px;
+  border: 2px solid var(--green);
+}
+
+.profile-initials {
+  align-items: center;
+  background: var(--green);
+  border-radius: 999px;
+  color: #fff;
+  display: inline-flex;
+  font-size: 22px;
+  font-weight: 700;
+  height: 64px;
+  justify-content: center;
+  width: 64px;
+}
+
+.profile-header-info h1 {
+  color: #1f272c;
+  font-size: 24px;
+  font-weight: 700;
+  line-height: 1.2;
+  margin: 0 0 2px;
+}
+
+.profile-header-info p {
+  color: #545d65;
+  font-size: 14px;
+  margin: 0;
+}
+
+.profile-edit-btn {
+  align-items: center;
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  color: #30383e;
+  cursor: pointer;
+  display: inline-flex;
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  gap: 7px;
+  min-height: 38px;
+  padding: 0 16px;
+  transition: border-color 160ms ease, color 160ms ease;
+}
+
+.profile-edit-btn:hover {
+  border-color: var(--green);
+  color: var(--green);
+}
+
+.profile-saved-banner {
+  align-items: center;
+  background: #eef5ef;
+  border: 1px solid #bfd9c8;
+  border-radius: 8px;
+  color: var(--green-dark);
+  display: flex;
+  font-size: 13px;
+  font-weight: 600;
+  gap: 8px;
+  margin-top: 14px;
+  padding: 10px 16px;
+}
+
+.profile-card {
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 22px 24px;
+}
+
+.profile-card + .profile-card {
+  margin-top: 12px;
+}
+
+.profile-card-header h2 {
+  align-items: center;
+  color: #1f272c;
+  display: flex;
+  font-size: 16px;
+  font-weight: 700;
+  gap: 8px;
+  margin: 0 0 18px;
+}
+
+.profile-card-header h2 svg {
+  color: var(--green);
+}
+
+.profile-info-grid {
+  display: grid;
+  grid-gap: 1px;
+  gap: 1px;
+}
+
+.profile-info-row {
+  align-items: flex-start;
+  display: grid;
+  grid-gap: 24px;
+  gap: 24px;
+  grid-template-columns: 160px 1fr;
+  padding: 12px 0;
+}
+
+.profile-info-row + .profile-info-row {
+  border-top: 1px solid #f0f2ef;
+}
+
+.profile-info-label {
+  align-items: center;
+  color: #545d65;
+  display: flex;
+  font-size: 13px;
+  font-weight: 500;
+  gap: 8px;
+}
+
+.profile-info-label svg {
+  color: #8a9290;
+}
+
+.profile-info-value {
+  color: #1f272c;
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 1.5;
+}
+
+.profile-role-badge {
+  background: #e8f0eb;
+  border-radius: 999px;
+  color: var(--green);
+  display: inline-flex;
+  font-size: 12px;
+  font-weight: 700;
+  padding: 3px 10px;
+}
+
+.profile-tag {
+  background: #e8f0eb;
+  border-radius: 999px;
+  color: var(--green);
+  font-size: 11px;
+  font-weight: 700;
+  margin-left: 8px;
+  padding: 2px 8px;
+  vertical-align: middle;
+}
+
+.profile-undefined {
+  color: #a0a8a5;
+  font-style: italic;
+}
+
+/* Edit form */
+.profile-edit-form {
+  display: grid;
+  grid-gap: 16px;
+  gap: 16px;
+}
+
+.profile-field {
+  display: grid;
+  grid-gap: 6px;
+  gap: 6px;
+}
+
+.profile-field label {
+  color: #30383e;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.profile-field input,
+.profile-field select,
+.profile-field textarea {
+  background: #f9faf8;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  font-family: inherit;
+  font-size: 14px;
+  color: #1f272c;
+  padding: 10px 14px;
+  transition: border-color 160ms ease;
+}
+
+.profile-field input:focus,
+.profile-field select:focus,
+.profile-field textarea:focus {
+  border-color: var(--green);
+  outline: none;
+}
+
+.profile-field textarea {
+  resize: vertical;
+}
+
+.profile-field-row {
+  display: grid;
+  grid-gap: 16px;
+  gap: 16px;
+  grid-template-columns: 1fr 1fr;
+}
+
+.profile-char-count {
+  color: #a0a8a5;
+  font-size: 12px;
+  text-align: right;
+}
+
+.profile-edit-actions {
+  display: flex;
+  gap: 10px;
+  justify-content: flex-end;
+  padding-top: 4px;
+}
+
+.profile-btn {
+  align-items: center;
+  border-radius: 8px;
+  cursor: pointer;
+  display: inline-flex;
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  gap: 7px;
+  justify-content: center;
+  min-height: 40px;
+  padding: 0 18px;
+  transition: background 160ms ease, color 160ms ease;
+}
+
+.profile-btn.primary {
+  background: var(--green);
+  border: 1px solid var(--green);
+  color: #fff;
+}
+
+.profile-btn.primary:hover {
+  background: var(--green-dark);
+}
+
+.profile-btn.primary:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.profile-btn.outline {
+  background: #fff;
+  border: 1px solid var(--line);
+  color: #30383e;
+}
+
+.profile-btn.outline:hover {
+  border-color: var(--green);
+  color: var(--green);
+}
+
+/* Case section */
+.profile-case-section {
+  display: grid;
+  grid-gap: 18px;
+  gap: 18px;
+}
+
+.profile-case-stats {
+  display: grid;
+  grid-gap: 12px;
+  gap: 12px;
+  grid-template-columns: repeat(3, 1fr);
+}
+
+.profile-case-stat {
+  background: #f7f8f5;
+  border-radius: 8px;
+  padding: 14px 16px;
+}
+
+.profile-case-stat span {
+  color: #545d65;
+  display: block;
+  font-size: 12px;
+  font-weight: 600;
+  margin-bottom: 6px;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.profile-case-stat strong {
+  color: #1f272c;
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.profile-status {
+  display: inline-flex;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 700;
+  padding: 2px 10px;
+}
+
+.profile-status.active {
+  background: #e8f0eb;
+  color: var(--green);
+}
+
+.profile-status.completed {
+  background: var(--green);
+  color: #fff;
+}
+
+.profile-status.pending {
+  background: #faf3e2;
+  color: #a67c1e;
+}
+
+.profile-progress-bar {
+  background: #f7f8f5;
+  border-radius: 8px;
+  padding: 14px 16px;
+}
+
+.profile-progress-header {
+  align-items: center;
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 10px;
+}
+
+.profile-progress-header span {
+  color: #545d65;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.profile-progress-header strong {
+  color: var(--green);
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.profile-case-empty {
+  align-items: center;
+  background: #f9faf8;
+  border-radius: 8px;
+  color: #8a9290;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 32px 20px;
+  text-align: center;
+}
+
+.profile-case-empty p {
+  color: #545d65;
+  font-size: 14px;
+  margin: 0;
+  max-width: 360px;
+}
+
+.profile-empty {
+  align-items: center;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 60px 20px;
+  text-align: center;
+}
+
+.profile-empty svg {
+  color: #8a9290;
+}
+
+.profile-empty h2 {
+  color: #1f272c;
+  font-size: 20px;
+  font-weight: 700;
+  margin: 0;
+}
+
+.profile-empty p {
+  color: #545d65;
+  font-size: 14px;
+  margin: 0;
+}
+
+/* Officer profile hero */
+.officer-profile-hero {
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  margin-bottom: 16px;
+  padding: 28px 32px;
+}
+
+.officer-profile-hero-inner {
+  align-items: flex-start;
+  display: flex;
+  gap: 32px;
+  justify-content: space-between;
+}
+
+.officer-profile-hero-left {
+  align-items: center;
+  display: flex;
+  gap: 20px;
+}
+
+.officer-profile-hero-photo {
+  border-radius: 999px;
+  height: 72px;
+  object-fit: cover;
+  width: 72px;
+  border: 2px solid var(--green);
+}
+
+.officer-profile-hero-initials {
+  align-items: center;
+  background: var(--green);
+  border-radius: 999px;
+  color: #fff;
+  display: inline-flex;
+  font-size: 24px;
+  font-weight: 700;
+  height: 72px;
+  justify-content: center;
+  width: 72px;
+}
+
+.officer-profile-hero-info h2 {
+  color: #1f272c;
+  font-size: 24px;
+  font-weight: 800;
+  margin: 0 0 8px;
+}
+
+.officer-role-badge {
+  align-items: center;
+  background: #e8f0eb;
+  border-radius: 999px;
+  color: var(--green);
+  display: inline-flex;
+  font-size: 12px;
+  font-weight: 700;
+  gap: 5px;
+  padding: 4px 12px;
+}
+
+.officer-profile-hero-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.officer-profile-hero-meta span {
+  align-items: center;
+  color: #545d65;
+  display: flex;
+  font-size: 13px;
+  gap: 8px;
+}
+
+.officer-profile-hero-meta svg {
+  color: #8a9290;
+  flex-shrink: 0;
+}
+
+/* Officer profile stats */
+.officer-profile-stats {
+  display: grid;
+  grid-gap: 14px;
+  gap: 14px;
+  grid-template-columns: repeat(4, 1fr);
+  margin-bottom: 16px;
+}
+
+/* Officer profile details grid */
+.officer-profile-details-grid {
+  display: grid;
+  grid-gap: 1px;
+  gap: 1px;
+}
+
+.officer-profile-detail-row {
+  display: grid;
+  grid-gap: 24px;
+  gap: 24px;
+  grid-template-columns: 160px 1fr;
+  padding: 12px 0;
+}
+
+.officer-profile-detail-row + .officer-profile-detail-row {
+  border-top: 1px solid #f0f2ef;
+}
+
+.officer-detail-label {
+  color: #545d65;
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.officer-detail-value {
+  color: #1f272c;
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.officer-role-pill {
+  background: #e8f0eb;
+  border-radius: 999px;
+  color: var(--green);
+  display: inline-flex;
+  font-size: 12px;
+  font-weight: 700;
+  padding: 2px 10px;
+  width: -moz-fit-content;
+  width: fit-content;
+}
+
+@media (max-width: 768px) {
+  .profile-header-top {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .profile-info-row,
+  .officer-profile-detail-row {
+    grid-template-columns: 1fr;
+    gap: 6px;
+  }
+
+  .profile-case-stats {
+    grid-template-columns: 1fr;
+  }
+
+  .officer-profile-hero-inner {
+    flex-direction: column;
+    gap: 20px;
+  }
+
+  .officer-profile-stats {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .profile-field-row {
+    grid-template-columns: 1fr;
   }
 }
 

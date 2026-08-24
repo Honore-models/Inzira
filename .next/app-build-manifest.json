@@ -31,60 +31,30 @@
       "static/chunks/main-app.js",
       "static/chunks/app/api/cases/route.js"
     ],
+    "/youth/messages/page": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/chunks/app/youth/messages/page.js"
+    ],
+    "/youth/profile/page": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/chunks/app/youth/profile/page.js"
+    ],
     "/auth/signin/page": [
       "static/chunks/webpack.js",
       "static/chunks/main-app.js",
       "static/chunks/app/auth/signin/page.js"
-    ],
-    "/officer/page": [
-      "static/chunks/webpack.js",
-      "static/chunks/main-app.js",
-      "static/chunks/app/officer/page.js"
-    ],
-    "/api/youth/route": [
-      "static/chunks/webpack.js",
-      "static/chunks/main-app.js",
-      "static/chunks/app/api/youth/route.js"
-    ],
-    "/officer/youth/page": [
-      "static/chunks/webpack.js",
-      "static/chunks/main-app.js",
-      "static/chunks/app/officer/youth/page.js"
-    ],
-    "/officer/intake/page": [
-      "static/chunks/webpack.js",
-      "static/chunks/main-app.js",
-      "static/chunks/app/officer/intake/page.js"
-    ],
-    "/api/youth/[id]/route": [
-      "static/chunks/webpack.js",
-      "static/chunks/main-app.js",
-      "static/chunks/app/api/youth/[id]/route.js"
-    ],
-    "/api/ai/generate-roadmap/route": [
-      "static/chunks/webpack.js",
-      "static/chunks/main-app.js",
-      "static/chunks/app/api/ai/generate-roadmap/route.js"
-    ],
-    "/api/ai/approve-roadmap/route": [
-      "static/chunks/webpack.js",
-      "static/chunks/main-app.js",
-      "static/chunks/app/api/ai/approve-roadmap/route.js"
-    ],
-    "/officer/youth/[id]/page": [
-      "static/chunks/webpack.js",
-      "static/chunks/main-app.js",
-      "static/chunks/app/officer/youth/[id]/page.js"
     ],
     "/api/cases/[caseId]/steps/route": [
       "static/chunks/webpack.js",
       "static/chunks/main-app.js",
       "static/chunks/app/api/cases/[caseId]/steps/route.js"
     ],
-    "/youth/steps/page": [
+    "/api/officers/route": [
       "static/chunks/webpack.js",
       "static/chunks/main-app.js",
-      "static/chunks/app/youth/steps/page.js"
+      "static/chunks/app/api/officers/route.js"
     ]
   }
 }
