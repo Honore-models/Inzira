@@ -2,11 +2,13 @@
   "/api/auth/[...nextauth]/route": "app/api/auth/[...nextauth]/route.js",
   "/api/profile/route": "app/api/profile/route.js",
   "/api/cases/route": "app/api/cases/route.js",
-  "/api/cases/[caseId]/steps/route": "app/api/cases/[caseId]/steps/route.js",
   "/api/officers/route": "app/api/officers/route.js",
+  "/api/cases/find-or-create/route": "app/api/cases/find-or-create/route.js",
+  "/api/cases/[caseId]/messages/route": "app/api/cases/[caseId]/messages/route.js",
   "/page": "app/page.js",
   "/youth/page": "app/youth/page.js",
   "/youth/profile/page": "app/youth/profile/page.js",
   "/auth/signin/page": "app/auth/signin/page.js",
-  "/youth/messages/page": "app/youth/messages/page.js"
+  "/youth/messages/page": "app/youth/messages/page.js",
+  "/youth/steps/page": "app/youth/steps/page.js"
 }

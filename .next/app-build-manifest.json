@@ -55,6 +55,21 @@
       "static/chunks/webpack.js",
       "static/chunks/main-app.js",
       "static/chunks/app/api/officers/route.js"
+    ],
+    "/api/cases/find-or-create/route": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/chunks/app/api/cases/find-or-create/route.js"
+    ],
+    "/api/cases/[caseId]/messages/route": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/chunks/app/api/cases/[caseId]/messages/route.js"
+    ],
+    "/youth/steps/page": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/chunks/app/youth/steps/page.js"
     ]
   }
 }
