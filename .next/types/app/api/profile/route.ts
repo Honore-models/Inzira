@@ -1,8 +1,8 @@
-// File: C:\Users\HP\Desktop\Inzira\src\app\api\ai\ask\route.ts
-import * as entry from '../../../../../../src/app/api/ai/ask/route.js'
+// File: C:\Users\HP\Desktop\Inzira\src\app\api\profile\route.ts
+import * as entry from '../../../../../src/app/api/profile/route.js'
 import type { NextRequest } from 'next/server.js'
 
-type TEntry = typeof import('../../../../../../src/app/api/ai/ask/route.js')
+type TEntry = typeof import('../../../../../src/app/api/profile/route.js')
 
 type SegmentParams<T extends Object = any> = T extends Record<string, any>
   ? { [K in keyof T]: T[K] extends string ? string | string[] | undefined : never }
