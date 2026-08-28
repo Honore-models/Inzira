@@ -8,7 +8,7 @@ A guided platform connecting unemployed youth in Rwanda to real government and i
 
 ## 1. Purpose
 
-Rwanda has real, funded youth employment infrastructure: RDB handles business registration, RRA issues tax identification, RTB runs vocational (TVET) training, and BRD (formerly BDF) offers loan guarantees that specifically favor youth-owned businesses. None of this is aspirational - it exists and is actively funded today.
+Rwanda has real, funded youth employment infrastructure: RDB handles business registration, RRA issues tax identification, RTB runs vocational (TVET) training, and BRD offers loan guarantees that specifically favor youth-owned businesses. None of this is aspirational - it exists and is actively funded today.
 
 The problem is not a lack of opportunity. It's that these programs are spread across separate institutions that don't communicate with each other, each assuming the applicant already knows what to do and in what order. A youth who wants to start a business often doesn't know they need to register that business *before* they can qualify for a loan guarantee, or that a specific TVET certificate unlocks a specific funding category. As a result, real, funded help goes unused - not from scarcity, but from invisibility and poor sequencing.
 
