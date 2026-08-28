@@ -97,10 +97,12 @@ export async function chatCompletion(params: {
   temperature?: number;
   responseFormat?: { type: "json_object" };
 }): Promise<ChatCompletionResponse> {
-  const models = [AI_CONFIG.chatModel, AI_CONFIG.chatModelFallback];
+  const models = AI_CONFIG.chatModels;
   let lastError: Error | null = null;
 
-  for (const model of models) {
+  for (let i = 0; i < models.length; i++) {
+    const model = models[i];
+
     for (let attempt = 0; attempt <= AI_CONFIG.maxRetries; attempt++) {
       try {
         return await callChatModel(model, params);
@@ -126,20 +128,19 @@ export async function chatCompletion(params: {
     }
 
     // If we get here, current model failed — try next fallback
-    const nextIndex = models.indexOf(model) + 1;
-    if (nextIndex < models.length) {
+    if (i + 1 < models.length) {
       console.warn(
-        `[Inzira AI] Model ${model} failed. Trying fallback: ${models[nextIndex]}`,
+        `[Inzira AI] Model ${model} failed. Trying fallback: ${models[i + 1]}`,
       );
     }
   }
 
-  // Both models failed — throw the last error
+  // All models failed — throw the last error
   throw lastError || new Error("All chat completion attempts failed");
 }
 
 /**
- * Call OpenRouter embeddings (BGE-M3).
+ * Call OpenRouter embeddings with retry and fallback across multiple models.
  */
 export async function generateEmbeddingsAPI(
   inputs: string | string[],
@@ -150,31 +151,72 @@ export async function generateEmbeddingsAPI(
     );
   }
 
-  const res = await fetch(`${OPENROUTER_BASE_URL}/embeddings`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${AI_CONFIG.openrouterApiKey}`,
-      "HTTP-Referer": "https://inzira.rw",
-      "X-Title": "Inzira",
-    },
-    body: JSON.stringify({
-      model: AI_CONFIG.embeddingModel,
-      input: Array.isArray(inputs) ? inputs : [inputs],
-    }),
-  });
+  const inputArray = Array.isArray(inputs) ? inputs : [inputs];
+  const models = AI_CONFIG.embeddingModels;
+  let lastError: Error | null = null;
 
-  if (!res.ok) {
-    const errText = await res.text().catch(() => "Unknown error");
-    throw new Error(
-      `OpenRouter embedding failed (${res.status}): ${errText}`,
-    );
+  for (let i = 0; i < models.length; i++) {
+    const model = models[i];
+
+    for (let attempt = 0; attempt <= AI_CONFIG.maxRetries; attempt++) {
+      try {
+        const res = await fetch(`${OPENROUTER_BASE_URL}/embeddings`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${AI_CONFIG.openrouterApiKey}`,
+            "HTTP-Referer": "https://inzira.rw",
+            "X-Title": "Inzira",
+          },
+          body: JSON.stringify({
+            model,
+            input: inputArray,
+          }),
+        });
+
+        if (!res.ok) {
+          const errText = await res.text().catch(() => "Unknown error");
+          const error = new Error(
+            `OpenRouter embedding failed (${res.status}): ${errText}`,
+          );
+          (error as Error & { statusCode?: number }).statusCode = res.status;
+          throw error;
+        }
+
+        const data: EmbeddingResponse = await res.json();
+
+        // Sort by index to ensure correct ordering
+        return data.data
+          .sort((a, b) => a.index - b.index)
+          .map((item) => item.embedding);
+      } catch (error) {
+        lastError = error instanceof Error ? error : new Error(String(error));
+        const statusCode = (lastError as Error & { statusCode?: number }).statusCode;
+
+        // Only retry on 429 (rate limit) or 503 (service unavailable)
+        if (statusCode === 429 || statusCode === 503) {
+          if (attempt < AI_CONFIG.maxRetries) {
+            const delay = AI_CONFIG.retryBaseDelayMs * Math.pow(2, attempt);
+            console.warn(
+              `[Inzira AI] Embedding model ${model} rate-limited (attempt ${attempt + 1}/${AI_CONFIG.maxRetries}). Retrying in ${delay}ms...`,
+            );
+            await sleep(delay);
+            continue;
+          }
+        }
+
+        // Non-retryable error or retries exhausted for this model
+        break;
+      }
+    }
+
+    // Current embedding model failed — try next fallback
+    if (i + 1 < models.length) {
+      console.warn(
+        `[Inzira AI] Embedding model ${model} failed. Trying fallback: ${models[i + 1]}`,
+      );
+    }
   }
 
-  const data: EmbeddingResponse = await res.json();
-
-  // Sort by index to ensure correct ordering
-  return data.data
-    .sort((a, b) => a.index - b.index)
-    .map((item) => item.embedding);
+  throw lastError || new Error("All embedding attempts failed");
 }

@@ -7,14 +7,19 @@ export const AI_CONFIG = {
   // OpenRouter API (single key for both embeddings and generation)
   openrouterApiKey: process.env.OPENROUTER_API_KEY || "",
 
-  // Generation model
-  chatModel: process.env.AI_MODEL || "openai/gpt-oss-20b:free",
+  // Generation models (tried in order, first to last)
+  chatModels: [
+    process.env.AI_MODEL || "google/gemma-4-26b-a4b-it:free",
+    process.env.AI_MODEL_FALLBACK_1 || "liquid/lfm-2.5-2.6b:free",
+    process.env.AI_MODEL_FALLBACK_2 || "google/gemma-4-31b-it:free",
+  ],
 
-  // Fallback model (used when primary is rate-limited)
-  chatModelFallback: process.env.AI_MODEL_FALLBACK || "z-ai/glm-5.2:free",
-
-  // Embedding model (BGE-M3 via OpenRouter)
-  embeddingModel: process.env.EMBEDDING_MODEL || "BAAI/bge-m3",
+  // Embedding models (tried in order, first to last) — all free, 1024 dimensions
+  embeddingModels: [
+    process.env.EMBEDDING_MODEL || "liquid/lfm-2.5-embedding-350m:free",
+    process.env.EMBEDDING_MODEL_FALLBACK_1 || "nvidia/nemotron-3-embed-1b:free",
+    process.env.EMBEDDING_MODEL_FALLBACK_2 || "nvidia/llama-nemotron-embed-vl-1b-v2:free",
+  ],
 
   // BGE-M3 outputs 1024-dimensional dense vectors
   embeddingDimensions: 1024,
