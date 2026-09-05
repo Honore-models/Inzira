@@ -4579,28 +4579,139 @@ p {
 /* Progress bar */
 .onboard-progress {
   margin-bottom: 28px;
-}
-
-.onboard-progress span {
-  color: #777f87;
-  font-size: 12px;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.03em;
+  padding: 0 8px;
 }
 
 .onboard-progress-track {
   background: #eef0ed;
-  border-radius: 3px;
-  height: 4px;
-  margin-top: 8px;
+  border-radius: 999px;
+  height: 3px;
+  margin: 0 16px 0;
+  overflow: hidden;
 }
 
 .onboard-progress-fill {
   background: #1f6f4c;
-  border-radius: 3px;
+  border-radius: 999px;
   height: 100%;
-  transition: width 0.3s ease;
+  transition: width 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.onboard-progress-steps {
+  display: flex;
+  justify-content: space-between;
+  margin-top: -11px;
+  padding: 0;
+}
+
+.onboard-step-item {
+  align-items: center;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.onboard-step-circle {
+  align-items: center;
+  background: #eef0ed;
+  border: 2px solid #eef0ed;
+  border-radius: 50%;
+  color: #b6bdb9;
+  display: inline-flex;
+  font-size: 11px;
+  font-weight: 700;
+  height: 22px;
+  justify-content: center;
+  width: 22px;
+  transition: all 0.3s ease;
+}
+
+.onboard-step-name {
+  color: #b6bdb9;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  transition: color 0.3s ease;
+}
+
+.onboard-step-item.active .onboard-step-circle {
+  background: #1f6f4c;
+  border-color: #1f6f4c;
+  color: #fff;
+  box-shadow: 0 0 0 4px rgba(31, 111, 76, 0.15);
+  transform: scale(1.1);
+}
+
+.onboard-step-item.active .onboard-step-name {
+  color: #1f6f4c;
+}
+
+.onboard-step-item.done .onboard-step-circle {
+  background: #1f6f4c;
+  border-color: #1f6f4c;
+  color: #fff;
+}
+
+.onboard-step-item.done .onboard-step-name {
+  color: #1f6f4c;
+}
+
+.onboard-step-item.done .onboard-step-circle svg {
+  display: block;
+}
+
+/* Other goal input */
+.onboard-other-input {
+  margin-top: -4px;
+  margin-bottom: 16px;
+  animation: onboardSlideIn 0.25s ease forwards;
+}
+
+.onboard-input-wrap {
+  align-items: center;
+  background: #fbfbfa;
+  border: 1.5px solid #d8ded8;
+  border-radius: 10px;
+  display: flex;
+  gap: 10px;
+  padding: 0 14px;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+
+.onboard-input-wrap:focus-within {
+  border-color: #1f6f4c;
+  box-shadow: 0 0 0 3px rgba(31, 111, 76, 0.08);
+}
+
+.onboard-input-icon {
+  color: #b6bdb9;
+  flex-shrink: 0;
+}
+
+.onboard-input-wrap input {
+  background: transparent;
+  border: 0;
+  color: #1a2228;
+  font-family: inherit;
+  font-size: 14px;
+  min-height: 42px;
+  outline: none;
+  width: 100%;
+}
+
+.onboard-input-wrap input::placeholder {
+  color: #b6bdb9;
+}
+
+@keyframes onboardSlideIn {
+  from {
+    opacity: 0;
+    transform: translateY(-6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 /* Step */
