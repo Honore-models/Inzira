@@ -554,27 +554,123 @@ p {
 }
 
 .site-footer {
-  align-items: center;
-  border-top: 1px solid var(--line);
-  display: grid;
-  gap: 48px;
-  grid-template-columns: 220px minmax(0, 1fr);
-  padding: 18px 56px 20px;
+  background: #1a2228;
+  border-top: 1px solid #2a353d;
+  color: #c8cdc9;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  padding: 0 56px;
 }
 
-.site-footer span {
-  color: var(--muted);
-  display: block;
-  font-size: 13px;
+.footer-top {
+  display: grid;
+  gap: 48px;
+  grid-template-columns: 1.4fr 1fr 1fr 1fr;
+  padding: 56px 0 40px;
+}
+
+.footer-brand-col {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.footer-brand-col .brand {
+  display: inline-flex;
+}
+
+.footer-brand-col .brand img {
+  height: 30px;
+  width: auto;
+}
+
+.footer-tagline {
+  color: #8a9290;
+  font-size: 14px;
+  line-height: 1.6;
+  margin: 0;
+  max-width: 280px;
+}
+
+.footer-social {
+  align-items: center;
+  display: flex;
+  gap: 10px;
   margin-top: 4px;
 }
 
-.site-footer p {
-  font-size: 13px;
-  line-height: 1.35;
+.footer-social a {
+  align-items: center;
+  background: #2a353d;
+  border-radius: 8px;
+  color: #8a9290;
+  display: inline-flex;
+  height: 36px;
+  justify-content: center;
+  transition: background 160ms ease, color 160ms ease;
+  width: 36px;
+}
+
+.footer-social a:hover {
+  background: var(--green);
+  color: #fff;
+}
+
+.footer-links-col {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.footer-links-col h4 {
+  color: #e8ece9;
+  font-size: 14px;
+  font-weight: 700;
+  margin: 0 0 4px;
+  letter-spacing: 0.01em;
+}
+
+.footer-links-col ul {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  list-style: none;
   margin: 0;
-  max-width: 1050px;
-  text-align: left;
+  padding: 0;
+}
+
+.footer-links-col a,
+.footer-links-col span {
+  color: #8a9290;
+  font-size: 13px;
+  line-height: 1.4;
+  transition: color 160ms ease;
+}
+
+.footer-links-col a:hover {
+  color: #fff;
+}
+
+.footer-bottom {
+  align-items: center;
+  border-top: 1px solid #2a353d;
+  display: flex;
+  justify-content: space-between;
+  gap: 24px;
+  padding: 20px 0;
+}
+
+.footer-bottom p {
+  color: #68726d;
+  font-size: 12px;
+  line-height: 1.45;
+  margin: 0;
+}
+
+.footer-bottom p:last-child {
+  color: #545d65;
+  white-space: nowrap;
 }
 
 @media (max-width: 900px) {
@@ -660,15 +756,19 @@ p {
   }
 
   .site-footer {
-    align-items: flex-start;
-    gap: 18px;
-    grid-template-columns: 1fr;
-    padding-left: 22px;
-    padding-right: 22px;
+    padding: 0 22px;
   }
 
-  .site-footer p {
-    text-align: left;
+  .footer-top {
+    grid-template-columns: 1fr 1fr;
+    gap: 32px;
+    padding: 40px 0 32px;
+  }
+
+  .footer-bottom {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
   }
 }
 
@@ -684,9 +784,13 @@ p {
 }
 
 @media (max-width: 560px) {
-  .brand,
-  .site-footer strong {
+  .brand {
     font-size: 24px;
+  }
+
+  .footer-top {
+    grid-template-columns: 1fr;
+    gap: 28px;
   }
 
   .header-action {
@@ -3916,6 +4020,58 @@ p {
 
 .auth-switch a:hover {
   text-decoration: underline;
+}
+
+/* ---- Auth divider ---- */
+.auth-divider {
+  align-items: center;
+  display: flex;
+  gap: 14px;
+  margin: 18px 0 14px;
+}
+
+.auth-divider::before,
+.auth-divider::after {
+  background: #e2e5df;
+  content: "";
+  flex: 1;
+  height: 1px;
+}
+
+.auth-divider span {
+  color: #b6bdb9;
+  font-size: 13px;
+  font-weight: 500;
+}
+
+/* ---- Google button ---- */
+.auth-google-btn {
+  align-items: center;
+  background: #fff;
+  border: 1.5px solid #d8ded8;
+  border-radius: 10px;
+  color: #30383e;
+  cursor: pointer;
+  display: flex;
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  gap: 10px;
+  justify-content: center;
+  min-height: 44px;
+  padding: 0 20px;
+  transition: background 160ms ease, border-color 160ms ease, box-shadow 160ms ease;
+  width: 100%;
+}
+
+.auth-google-btn:hover {
+  background: #f8faf7;
+  border-color: #b6bdb9;
+  box-shadow: 0 1px 4px rgba(32, 37, 43, 0.06);
+}
+
+.auth-google-btn:active {
+  background: #f1f3ee;
 }
 
 /* ============================================================

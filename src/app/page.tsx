@@ -226,16 +226,67 @@ export default function Home() {
       </section>
 
       <footer className="site-footer">
-        <div>
-          <strong>Inzira</strong>
-          <span>Kinyarwanda for "the path"</span>
+        <div className="footer-top">
+          <div className="footer-brand-col">
+            <a className="brand" href="#top" aria-label="Inzira home">
+              <img src="/inzira_logo.png" alt="Inzira" />
+            </a>
+            <p className="footer-tagline">
+              A guided path connecting Rwandan youth with verified employment
+              support programs.
+            </p>
+            <div className="footer-social">
+              <a href="#" aria-label="Twitter">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 4s-.7 2.1-2 3.4c1.6 10-9.4 17.3-18 11.6 2.2.1 4.4-.6 6-2C3 15.5.5 9.6 3 5c2.2 2.6 5.6 4.1 9 4-.9-4.2 4-6.6 7-3.8 1.1 0 3-1.2 3-1.2z"/></svg>
+              </a>
+              <a href="#" aria-label="LinkedIn">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M16 8a6 6 0 0 1 6 6v7h-4v-7a2 2 0 0 0-2-2 2 2 0 0 0-2 2v7h-4v-7a6 6 0 0 1 6-6z"/><rect width="4" height="12" x="2" y="9"/><circle cx="4" cy="4" r="2"/></svg>
+              </a>
+              <a href="#" aria-label="Facebook">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z"/></svg>
+              </a>
+            </div>
+          </div>
+
+          <div className="footer-links-col">
+            <h4>Platform</h4>
+            <ul>
+              <li><a href="#how-it-works">How it works</a></li>
+              <li><a href="#problem">The problem</a></li>
+              <li><a href="#demo">Live demo</a></li>
+              <li><a href="/auth/signup?role=youth">Enter as a youth</a></li>
+              <li><a href="/auth/signup?role=officer">Enter as an officer</a></li>
+            </ul>
+          </div>
+
+          <div className="footer-links-col">
+            <h4>Resources</h4>
+            <ul>
+              <li><a href="#">RDB — Business support</a></li>
+              <li><a href="#">BDF — Loan guarantees</a></li>
+              <li><a href="#">RTB — Vocational training</a></li>
+              <li><a href="#">RRA — Tax registration</a></li>
+            </ul>
+          </div>
+
+          <div className="footer-links-col">
+            <h4>Contact</h4>
+            <ul>
+              <li><a href="mailto:hello@inzira.rw">hello@inzira.rw</a></li>
+              <li><span>Kigali, Rwanda</span></li>
+            </ul>
+          </div>
         </div>
-        <p>
-          A demonstration project set in Rwanda. All people, organizations, and
-          data shown are fictional and for demonstration only. Statistics cited
-          are from public sources and are not a substitute for professional,
-          financial, or legal advice.
-        </p>
+
+        <div className="footer-bottom">
+          <p>
+            A demonstration project. All people, organizations, and data shown
+            are fictional. Statistics cited are from public sources.
+          </p>
+          <p>
+            &copy; {new Date().getFullYear()} Inzira. All rights reserved.
+          </p>
+        </div>
       </footer>
     </main>
   );

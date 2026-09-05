@@ -13,9 +13,14 @@ export default auth((req) => {
   }
 
   // Auth pages — allow through (but redirect logged-in users to their dashboard)
+  // Exception: /auth/signup?google=1 allows logged-in Google users to complete profile
   const authPages = ["/auth/signin", "/auth/signup", "/auth/error"];
   if (authPages.some((route) => pathname === route)) {
     if (isLoggedIn) {
+      const isGoogleSignup = pathname === "/auth/signup" && req.nextUrl.searchParams.get("google") === "1";
+      if (isGoogleSignup) {
+        return NextResponse.next();
+      }
       return NextResponse.redirect(
         new URL(userRole === "officer" ? "/officer" : "/youth", req.url),
       );
