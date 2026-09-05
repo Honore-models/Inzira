@@ -1,5 +1,5 @@
 import Image from "next/image";
-import { ArrowRight } from "lucide-react";
+import { ArrowRight, Menu } from "lucide-react";
 
 const youthItems = [
   {
@@ -77,9 +77,14 @@ export default function Home() {
           <a href="#problem">The problem</a>
           <a href="#demo">Live demo</a>
         </nav>
-        <a className="header-action" href="/auth/signin">
-          Sign in
-        </a>
+        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+          <button className="header-menu-btn" type="button" aria-label="Menu">
+            <Menu size={22} />
+          </button>
+          <a className="header-action" href="/auth/signin">
+            Sign in
+          </a>
+        </div>
       </header>
 
       <section id="top" className="hero section">
