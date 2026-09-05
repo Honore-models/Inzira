@@ -1,5 +1,5 @@
 import Image from "next/image";
-import { ArrowRight, Menu } from "lucide-react";
+import { ArrowRight, Menu, Mail, MapPin, Phone, ShieldCheck, Briefcase, GraduationCap, FileText, Shield } from "lucide-react";
 
 const youthItems = [
   {
@@ -255,7 +255,7 @@ export default function Home() {
 
           <div className="footer-links-col">
             <h4>Platform</h4>
-            <ul>
+            <ul className="platform-links">
               <li><a href="#how-it-works">How it works</a></li>
               <li><a href="#problem">The problem</a></li>
               <li><a href="#demo">Live demo</a></li>
@@ -267,30 +267,36 @@ export default function Home() {
           <div className="footer-links-col">
             <h4>Resources</h4>
             <ul>
-              <li><a href="#">RDB — Business support</a></li>
-              <li><a href="#">BDF — Loan guarantees</a></li>
-              <li><a href="#">RTB — Vocational training</a></li>
-              <li><a href="#">RRA — Tax registration</a></li>
+              <li><a href="#"><Briefcase size={16} aria-hidden /> RDB — Business support</a></li>
+              <li><a href="#"><Shield size={16} aria-hidden /> BDF — Loan guarantees</a></li>
+              <li><a href="#"><GraduationCap size={16} aria-hidden /> RTB — Vocational training</a></li>
+              <li><a href="#"><FileText size={16} aria-hidden /> RRA — Tax registration</a></li>
             </ul>
           </div>
 
           <div className="footer-links-col">
             <h4>Contact</h4>
             <ul>
-              <li><a href="mailto:hello@inzira.rw">hello@inzira.rw</a></li>
-              <li><span>Kigali, Rwanda</span></li>
+              <li><a href="mailto:hello@inzira.rw"><Mail size={16} aria-hidden /> hello@inzira.rw</a></li>
+              <li><span><MapPin size={16} aria-hidden /> Kigali, Rwanda</span></li>
+              <li><span><Phone size={16} aria-hidden /> +250 788 123 456</span></li>
             </ul>
           </div>
         </div>
 
         <div className="footer-bottom">
-          <p>
-            A demonstration project. All people, organizations, and data shown
-            are fictional. Statistics cited are from public sources.
+          <div className="footer-security">
+            <ShieldCheck size={16} aria-hidden />
+            <p>Your information is secure and used only to provide better support and guidance.</p>
+          </div>
+          <p className="footer-copyright">
+            &copy; {new Date().getFullYear()} <strong>Inzira</strong>. All rights reserved.
           </p>
-          <p>
-            &copy; {new Date().getFullYear()} Inzira. All rights reserved.
-          </p>
+          <div className="footer-legal">
+            <a href="#">Privacy Policy</a>
+            <a href="#">Terms of Service</a>
+            <a href="#">About Inzira</a>
+          </div>
         </div>
       </footer>
     </main>
