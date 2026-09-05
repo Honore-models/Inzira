@@ -297,6 +297,7 @@ export default function Onboarding() {
                 onClick={handleSubmit}
                 disabled={submitting}
               >
+                {submitting && <span className="btn-spinner" />}
                 {submitting ? "Submitting…" : "Submit information"}
                 {!submitting && <ArrowRight size={16} aria-hidden />}
               </button>

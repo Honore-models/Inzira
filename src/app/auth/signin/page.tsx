@@ -27,6 +27,7 @@ function SignInForm() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [googleLoading, setGoogleLoading] = useState(false);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -124,6 +125,7 @@ function SignInForm() {
             type="submit"
             disabled={loading}
           >
+            {loading && <span className="btn-spinner" />}
             {loading ? "Signing in…" : "Sign in"}
             {!loading && <ArrowRight aria-hidden size={15} />}
           </button>
@@ -136,10 +138,18 @@ function SignInForm() {
         <button
           className="auth-google-btn"
           type="button"
-          onClick={() => signIn("google", { callbackUrl: "/youth" })}
+          disabled={googleLoading}
+          onClick={() => {
+            setGoogleLoading(true);
+            signIn("google", { callbackUrl: "/youth" });
+          }}
         >
-          <GoogleIcon />
-          Continue with Google
+          {googleLoading ? (
+            <span className="btn-spinner" />
+          ) : (
+            <GoogleIcon />
+          )}
+          {googleLoading ? "Redirecting…" : "Continue with Google"}
         </button>
 
         <p className="auth-switch" style={{ marginTop: 16 }}>

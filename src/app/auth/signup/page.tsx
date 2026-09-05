@@ -39,6 +39,7 @@ function SignUpForm() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [googleLoading, setGoogleLoading] = useState(false);
   const [googleName, setGoogleName] = useState("");
   const [googleEmail, setGoogleEmail] = useState("");
 
@@ -101,6 +102,7 @@ function SignUpForm() {
   }
 
   function handleGoogleSignUp() {
+    setGoogleLoading(true);
     signIn("google", { callbackUrl: "/auth/signup?google=1" });
   }
 
@@ -209,10 +211,15 @@ function SignUpForm() {
             <button
               className="auth-google-btn"
               type="button"
+              disabled={googleLoading}
               onClick={handleGoogleSignUp}
             >
-              <GoogleIcon />
-              Continue with Google
+              {googleLoading ? (
+                <span className="btn-spinner" />
+              ) : (
+                <GoogleIcon />
+              )}
+              {googleLoading ? "Redirecting…" : "Continue with Google"}
             </button>
           </>
         )}
@@ -335,6 +342,7 @@ function SignUpForm() {
                   type="submit"
                   disabled={loading || !role || password.length < 8}
                 >
+                  {loading && <span className="btn-spinner" />}
                   {loading ? "Setting up…" : `Continue as ${role === "youth" ? "Youth" : "Youth Officer"}`}
                   {!loading && <ArrowRight aria-hidden size={15} />}
                 </button>
@@ -392,6 +400,7 @@ function SignUpForm() {
                   type="submit"
                   disabled={loading || !fullName || !email || password.length < 8}
                 >
+                  {loading && <span className="btn-spinner" />}
                   {loading ? "Creating account…" : `Create ${roleLabel} account`}
                   {!loading && <ArrowRight aria-hidden size={15} />}
                 </button>

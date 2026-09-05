@@ -4109,6 +4109,34 @@ p {
   margin: 0;
 }
 
+/* Button spinner */
+.btn-spinner {
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  border-top-color: #fff;
+  border-radius: 50%;
+  height: 16px;
+  width: 16px;
+  animation: btnSpin 0.7s linear infinite;
+  display: inline-block;
+  flex-shrink: 0;
+}
+
+@keyframes btnSpin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.auth-google-btn:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+.ob-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
 /* Caseload summary */
 .caseload-summary {
   display: grid;
