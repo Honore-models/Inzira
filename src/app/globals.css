@@ -3350,22 +3350,28 @@ p {
   transition: width 0.4s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-.ob-progress-dots {
-  align-items: center;
+.ob-progress-steps {
   display: flex;
   justify-content: space-between;
   margin-top: -11px;
   padding: 0;
 }
 
-.ob-dot {
+.ob-progress-step {
+  align-items: center;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.ob-step-circle {
   align-items: center;
   background: #eef0ed;
   border: 2px solid #eef0ed;
   border-radius: 50%;
   color: #b6bdb9;
   display: inline-flex;
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 700;
   height: 22px;
   justify-content: center;
@@ -3373,7 +3379,15 @@ p {
   transition: all 0.3s ease;
 }
 
-.ob-dot.active {
+.ob-step-name {
+  color: #b6bdb9;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  transition: color 0.3s ease;
+}
+
+.ob-progress-step.active .ob-step-circle {
   background: var(--green);
   border-color: var(--green);
   color: #fff;
@@ -3381,14 +3395,48 @@ p {
   transform: scale(1.1);
 }
 
-.ob-dot.done {
+.ob-progress-step.active .ob-step-name {
+  color: var(--green);
+}
+
+.ob-progress-step.done .ob-step-circle {
   background: var(--green);
   border-color: var(--green);
   color: #fff;
 }
 
-.ob-dot.done svg {
+.ob-progress-step.done .ob-step-name {
+  color: var(--green);
+}
+
+.ob-progress-step.done .ob-step-circle svg {
   display: block;
+}
+
+/* ---- Other goal input ---- */
+.ob-other-input {
+  margin-top: -4px;
+  margin-bottom: 16px;
+  animation: obSlideIn 0.25s ease forwards;
+}
+
+.ob-other-input .ob-input-wrap {
+  background: #fbfbfa;
+}
+
+.ob-other-input .ob-input-wrap input {
+  min-height: 42px;
+}
+
+@keyframes obSlideIn {
+  from {
+    opacity: 0;
+    transform: translateY(-6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 /* Content */

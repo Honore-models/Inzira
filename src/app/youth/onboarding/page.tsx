@@ -14,6 +14,7 @@ import {
   User,
   CheckCircle2,
   Building2,
+  CircleDot,
 } from "lucide-react";
 
 const goalOptions = [
@@ -35,6 +36,12 @@ const goalOptions = [
     desc: "I want support to find employment.",
     icon: Building2,
   },
+  {
+    id: "other",
+    title: "Other",
+    desc: "None of these match — tell us what you're looking for.",
+    icon: CircleDot,
+  },
 ];
 
 import { districtNames, getSectorsForDistrict } from "@/data/rwanda-locations";
@@ -43,6 +50,7 @@ export default function YouthOnboarding() {
   const [step, setStep] = useState(1);
   const [name, setName] = useState("");
   const [goal, setGoal] = useState("");
+  const [otherGoal, setOtherGoal] = useState("");
   const [skills, setSkills] = useState("");
   const [district, setDistrict] = useState(districtNames[0]);
   const [sector, setSector] = useState("");
@@ -64,7 +72,7 @@ export default function YouthOnboarding() {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          goal: goal === "business" ? "Start a business" : goal === "training" ? "Get vocational training" : "Find a job",
+          goal: goal === "business" ? "Start a business" : goal === "training" ? "Get vocational training" : goal === "job" ? "Find a job" : otherGoal.trim() || "Other",
           skills,
           district,
           sector,
@@ -99,15 +107,21 @@ export default function YouthOnboarding() {
                 style={{ width: `${((step - 1) / 3) * 100}%` }}
               />
             </div>
-            <div className="ob-progress-dots">
-              {[1, 2, 3, 4].map((n) => (
-                <span
-                  key={n}
-                  className={`ob-dot ${n < step ? "done" : ""} ${n === step ? "active" : ""}`}
-                >
-                  {n < step ? <CheckCircle2 size={14} /> : n}
-                </span>
-              ))}
+            <div className="ob-progress-steps">
+              {[1, 2, 3, 4].map((n) => {
+                const labels = ["Name", "Goal", "Skills", "Location"];
+                return (
+                  <div
+                    key={n}
+                    className={`ob-progress-step ${n < step ? "done" : ""} ${n === step ? "active" : ""}`}
+                  >
+                    <span className="ob-step-circle">
+                      {n < step ? <CheckCircle2 size={14} /> : n}
+                    </span>
+                    <span className="ob-step-name">{labels[n - 1]}</span>
+                  </div>
+                );
+              })}
             </div>
           </div>
         )}
@@ -175,6 +189,21 @@ export default function YouthOnboarding() {
                   );
                 })}
               </div>
+
+              {goal === "other" && (
+                <div className="ob-other-input">
+                  <div className="ob-input-wrap">
+                    <Pencil aria-hidden size={16} className="ob-input-icon" />
+                    <input
+                      type="text"
+                      placeholder="e.g. Get a scholarship, Learn English, Start farming..."
+                      value={otherGoal}
+                      onChange={(e) => setOtherGoal(e.target.value)}
+                      autoFocus
+                    />
+                  </div>
+                </div>
+              )}
 
               <div className="ob-tip">
                 <Sparkles aria-hidden size={16} />
@@ -325,7 +354,7 @@ export default function YouthOnboarding() {
               className="ob-btn primary"
               type="button"
               onClick={next}
-              disabled={step === 1 && !name.trim()}
+              disabled={(step === 1 && !name.trim()) || (step === 2 && goal === "other" && !otherGoal.trim())}
             >
               Continue
               <ArrowRight aria-hidden size={15} />
