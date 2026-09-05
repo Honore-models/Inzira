@@ -77,7 +77,7 @@ export default function Home() {
           <a href="#problem">The problem</a>
           <a href="#demo">Live demo</a>
         </nav>
-        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+        <div className="header-right">
           <button className="header-menu-btn" type="button" aria-label="Menu">
             <Menu size={22} />
           </button>
