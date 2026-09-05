@@ -6353,6 +6353,23 @@ p {
   .nav {
     display: none;
   }
+
+  .header-action {
+    padding: 10px 18px;
+    font-size: 13px;
+  }
+}
+
+@media (max-width: 600px) {
+  .header-action {
+    padding: 8px 14px;
+    font-size: 12px;
+    min-height: 36px;
+  }
+
+  .header-right {
+    gap: 6px;
+  }
 }
 
 /* --- Onboard page mobile --- */
