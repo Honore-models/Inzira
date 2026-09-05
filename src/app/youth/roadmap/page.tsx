@@ -13,6 +13,7 @@ import {
   ChevronDown,
 } from "lucide-react";
 import { YouthShell, ProgressMeter } from "@/components/youth/YouthShell";
+import { DashboardSkeleton } from "@/components/Skeleton";
 
 interface Step {
   id: string;
@@ -117,10 +118,7 @@ export default function YouthRoadmapPage() {
     return (
       <YouthShell active="My Steps">
         <div className="youth-page-wrap">
-          <div className="yd-loading">
-            <div className="yd-loading-spinner" />
-            <p>Loading your roadmap…</p>
-          </div>
+          <DashboardSkeleton />
         </div>
       </YouthShell>
     );

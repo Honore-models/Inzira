@@ -13,6 +13,7 @@ import {
   Sun,
 } from "lucide-react";
 import { YouthShell, ProgressMeter } from "@/components/youth/YouthShell";
+import { DashboardSkeleton } from "@/components/Skeleton";
 
 interface Profile {
   full_name: string;
@@ -88,10 +89,7 @@ export default function YouthDashboard() {
     return (
       <YouthShell active="Home">
         <div className="youth-page-wrap">
-          <div className="yd-loading">
-            <div className="yd-loading-spinner" />
-            <p>Loading your dashboard…</p>
-          </div>
+          <DashboardSkeleton />
         </div>
       </YouthShell>
     );

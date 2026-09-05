@@ -166,8 +166,11 @@ export default function YouthAsk() {
                   {exchange.loading ? (
                     <article className="ai-response-card">
                       <div className="ai-loading">
-                        <div className="yd-loading-spinner" />
-                        <p>Searching verified sources…</p>
+                        <div style={{ display: "flex", flexDirection: "column", gap: 8, width: "100%" }}>
+                          <div className="skeleton skeleton-line-long" />
+                          <div className="skeleton skeleton-line-medium" />
+                          <div className="skeleton skeleton-line-short" />
+                        </div>
                       </div>
                     </article>
                   ) : exchange.error ? (

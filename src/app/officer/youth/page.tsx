@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { Plus } from "lucide-react";
 import { OfficerShell } from "@/components/officer/OfficerShell";
+import { TableSkeleton } from "@/components/Skeleton";
 import { getPhotoUrl } from "@/lib/photos";
 
 interface YouthProfile {
@@ -88,10 +89,7 @@ export default function OfficerYouthList() {
     return (
       <OfficerShell active="Youth List">
         <div className="officer-page-wrap">
-          <div className="yd-loading">
-            <div className="yd-loading-spinner" />
-            <p>Loading youth list…</p>
-          </div>
+          <TableSkeleton rows={6} />
         </div>
       </OfficerShell>
     );

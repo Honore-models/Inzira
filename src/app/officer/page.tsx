@@ -12,6 +12,7 @@ import {
 } from "lucide-react";
 import { DateSelector } from "@/components/officer/DateSelector";
 import { OfficerAvatar, OfficerShell } from "@/components/officer/OfficerShell";
+import { DashboardSkeleton } from "@/components/Skeleton";
 import { getPhotoUrl } from "@/lib/photos";
 
 interface YouthProfile {
@@ -109,10 +110,7 @@ export default function OfficerDashboard() {
     return (
       <OfficerShell active="Dashboard">
         <div className="officer-page-wrap">
-          <div className="yd-loading">
-            <div className="yd-loading-spinner" />
-            <p>Loading dashboard…</p>
-          </div>
+          <DashboardSkeleton />
         </div>
       </OfficerShell>
     );

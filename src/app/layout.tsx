@@ -40,7 +40,7 @@ export const metadata: Metadata = {
       "Helping Rwandan youth discover, sequence, and access employment support programs with verified guidance.",
     images: [
       {
-        url: "/og-image.png",
+        url: "/og-image.svg",
         width: 1200,
         height: 630,
         alt: "Inzira — A guided path for Rwandan youth",
@@ -52,7 +52,7 @@ export const metadata: Metadata = {
     title: "Inzira — Guided Path for Rwandan Youth Employment",
     description:
       "Helping Rwandan youth discover, sequence, and access employment support programs.",
-    images: ["/og-image.png"],
+    images: ["/og-image.svg"],
   },
   robots: {
     index: true,
@@ -70,6 +70,27 @@ export const metadata: Metadata = {
   },
 };
 
+const jsonLd = {
+  "@context": "https://schema.org",
+  "@type": "WebApplication",
+  name: "Inzira",
+  description:
+    "A guided path connecting Rwandan youth with verified employment support programs.",
+  url: "https://inzira.rw",
+  applicationCategory: "SocialNetworkingApplication",
+  operatingSystem: "Web",
+  offers: {
+    "@type": "Offer",
+    price: "0",
+    priceCurrency: "USD",
+  },
+  author: {
+    "@type": "Organization",
+    name: "Inzira",
+    url: "https://inzira.rw",
+  },
+};
+
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -82,6 +103,10 @@ export default function RootLayout({
         <link rel="apple-touch-icon" href="/inzira_logo.png" />
         <meta name="application-name" content="Inzira" />
         <meta name="msapplication-TileColor" content="#1f6f4c" />
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+        />
       </head>
       <body><Providers>{children}</Providers></body>
     </html>

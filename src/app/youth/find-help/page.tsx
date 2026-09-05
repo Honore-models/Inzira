@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { ChevronDown, Search, X } from "lucide-react";
 import { InstitutionCard } from "@/components/youth/InstitutionCard";
 import { YouthShell } from "@/components/youth/YouthShell";
+import { CardSkeleton, SkeletonGroup } from "@/components/Skeleton";
 
 const INITIAL_VISIBLE = 4;
 
@@ -124,9 +125,8 @@ export default function YouthFindHelp() {
         </div>
 
         {loading ? (
-          <div className="yd-loading">
-            <div className="yd-loading-spinner" />
-            <p>Loading institutions…</p>
+          <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+            <SkeletonGroup count={4} className="h-16" />
           </div>
         ) : filtered.length === 0 ? (
           <div className="find-help-empty">
