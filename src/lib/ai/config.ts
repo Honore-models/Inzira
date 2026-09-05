@@ -8,9 +8,10 @@ export const AI_CONFIG = {
   openrouterApiKey: process.env.OPENROUTER_API_KEY || "",
 
   // Generation models (tried in order, first to last)
+  // "openrouter/free" lets OpenRouter pick the best free model automatically
   chatModels: [
-    process.env.AI_MODEL || "google/gemma-4-26b-a4b-it:free",
-    process.env.AI_MODEL_FALLBACK_1 || "liquid/lfm-2.5-2.6b:free",
+    process.env.AI_MODEL || "openrouter/free",
+    process.env.AI_MODEL_FALLBACK_1 || "google/gemma-4-26b-a4b-it:free",
     process.env.AI_MODEL_FALLBACK_2 || "google/gemma-4-31b-it:free",
   ],
 
