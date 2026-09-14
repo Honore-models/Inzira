@@ -6,6 +6,7 @@ export { AI_CONFIG, validateConfig } from "./config";
 export {
   chatCompletion,
   generateEmbeddingsAPI,
+  extractJsonFromModelText,
   type ChatMessage,
   type ChatCompletionResponse,
 } from "./openai";

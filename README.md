@@ -64,8 +64,8 @@ The AI drafts. The officer decides. The sequencing logic (what step must come be
 | **Frontend** | Next.js 15 (App Router), TypeScript, CSS Modules |
 | **Backend / Database** | Supabase (PostgreSQL with pgvector extension) |
 | **Authentication** | NextAuth.js v5 (beta) with credentials provider |
-| **AI Generation** | OpenRouter API (OpenAI-compatible) - primary model: `openai/gpt-oss-20b:free`, fallback: `z-ai/glm-5.2:free` |
-| **AI Embeddings** | BGE-M3 (`BAAI/bge-m3`) via OpenRouter - 1024-dimensional vectors |
+| **AI Generation** | NVIDIA NIM (`https://integrate.api.nvidia.com/v1`) — primary: `meta/llama-3.2-90b-vision-instruct`, fallbacks: Llama 3.1/3.3 70B |
+| **AI Embeddings** | OpenRouter embedding models (1024-dimensional vectors) for RAG retrieval |
 | **Vector Search** | Supabase pgvector with HNSW index for fast approximate nearest neighbor search |
 | **Deployment** | Vercel, auto-deployed from GitHub on every push to `main` |
 
@@ -210,7 +210,7 @@ Retrieve top-K verified chunks (configurable, default: 8)
         ↓
 Construct grounded context with source metadata
         ↓
-Send context + query to LLM via OpenRouter
+Send context + query to NVIDIA NIM (Llama)
         ↓
 Structured response with citations
         ↓
@@ -255,7 +255,8 @@ The LLM personalizes and explains these steps but does not invent new dependenci
 - Node.js 18+ (recommended: 20+)
 - npm or yarn
 - A Supabase account and project (free tier works)
-- An OpenRouter account and API key (free tier works)
+- An NVIDIA API catalog key (for assistant answers and roadmaps)
+- An OpenRouter account and API key (for RAG embeddings)
 - A GitHub account (for Vercel deployment)
 
 ### Local setup
@@ -293,17 +294,18 @@ NEXT_PUBLIC_SUPABASE_URL=https://your-project.supabase.co
 NEXT_PUBLIC_SUPABASE_ANON_KEY=your-supabase-anon-key
 
 # ============================================
-# AI - OpenRouter
+# AI - NVIDIA NIM (assistant + roadmaps)
 # ============================================
-OPENROUTER_API_KEY=sk-or-your-openrouter-key
-AI_MODEL=openai/gpt-oss-20b:free
-AI_MODEL_FALLBACK=z-ai/glm-5.2:free
+NVIDIA_API_KEY=nvapi-your-nvidia-key
+AI_MODEL=meta/llama-3.2-90b-vision-instruct
+AI_MODEL_FALLBACK_1=meta/llama-3.1-70b-instruct
+AI_MODEL_FALLBACK_2=meta/llama-3.3-70b-instruct
 
 # ============================================
-# AI - Embeddings
+# AI - Embeddings (OpenRouter, RAG only)
 # ============================================
-EMBEDDING_MODEL=BAAI/bge-m3
-EMBEDDING_API_KEY=your-openrouter-key
+OPENROUTER_API_KEY=sk-or-your-openrouter-key
+EMBEDDING_MODEL=liquid/lfm-2.5-embedding-350m:free
 
 # ============================================
 # RAG Configuration
@@ -311,7 +313,7 @@ EMBEDDING_API_KEY=your-openrouter-key
 RAG_TOP_K=8
 ```
 
-> **Security:** `OPENROUTER_API_KEY` and `SUPABASE_SERVICE_ROLE_KEY` must **never** be prefixed with `NEXT_PUBLIC_`. They are used only in server-side API routes and should never be exposed to the browser.
+> **Security:** `NVIDIA_API_KEY`, `OPENROUTER_API_KEY`, and `SUPABASE_SERVICE_ROLE_KEY` must **never** be prefixed with `NEXT_PUBLIC_`. They are used only in server-side API routes and should never be exposed to the browser.
 
 ### Database setup
 
@@ -517,7 +519,7 @@ Inzira/
 │   ├── lib/
 │   │   ├── ai/
 │   │   │   ├── config.ts               # AI model configuration
-│   │   │   ├── openai.ts               # OpenRouter client with retry/fallback
+│   │   │   ├── openai.ts               # NVIDIA chat + OpenRouter embeddings
 │   │   │   ├── embeddings.ts           # BGE-M3 embedding generation
 │   │   │   ├── retrieval.ts            # Hybrid vector + keyword search
 │   │   │   ├── chunking.ts             # Document text chunking

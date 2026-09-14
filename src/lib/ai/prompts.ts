@@ -1,5 +1,5 @@
 // ============================================================
-// INZIRA AI - System Prompts (for Gemma 4 via OpenRouter)
+// INZIRA AI - System Prompts (NVIDIA Llama for generation)
 // ============================================================
 
 /**

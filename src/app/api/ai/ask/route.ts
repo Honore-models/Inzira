@@ -1,7 +1,6 @@
 // ============================================================
 // POST /api/ai/ask
-// RAG-based question answering using Gemma 4 + BGE-M3
-// via OpenRouter
+// RAG-based question answering using NVIDIA Llama + OpenRouter embeddings
 // ============================================================
 
 import { NextResponse } from "next/server";
@@ -102,7 +101,7 @@ export async function POST(request: Request) {
     const contextString = formatContextForPrompt(retrievedChunks);
     const userPrompt = buildAskUserPrompt(question, contextString);
 
-    // 8. Call Gemma 4 via OpenRouter for the answer
+    // 8. Call NVIDIA Llama for the answer
     let answer: string;
     try {
       const completion = await chatCompletion({

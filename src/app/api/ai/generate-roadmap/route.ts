@@ -1,7 +1,7 @@
 // ============================================================
 // POST /api/ai/generate-roadmap
-// Generates a personalized roadmap draft using Gemma 4 + BGE-M3
-// with verified pathway dependency rules
+// Generates a personalized roadmap draft using NVIDIA Llama
+// plus OpenRouter embeddings, with verified pathway dependency rules
 // ============================================================
 
 import { NextResponse } from "next/server";
@@ -12,6 +12,7 @@ import {
   hybridSearch,
   formatContextForPrompt,
   chatCompletion,
+  extractJsonFromModelText,
   ROADMAP_SYSTEM_PROMPT,
   buildRoadmapUserPrompt,
 } from "@/lib/ai";
@@ -183,7 +184,7 @@ export async function POST(request: Request) {
       pathwayRulesStr,
     );
 
-    // 8. Call Gemma 4 via OpenRouter for roadmap generation
+    // 8. Call NVIDIA Llama for roadmap generation
     let rawResponse: string;
     try {
       const completion = await chatCompletion({
@@ -218,9 +219,9 @@ export async function POST(request: Request) {
     // 9. Parse and validate the JSON response
     let parsedResponse: unknown;
     try {
-      parsedResponse = JSON.parse(rawResponse);
+      parsedResponse = JSON.parse(extractJsonFromModelText(rawResponse));
     } catch {
-      console.error("Invalid JSON from Gemma:", rawResponse);
+      console.error("Invalid JSON from NVIDIA chat model:", rawResponse);
       return NextResponse.json(
         { error: "The AI returned an invalid response. Please try again." },
         { status: 500 },

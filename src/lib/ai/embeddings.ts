@@ -7,7 +7,7 @@ import { generateEmbeddingsAPI } from "./openai";
 
 /**
  * Generate an embedding for a single text string.
- * Uses BGE-M3 (1024 dimensions) via OpenRouter.
+ * Uses the configured OpenRouter embedding model (1024 dimensions).
  */
 export async function generateEmbedding(text: string): Promise<number[]> {
   const results = await generateEmbeddingsAPI(text);

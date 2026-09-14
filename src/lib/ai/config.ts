@@ -1,50 +1,52 @@
 // ============================================================
 // INZIRA AI - Configuration
-// All models configurable via environment variables
+// Chat (assistant + roadmaps) → NVIDIA NIM
+// Embeddings (RAG) → OpenRouter
 // ============================================================
 
 export const AI_CONFIG = {
-  // OpenRouter API (single key for both embeddings and generation)
+  nvidiaApiKey: process.env.NVIDIA_API_KEY || "",
   openrouterApiKey: process.env.OPENROUTER_API_KEY || "",
 
-  // Generation models (tried in order, first to last)
-  // "openrouter/free" lets OpenRouter pick the best free model automatically
+  nvidiaBaseUrl:
+    process.env.NVIDIA_API_BASE_URL || "https://integrate.api.nvidia.com/v1",
+  openrouterBaseUrl:
+    process.env.OPENROUTER_BASE_URL || "https://openrouter.ai/api/v1",
+
+  // Generation models (tried in order). NVIDIA NIM ids.
   chatModels: [
-    process.env.AI_MODEL || "openrouter/free",
-    process.env.AI_MODEL_FALLBACK_1 || "google/gemma-4-26b-a4b-it:free",
-    process.env.AI_MODEL_FALLBACK_2 || "google/gemma-4-31b-it:free",
+    process.env.AI_MODEL || "meta/llama-3.2-90b-vision-instruct",
+    process.env.AI_MODEL_FALLBACK_1 || "meta/llama-3.1-70b-instruct",
+    process.env.AI_MODEL_FALLBACK_2 || "meta/llama-3.3-70b-instruct",
   ],
 
-  // Embedding models (tried in order, first to last) — all free, 1024 dimensions
+  // Embedding models stay on OpenRouter (1024-d vectors)
   embeddingModels: [
     process.env.EMBEDDING_MODEL || "liquid/lfm-2.5-embedding-350m:free",
     process.env.EMBEDDING_MODEL_FALLBACK_1 || "nvidia/nemotron-3-embed-1b:free",
-    process.env.EMBEDDING_MODEL_FALLBACK_2 || "nvidia/llama-nemotron-embed-vl-1b-v2:free",
+    process.env.EMBEDDING_MODEL_FALLBACK_2 ||
+      "nvidia/llama-nemotron-embed-vl-1b-v2:free",
   ],
 
-  // BGE-M3 outputs 1024-dimensional dense vectors
   embeddingDimensions: 1024,
 
-  // Chunking settings
   chunkSize: 1000,
   chunkOverlap: 200,
 
-  // Retrieval settings
   topK: parseInt(process.env.RAG_TOP_K || "8", 10),
   similarityThreshold: 0.4,
 
-  // Hybrid retrieval weights
   hybridWeights: {
     vector: 0.6,
     keyword: 0.25,
     metadata: 0.15,
   },
 
-  // Generation settings
+  // Roadmaps need room for JSON; keep temperature low for structured output
   maxTokens: 2048,
   temperature: 0.3,
+  topP: 1,
 
-  // Retry settings for rate-limited models
   maxRetries: 3,
   retryBaseDelayMs: 2000,
 } as const;
@@ -55,6 +57,9 @@ export const AI_CONFIG = {
  */
 export function validateConfig(): string[] {
   const missing: string[] = [];
+  if (!process.env.NVIDIA_API_KEY) {
+    missing.push("NVIDIA_API_KEY");
+  }
   if (!process.env.OPENROUTER_API_KEY) {
     missing.push("OPENROUTER_API_KEY");
   }
