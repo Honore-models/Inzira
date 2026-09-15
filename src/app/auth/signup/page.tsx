@@ -12,6 +12,7 @@ import {
   ShieldCheck,
   User,
 } from "lucide-react";
+import PasswordInput from "@/components/PasswordInput";
 
 function GoogleIcon() {
   return (
@@ -354,34 +355,28 @@ function SignUpForm() {
 
                 <label className="ob-field" htmlFor="google-password">
                   <span className="ob-field-label">Create a password</span>
-                  <div className="ob-input-wrap">
-                    <input
-                      id="google-password"
-                      type="password"
-                      placeholder="At least 8 characters"
-                      value={password}
-                      onChange={(e) => setPassword(e.target.value)}
-                      required
-                      minLength={8}
-                      autoFocus
-                    />
-                  </div>
+                  <PasswordInput
+                    id="google-password"
+                    placeholder="At least 8 characters"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    required
+                    minLength={8}
+                    autoFocus
+                  />
                 </label>
 
                 {role === "officer" && (
                   <>
                     <label className="ob-field" htmlFor="google-officer-code">
                       <span className="ob-field-label">Officer invitation code</span>
-                      <div className="ob-input-wrap">
-                        <input
-                          id="google-officer-code"
-                          type="password"
-                          placeholder="Enter your invitation code"
-                          value={officerCode}
-                          onChange={(e) => setOfficerCode(e.target.value)}
-                          required
-                        />
-                      </div>
+                      <PasswordInput
+                        id="google-officer-code"
+                        placeholder="Enter your invitation code"
+                        value={officerCode}
+                        onChange={(e) => setOfficerCode(e.target.value)}
+                        required
+                      />
                     </label>
 
                     {testOfficerCode && (
@@ -435,33 +430,27 @@ function SignUpForm() {
 
                 <label className="ob-field" htmlFor="signup-password">
                   <span className="ob-field-label">Password</span>
-                  <div className="ob-input-wrap">
-                    <input
-                      id="signup-password"
-                      type="password"
-                      placeholder="At least 8 characters"
-                      value={password}
-                      onChange={(e) => setPassword(e.target.value)}
-                      required
-                      minLength={8}
-                    />
-                  </div>
+                  <PasswordInput
+                    id="signup-password"
+                    placeholder="At least 8 characters"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    required
+                    minLength={8}
+                  />
                 </label>
 
                 {role === "officer" && (
                   <>
                     <label className="ob-field" htmlFor="signup-officer-code">
                       <span className="ob-field-label">Officer invitation code</span>
-                      <div className="ob-input-wrap">
-                        <input
-                          id="signup-officer-code"
-                          type="password"
-                          placeholder="Enter your invitation code"
-                          value={officerCode}
-                          onChange={(e) => setOfficerCode(e.target.value)}
-                          required
-                        />
-                      </div>
+                      <PasswordInput
+                        id="signup-officer-code"
+                        placeholder="Enter your invitation code"
+                        value={officerCode}
+                        onChange={(e) => setOfficerCode(e.target.value)}
+                        required
+                      />
                     </label>
 
                     {testOfficerCode && (

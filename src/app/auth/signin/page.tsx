@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { signIn } from "next-auth/react";
 import Link from "next/link";
 import { ArrowRight, ShieldCheck } from "lucide-react";
+import PasswordInput from "@/components/PasswordInput";
 
 function GoogleIcon() {
   return (
@@ -109,16 +110,13 @@ function SignInForm() {
 
           <label className="ob-field" htmlFor="signin-password">
             <span className="ob-field-label">Password</span>
-            <div className="ob-input-wrap">
-              <input
-                id="signin-password"
-                type="password"
-                placeholder="Enter your password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
-              />
-            </div>
+            <PasswordInput
+              id="signin-password"
+              placeholder="Enter your password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              required
+            />
           </label>
 
           <button

@@ -3702,6 +3702,36 @@ p {
   color: #b6bdb9;
 }
 
+/* ---- Password visibility toggle ---- */
+.password-input-wrap input {
+  padding-right: 34px;
+}
+
+.password-toggle {
+  align-items: center;
+  background: none;
+  border: 0;
+  border-radius: 8px;
+  color: #b6bdb9;
+  cursor: pointer;
+  display: flex;
+  flex-shrink: 0;
+  justify-content: center;
+  margin: 0 -4px;
+  padding: 8px;
+  transition: color 160ms ease;
+}
+
+.password-toggle:hover,
+.password-toggle:focus-visible {
+  color: #30383e;
+}
+
+.password-toggle:focus-visible {
+  box-shadow: 0 0 0 3px rgba(31, 111, 76, 0.12);
+  outline: none;
+}
+
 /* ---- Goal cards ---- */
 .ob-goal-list {
   display: grid;
@@ -4417,12 +4447,6 @@ p {
   animation: btnSpin 0.7s linear infinite;
   display: inline-block;
   flex-shrink: 0;
-}
-
-@keyframes btnSpin {
-  to {
-    transform: rotate(360deg);
-  }
 }
 
 .auth-google-btn:disabled {
