@@ -1,6 +1,9 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
-import { auth } from "@/lib/auth";
+import NextAuth from "next-auth";
+import authConfig from "@/lib/auth.config";
+
+const { auth } = NextAuth(authConfig);
 
 export default auth((req) => {
   const { pathname } = req.nextUrl;
@@ -28,13 +31,11 @@ export default auth((req) => {
     return NextResponse.next();
   }
 
-  // API routes that don't require auth
+  // Public authentication endpoints only. Administrative maintenance routes
+  // authorize themselves and must not be exposed anonymously.
   if (
-    pathname.startsWith("/api/seed") ||
-    pathname.startsWith("/api/ai/seed") ||
-    pathname.startsWith("/api/ai/documents") ||
     pathname.startsWith("/api/auth") ||
-    pathname === "/api/debug"
+    pathname === "/api/institutions"
   ) {
     return NextResponse.next();
   }

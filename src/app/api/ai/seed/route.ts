@@ -7,9 +7,14 @@
 import { NextResponse } from "next/server";
 import { ingestDocument } from "@/lib/ai/ingestion";
 import { createClient } from "@/lib/supabase/server";
+import { auth } from "@/lib/auth";
 
 export async function POST() {
   try {
+    const session = await auth();
+    if (process.env.NODE_ENV === "production" || session?.user?.role !== "officer") {
+      return NextResponse.json({ error: "Not available" }, { status: 403 });
+    }
     // Clear existing documents to prevent duplicates on re-seed
     const supabase = await createClient();
     await supabase.from("document_chunks").delete().neq("id", "00000000-0000-0000-0000-000000000000");

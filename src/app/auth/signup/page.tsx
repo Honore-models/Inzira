@@ -28,6 +28,7 @@ function SignUpForm() {
   const searchParams = useSearchParams();
   const presetRole = searchParams.get("role");
   const isGoogleReturn = searchParams.get("google") === "1";
+  const googleEnabled = process.env.NEXT_PUBLIC_GOOGLE_ENABLED === "true";
 
   // If role is in the URL or returning from Google, skip step 1
   const [step, setStep] = useState<1 | 2>(presetRole || isGoogleReturn ? 2 : 1);
@@ -37,6 +38,7 @@ function SignUpForm() {
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [officerCode, setOfficerCode] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
@@ -69,7 +71,7 @@ function SignUpForm() {
       const res = await fetch("/api/auth/signup", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, password, fullName, role }),
+        body: JSON.stringify({ email, password, fullName, role, officerCode }),
       });
 
       const data = await res.json();
@@ -115,7 +117,7 @@ function SignUpForm() {
       const res = await fetch("/api/auth/complete-google", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ role, password }),
+        body: JSON.stringify({ role, password, officerCode }),
       });
 
       const data = await res.json();
@@ -125,11 +127,16 @@ function SignUpForm() {
         return;
       }
 
-      if (role === "youth") {
-        router.push("/onboarding");
-      } else {
-        router.push("/officer");
+      const loginResult = await signIn("credentials", {
+        email: googleEmail,
+        password,
+        redirect: false,
+      });
+      if (!loginResult?.ok) {
+        router.push("/auth/signin");
+        return;
       }
+      router.push(role === "youth" ? "/onboarding" : "/officer");
       router.refresh();
     } catch {
       setError("Something went wrong. Please try again.");
@@ -204,23 +211,13 @@ function SignUpForm() {
               <ArrowRight aria-hidden size={15} />
             </button>
 
-            <div className="auth-divider">
-              <span>or</span>
-            </div>
-
-            <button
-              className="auth-google-btn"
-              type="button"
-              disabled={googleLoading}
-              onClick={handleGoogleSignUp}
-            >
-              {googleLoading ? (
-                <span className="btn-spinner" />
-              ) : (
-                <GoogleIcon />
-              )}
-              {googleLoading ? "Redirecting…" : "Continue with Google"}
-            </button>
+            {googleEnabled && <>
+              <div className="auth-divider"><span>or</span></div>
+              <button className="auth-google-btn" type="button" disabled={googleLoading} onClick={handleGoogleSignUp}>
+                {googleLoading ? <span className="btn-spinner" /> : <GoogleIcon />}
+                {googleLoading ? "Redirecting…" : "Continue with Google"}
+              </button>
+            </>}
           </>
         )}
 
@@ -337,10 +334,26 @@ function SignUpForm() {
                   </div>
                 </label>
 
+                {role === "officer" && (
+                  <label className="ob-field" htmlFor="google-officer-code">
+                    <span className="ob-field-label">Officer invitation code</span>
+                    <div className="ob-input-wrap">
+                      <input
+                        id="google-officer-code"
+                        type="password"
+                        placeholder="Enter your invitation code"
+                        value={officerCode}
+                        onChange={(e) => setOfficerCode(e.target.value)}
+                        required
+                      />
+                    </div>
+                  </label>
+                )}
+
                 <button
                   className="ob-btn primary full"
                   type="submit"
-                  disabled={loading || !role || password.length < 8}
+                  disabled={loading || !role || password.length < 8 || (role === "officer" && !officerCode)}
                 >
                   {loading && <span className="btn-spinner" />}
                   {loading ? "Setting up…" : `Continue as ${role === "youth" ? "Youth" : "Youth Officer"}`}
@@ -395,10 +408,26 @@ function SignUpForm() {
                   </div>
                 </label>
 
+                {role === "officer" && (
+                  <label className="ob-field" htmlFor="signup-officer-code">
+                    <span className="ob-field-label">Officer invitation code</span>
+                    <div className="ob-input-wrap">
+                      <input
+                        id="signup-officer-code"
+                        type="password"
+                        placeholder="Enter your invitation code"
+                        value={officerCode}
+                        onChange={(e) => setOfficerCode(e.target.value)}
+                        required
+                      />
+                    </div>
+                  </label>
+                )}
+
                 <button
                   className="ob-btn primary full"
                   type="submit"
-                  disabled={loading || !fullName || !email || password.length < 8}
+                  disabled={loading || !fullName || !email || password.length < 8 || (role === "officer" && !officerCode)}
                 >
                   {loading && <span className="btn-spinner" />}
                   {loading ? "Creating account…" : `Create ${roleLabel} account`}
@@ -407,7 +436,7 @@ function SignUpForm() {
               </form>
             )}
 
-            {!isGoogleReturn && (
+            {!isGoogleReturn && googleEnabled && (
               <>
                 <div className="auth-divider">
                   <span>or</span>

@@ -1,4 +1,4 @@
-// File: C:\Users\HP\Desktop\Inzira\src\app\youth\onboarding\page.tsx
+// File: /home/honore/Users/HP/Desktop/Inzira/src/app/youth/onboarding/page.tsx
 import * as entry from '../../../../../src/app/youth/onboarding/page.js'
 import type { ResolvingMetadata, ResolvingViewport } from 'next/dist/lib/metadata/types/metadata-interface.js'
 

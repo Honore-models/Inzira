@@ -1,4 +1,4 @@
-// File: C:\Users\HP\Desktop\Inzira\src\app\api\youth\[id]\route.ts
+// File: /home/honore/Users/HP/Desktop/Inzira/src/app/api/youth/[id]/route.ts
 import * as entry from '../../../../../../src/app/api/youth/[id]/route.js'
 import type { NextRequest } from 'next/server.js'
 

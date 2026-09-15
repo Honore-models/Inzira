@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
 import { createClient } from "@supabase/supabase-js";
+import { auth } from "@/lib/auth";
 
 function getSupabaseAdmin() {
   return createClient(
@@ -12,6 +13,10 @@ function getSupabaseAdmin() {
 
 export async function POST() {
   try {
+    const session = await auth();
+    if (process.env.NODE_ENV === "production" || session?.user?.role !== "officer") {
+      return NextResponse.json({ error: "Not available" }, { status: 403 });
+    }
     const supabase = getSupabaseAdmin();
 
     // Get existing officers and delete their auth users + profiles

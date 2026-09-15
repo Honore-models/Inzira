@@ -3,6 +3,7 @@ import Credentials from "next-auth/providers/credentials";
 import Google from "next-auth/providers/google";
 import bcrypt from "bcryptjs";
 import { createClient } from "@supabase/supabase-js";
+import authConfig from "@/lib/auth.config";
 
 declare module "next-auth" {
   interface Session {
@@ -35,11 +36,8 @@ function getSupabaseAdmin() {
 }
 
 export const { handlers, signIn, signOut, auth } = NextAuth({
+  ...authConfig,
   providers: [
-    Google({
-      clientId: process.env.GOOGLE_CLIENT_ID,
-      clientSecret: process.env.GOOGLE_CLIENT_SECRET,
-    }),
     Credentials({
       name: "credentials",
       credentials: {
@@ -51,13 +49,14 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
           return null;
         }
 
+        const email = (credentials.email as string).trim().toLowerCase();
         const supabase = getSupabaseAdmin();
 
         // Look up user in profiles table
         const { data: profile } = await supabase
           .from("profiles")
           .select("*")
-          .eq("email", credentials.email)
+          .eq("email", email)
           .single();
 
         if (!profile) {
@@ -84,14 +83,10 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         };
       },
     }),
+    ...(process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET
+      ? [Google({ clientId: process.env.GOOGLE_CLIENT_ID, clientSecret: process.env.GOOGLE_CLIENT_SECRET })]
+      : []),
   ],
-  session: {
-    strategy: "jwt",
-  },
-  pages: {
-    signIn: "/auth/signin",
-    error: "/auth/error",
-  },
   callbacks: {
     async signIn({ user, account }) {
       // Google users: create profile if it doesn't exist
@@ -99,30 +94,33 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         const supabase = getSupabaseAdmin();
         const { data: existing } = await supabase
           .from("profiles")
-          .select("id")
+          .select("id, user_id")
           .eq("email", user.email)
           .single();
 
         if (!existing) {
-          // Block credential login for Google-only accounts
-          const { data: profile } = await supabase
-            .from("profiles")
-            .select("password_hash")
-            .eq("email", user.email)
-            .single();
-          if (profile?.password_hash === "google") {
-            return false;
-          }
+          // NextAuth's OAuth subject is not a Supabase Auth user. Create a
+          // matching Supabase identity before inserting the foreign-keyed
+          // profile, while keeping its generated password private.
+          const { data: authUser, error: authError } = await supabase.auth.admin.createUser({
+            email: user.email,
+            password: crypto.randomUUID(),
+            email_confirm: true,
+          });
+          if (authError || !authUser.user) return false;
 
-          // Create a new profile with a sentinel password hash
-          await supabase.from("profiles").insert({
-            user_id: user.id,
+          const { error } = await supabase.from("profiles").insert({
+            user_id: authUser.user.id,
             email: user.email,
             full_name: user.name || "",
             role: "youth",
             password_hash: "google",
             onboarding_completed: false,
           });
+          if (error) {
+            await supabase.auth.admin.deleteUser(authUser.user.id);
+            return false;
+          }
         }
       }
       return true;
@@ -135,10 +133,11 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
           const supabase = getSupabaseAdmin();
           const { data: profile } = await supabase
             .from("profiles")
-            .select("id, role, onboarding_completed")
+            .select("id, user_id, role, onboarding_completed")
             .eq("email", user.email)
             .single();
           if (profile) {
+            token.id = profile.user_id;
             token.role = profile.role;
             token.profileId = profile.id;
             token.onboardingCompleted = profile.onboarding_completed;

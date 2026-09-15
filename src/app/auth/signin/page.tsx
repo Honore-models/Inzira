@@ -20,8 +20,12 @@ function GoogleIcon() {
 function SignInForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const callbackUrl = searchParams.get("callbackUrl") || "/";
+  const requestedCallbackUrl = searchParams.get("callbackUrl");
+  const callbackUrl = requestedCallbackUrl?.startsWith("/") && !requestedCallbackUrl.startsWith("//")
+    ? requestedCallbackUrl
+    : null;
   const isNewYouth = searchParams.get("new") === "youth";
+  const googleEnabled = process.env.NEXT_PUBLIC_GOOGLE_ENABLED === "true";
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -53,11 +57,8 @@ function SignInForm() {
           const res = await fetch("/api/auth/session");
           const session = await res.json();
           const role = session?.user?.role;
-          if (role === "officer") {
-            router.push("/officer");
-          } else {
-            router.push("/youth");
-          }
+          const defaultUrl = role === "officer" ? "/officer" : "/youth";
+          router.push(callbackUrl || defaultUrl);
         }
         router.refresh();
       }
@@ -131,26 +132,24 @@ function SignInForm() {
           </button>
         </form>
 
-        <div className="auth-divider">
-          <span>or</span>
-        </div>
+        {googleEnabled && <>
+          <div className="auth-divider">
+            <span>or</span>
+          </div>
 
-        <button
-          className="auth-google-btn"
-          type="button"
-          disabled={googleLoading}
-          onClick={() => {
-            setGoogleLoading(true);
-            signIn("google", { callbackUrl: "/youth" });
-          }}
-        >
-          {googleLoading ? (
-            <span className="btn-spinner" />
-          ) : (
-            <GoogleIcon />
-          )}
-          {googleLoading ? "Redirecting…" : "Continue with Google"}
-        </button>
+          <button
+            className="auth-google-btn"
+            type="button"
+            disabled={googleLoading}
+            onClick={() => {
+              setGoogleLoading(true);
+              signIn("google", { callbackUrl: callbackUrl || "/youth" });
+            }}
+          >
+            {googleLoading ? <span className="btn-spinner" /> : <GoogleIcon />}
+            {googleLoading ? "Redirecting…" : "Continue with Google"}
+          </button>
+        </>}
 
         <p className="auth-switch" style={{ marginTop: 16 }}>
           Don&apos;t have an account?{" "}

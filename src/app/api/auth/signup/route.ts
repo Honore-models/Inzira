@@ -4,7 +4,9 @@ import { createClient } from "@/lib/supabase/server";
 
 export async function POST(request: Request) {
   try {
-    const { email, password, fullName, role } = await request.json();
+    const { email: rawEmail, password, fullName: rawFullName, role, officerCode } = await request.json();
+    const email = typeof rawEmail === "string" ? rawEmail.trim().toLowerCase() : "";
+    const fullName = typeof rawFullName === "string" ? rawFullName.trim() : "";
 
     if (!email || !password || !fullName || !role) {
       return NextResponse.json(
@@ -18,6 +20,19 @@ export async function POST(request: Request) {
         { error: "Invalid role" },
         { status: 400 },
       );
+    }
+
+    if (!/^\S+@\S+\.\S+$/.test(email) || fullName.length > 120) {
+      return NextResponse.json({ error: "Enter a valid name and email address" }, { status: 400 });
+    }
+    if (typeof password !== "string" || password.length < 8) {
+      return NextResponse.json({ error: "Password must be at least 8 characters" }, { status: 400 });
+    }
+    if (role === "officer") {
+      const inviteCode = process.env.OFFICER_SIGNUP_CODE;
+      if (!inviteCode || officerCode !== inviteCode) {
+        return NextResponse.json({ error: "A valid officer invitation code is required" }, { status: 403 });
+      }
     }
 
     const supabase = await createClient();
@@ -65,6 +80,7 @@ export async function POST(request: Request) {
     });
 
     if (profileError) {
+      await supabase.auth.admin.deleteUser(authUser.user.id);
       return NextResponse.json(
         { error: "Failed to create profile" },
         { status: 500 },
