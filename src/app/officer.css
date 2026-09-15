@@ -108,7 +108,7 @@
   font-size: 14px;
 }
 
-.officer-profile span {
+.officer-profile > div > span {
   color: var(--muted);
   font-size: 12px;
 }

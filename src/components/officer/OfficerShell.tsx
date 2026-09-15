@@ -12,6 +12,7 @@ import {
   Users,
 } from "lucide-react";
 import { ConfirmModal } from "@/components/ConfirmModal";
+import { UserAvatar } from "@/components/UserAvatar";
 
 const navItems = [
   { href: "/officer", label: "Dashboard", icon: Home },
@@ -30,11 +31,18 @@ export function OfficerShell({
 }) {
   const { data: session } = useSession();
   const [showLogout, setShowLogout] = useState(false);
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
 
   const userName = session?.user?.name || "Officer";
 
-  function handleLogout() {
-    signOut({ callbackUrl: "/" });
+  async function handleLogout() {
+    setShowLogout(false);
+    setIsLoggingOut(true);
+    try {
+      await signOut({ callbackUrl: "/" });
+    } finally {
+      setIsLoggingOut(false);
+    }
   }
 
   return (
@@ -63,9 +71,7 @@ export function OfficerShell({
         <div className="officer-sidebar-spacer" />
 
         <div className="officer-profile">
-          <span className="officer-avatar" style={{ background: "#1f6f4c" }}>
-            {userName.split(" ").map((w) => w[0]).join("")}
-          </span>
+          <UserAvatar />
           <div>
             <strong>{userName}</strong>
             <span>Officer</span>
@@ -75,9 +81,15 @@ export function OfficerShell({
             type="button"
             onClick={() => setShowLogout(true)}
             title="Log out"
+            disabled={isLoggingOut}
+            aria-busy={isLoggingOut}
           >
-            <LogOut aria-hidden size={16} />
-            Log out
+            {isLoggingOut ? (
+              <span className="logout-spinner" aria-hidden />
+            ) : (
+              <LogOut aria-hidden size={16} />
+            )}
+            {isLoggingOut ? "Logging out..." : "Log out"}
           </button>
         </div>
       </aside>

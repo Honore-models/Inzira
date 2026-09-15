@@ -13,9 +13,16 @@ export function LogoutButton({
   compact?: boolean;
 }) {
   const [showConfirm, setShowConfirm] = useState(false);
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
 
-  function handleLogout() {
-    signOut({ callbackUrl: "/" });
+  async function handleLogout() {
+    setShowConfirm(false);
+    setIsLoggingOut(true);
+    try {
+      await signOut({ callbackUrl: "/" });
+    } finally {
+      setIsLoggingOut(false);
+    }
   }
 
   return (
@@ -25,9 +32,17 @@ export function LogoutButton({
         type="button"
         onClick={() => setShowConfirm(true)}
         title="Log out"
+        disabled={isLoggingOut}
+        aria-busy={isLoggingOut}
       >
-        <LogOut aria-hidden size={16} />
-        {compact ? null : <span>Log out</span>}
+        {isLoggingOut ? (
+          <span className="logout-spinner" aria-hidden />
+        ) : (
+          <LogOut aria-hidden size={16} />
+        )}
+        {compact ? null : (
+          <span>{isLoggingOut ? "Logging out..." : "Log out"}</span>
+        )}
       </button>
 
       <ConfirmModal

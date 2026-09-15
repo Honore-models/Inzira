@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useSession } from "next-auth/react";
 import {
   HelpCircle,
   Home,
@@ -11,6 +12,7 @@ import {
 } from "lucide-react";
 import { LogoutButton } from "@/components/LogoutButton";
 import { SidebarControls } from "@/components/youth/SidebarControls";
+import { UserAvatar } from "@/components/UserAvatar";
 
 const navItems = [
   { href: "/youth", label: "Home", icon: Home },
@@ -31,6 +33,8 @@ export function YouthShell({
   active: string;
   children: React.ReactNode;
 }) {
+  const { data: session } = useSession();
+  const userName = session?.user?.name || "You";
   return (
     <main className="youth-app">
       <aside className="youth-sidebar">
@@ -73,6 +77,15 @@ export function YouthShell({
         </div>
 
         <SidebarControls />
+
+        <div className="youth-profile">
+          <UserAvatar />
+          <div>
+            <strong>{userName}</strong>
+            <span>Youth</span>
+          </div>
+        </div>
+
         <LogoutButton className="youth-logout" />
       </aside>
       <section className="youth-content">{children}</section>
