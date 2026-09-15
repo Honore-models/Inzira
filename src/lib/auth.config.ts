@@ -6,6 +6,20 @@ import type { NextAuthConfig } from "next-auth";
 const authConfig = {
   providers: [],
   session: { strategy: "jwt" },
+  callbacks: {
+    // Middleware creates NextAuth from this edge-safe configuration. Map the
+    // custom JWT claims here as well, otherwise `req.auth.user.role` is lost
+    // in middleware and protected youth/officer routes redirect each other.
+    async session({ session, token }) {
+      if (session.user) {
+        session.user.id = token.id as string;
+        session.user.role = token.role as "youth" | "officer";
+        session.user.profileId = token.profileId as string;
+        session.user.onboardingCompleted = token.onboardingCompleted as boolean;
+      }
+      return session;
+    },
+  },
   pages: {
     signIn: "/auth/signin",
     error: "/auth/error",

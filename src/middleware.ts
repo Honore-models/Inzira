@@ -9,6 +9,7 @@ export default auth((req) => {
   const { pathname } = req.nextUrl;
   const isLoggedIn = !!req.auth;
   const userRole = req.auth?.user?.role as string | undefined;
+  const hasValidRole = userRole === "youth" || userRole === "officer";
 
   // Root / landing page — always allow
   if (pathname === "/") {
@@ -19,7 +20,7 @@ export default auth((req) => {
   // Exception: /auth/signup?google=1 allows logged-in Google users to complete profile
   const authPages = ["/auth/signin", "/auth/signup", "/auth/error"];
   if (authPages.some((route) => pathname === route)) {
-    if (isLoggedIn) {
+    if (isLoggedIn && hasValidRole) {
       const isGoogleSignup = pathname === "/auth/signup" && req.nextUrl.searchParams.get("google") === "1";
       if (isGoogleSignup) {
         return NextResponse.next();
@@ -54,7 +55,10 @@ export default auth((req) => {
   }
 
   // If not logged in, redirect to sign in
-  if (!isLoggedIn) {
+  // A session without a recognised role can exist after an auth configuration
+  // change or an interrupted sign-up. Let the user sign in again instead of
+  // bouncing indefinitely between the two role dashboards.
+  if (!isLoggedIn || !hasValidRole) {
     const signInUrl = new URL("/auth/signin", req.url);
     signInUrl.searchParams.set("callbackUrl", pathname);
     return NextResponse.redirect(signInUrl);

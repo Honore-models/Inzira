@@ -88,6 +88,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
       : []),
   ],
   callbacks: {
+    ...authConfig.callbacks,
     async signIn({ user, account }) {
       // Google users: create profile if it doesn't exist
       if (account?.provider === "google" && user?.email) {
@@ -149,15 +150,6 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         }
       }
       return token;
-    },
-    async session({ session, token }) {
-      if (token) {
-        session.user.id = token.id as string;
-        session.user.role = token.role as "youth" | "officer";
-        session.user.profileId = token.profileId as string;
-        session.user.onboardingCompleted = token.onboardingCompleted as boolean;
-      }
-      return session;
     },
   },
 });
