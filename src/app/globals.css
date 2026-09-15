@@ -4081,6 +4081,31 @@ p {
   margin: 0;
 }
 
+.auth-test-access {
+  border: 1px solid #b8d7c5;
+  border-radius: 10px;
+  background: #f1f8f3;
+  color: #245c3e;
+  padding: 12px;
+}
+
+.auth-test-access strong,
+.auth-test-access p {
+  display: block;
+}
+
+.auth-test-access p {
+  margin: 4px 0 10px;
+  font-size: 13px;
+  line-height: 1.4;
+}
+
+.auth-test-access .ob-btn {
+  min-height: 34px;
+  padding: 6px 10px;
+  font-size: 13px;
+}
+
 .auth-switch {
   color: #68726d;
   font-size: 13px;

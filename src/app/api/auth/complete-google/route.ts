@@ -25,7 +25,11 @@ export async function POST(request: Request) {
 
     if (role === "officer") {
       const inviteCode = process.env.OFFICER_SIGNUP_CODE;
-      if (!inviteCode || officerCode !== inviteCode) {
+      const testInviteCode = process.env.TEST_OFFICER_INVITATION_CODE;
+      const testSignupsEnabled = process.env.ENABLE_TEST_OFFICER_SIGNUP === "true";
+      const hasValidProductionCode = !!inviteCode && officerCode === inviteCode;
+      const hasValidTestCode = testSignupsEnabled && !!testInviteCode && officerCode === testInviteCode;
+      if (!hasValidProductionCode && !hasValidTestCode) {
         return NextResponse.json(
           { error: "A valid officer invitation code is required" },
           { status: 403 },
