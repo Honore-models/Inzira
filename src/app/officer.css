@@ -163,10 +163,21 @@
 }
 
 .officer-heading h1 {
+  color: #1d3226;
   font-size: 26px;
   font-weight: 800;
   letter-spacing: -0.01em;
   margin: 0 0 4px;
+}
+
+.officer-eyebrow {
+  color: var(--green);
+  display: block;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  margin-bottom: 7px;
+  text-transform: uppercase;
 }
 
 .officer-heading p {
@@ -265,7 +276,16 @@
   display: flex;
   gap: 14px;
   padding: 18px;
+  position: relative;
+  transition: box-shadow 160ms ease, transform 160ms ease;
 }
+
+.officer-stat-card:hover { box-shadow: 0 10px 24px rgba(25, 54, 36, 0.08); transform: translateY(-2px); }
+.officer-stat-card::before { border-radius: 12px 12px 0 0; content: ""; height: 3px; left: -1px; position: absolute; right: -1px; top: -1px; }
+.officer-stat-card.green::before { background: var(--green); }
+.officer-stat-card.blue::before { background: #2f6ba8; }
+.officer-stat-card.purple::before { background: #6f4fb0; }
+.officer-stat-card.amber::before { background: #c58d18; }
 
 .officer-stat-icon {
   align-items: center;
@@ -330,6 +350,7 @@
   border: 1px solid var(--line);
   border-radius: 12px;
   padding: 20px;
+  box-shadow: 0 8px 24px rgba(25, 54, 36, 0.035);
 }
 
 .officer-card-header {
@@ -579,6 +600,25 @@
   font-size: 13px;
   margin: 2px 0 0;
 }
+
+.caseload-next-action {
+  align-items: center;
+  background: linear-gradient(110deg, #edf7ef, #f9fcf9);
+  border: 1px solid #d9eadc;
+  border-radius: 10px;
+  color: var(--green);
+  display: grid;
+  gap: 10px;
+  grid-template-columns: 22px minmax(0, 1fr) 30px;
+  margin-top: 18px;
+  padding: 12px;
+}
+
+.caseload-next-action > div { display: grid; gap: 2px; }
+.caseload-next-action strong { color: #214a32; font-size: 13px; }
+.caseload-next-action span { color: #607667; font-size: 12px; line-height: 1.35; }
+.caseload-next-action a { align-items: center; background: #fff; border-radius: 8px; color: var(--green); display: inline-flex; height: 30px; justify-content: center; width: 30px; }
+.caseload-next-action a:hover { background: var(--green); color: #fff; }
 
 /* Stepper */
 .officer-stepper {

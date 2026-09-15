@@ -71,16 +71,14 @@ The AI drafts. The officer decides. The sequencing logic (what step must come be
 
 ### Test officer accounts
 
-For a staging or demonstration deployment, test users can create an officer account without being given the private production invitation code. Set these Vercel environment variables to the same non-production value, then redeploy:
+For a staging or demonstration deployment, test users can create an officer account without being given the private production invitation code. Set these two Vercel environment variables, then redeploy:
 
 ```bash
 ENABLE_TEST_OFFICER_SIGNUP=true
 TEST_OFFICER_INVITATION_CODE=choose-a-test-only-code
-NEXT_PUBLIC_TEST_OFFICER_SIGNUP_ENABLED=true
-NEXT_PUBLIC_TEST_OFFICER_INVITATION_CODE=choose-a-test-only-code
 ```
 
-The sign-up page will show a **Use test invitation code** button when this mode is enabled. Do not enable it on the production deployment: a test officer can access officer features and should only be used with test data.
+The sign-up page checks test access at runtime and will show a **Use test invitation code** button when this mode is enabled. Do not enable it on the production deployment: a test officer can access officer features and should only be used with test data.
 
 ### Database Schema
 

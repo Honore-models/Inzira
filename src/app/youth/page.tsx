@@ -5,11 +5,13 @@ import Link from "next/link";
 import {
   ChevronRight,
   ClipboardList,
+  Compass,
   HelpCircle,
   Lightbulb,
   ListChecks,
   MapPin,
   MessageCircle,
+  Target,
   Sun,
 } from "lucide-react";
 import { YouthShell, ProgressMeter } from "@/components/youth/YouthShell";
@@ -84,6 +86,7 @@ export default function YouthDashboard() {
   const completedSteps = steps.filter((s) => s.state === "done").length;
   const totalSteps = youthCase?.total_steps || steps.length || 5;
   const progressPercent = totalSteps > 0 ? Math.round((completedSteps / totalSteps) * 100) : 0;
+  const currentStepNumber = currentStep ? steps.indexOf(currentStep) + 1 : 0;
 
   if (loading) {
     return (
@@ -100,18 +103,17 @@ export default function YouthDashboard() {
   return (
     <YouthShell active="Home">
       <div className="youth-page-wrap">
-        {/* Welcome banner */}
         <section className="welcome-card">
           <div className="welcome-copy">
             <Sun aria-hidden size={28} />
             <div>
-              <p>Good morning,</p>
+              <p className="dashboard-eyebrow">Your personal pathway</p>
               <h1>{userName}</h1>
-              <span>You&apos;re on your path. Keep going!</span>
+              <span>Every completed step brings your goal closer.</span>
             </div>
           </div>
           <div className="progress-card compact-card">
-            <p>Overall progress</p>
+            <p>Pathway progress</p>
             <strong className="progress-steps">
               {completedSteps} of {totalSteps} steps
             </strong>
@@ -121,12 +123,18 @@ export default function YouthDashboard() {
               showHeader
             />
           </div>
+          <div className="welcome-meta" aria-label="Your profile summary">
+            <span><Target aria-hidden size={15} /> {profile?.goal || "Set your career goal"}</span>
+            {profile?.district && <span><MapPin aria-hidden size={15} /> {profile.district}</span>}
+          </div>
         </section>
 
-        {/* Next step card */}
         {currentStep && (
           <section className="content-card next-step-card">
-            <p className="section-label">Your next step</p>
+            <div className="card-kicker-row">
+              <p className="section-label">Recommended next step</p>
+              <span className="step-count">Step {currentStepNumber} of {totalSteps}</span>
+            </div>
             <div className="next-step">
               <div className="large-icon">
                 <ClipboardList aria-hidden size={28} />
@@ -148,29 +156,44 @@ export default function YouthDashboard() {
           </section>
         )}
 
-        {/* Quick access grid */}
+        {!currentStep && (
+          <section className="content-card empty-path-card">
+            <div className="large-icon"><Compass aria-hidden size={28} /></div>
+            <div>
+              <p className="section-label">Your pathway is being prepared</p>
+              <h2>There&apos;s no active step just yet.</h2>
+              <p>Your youth officer will review your information and share the next steps here.</p>
+            </div>
+            <Link className="small-action" href="/youth/messages">Message officer</Link>
+          </section>
+        )}
+
         <section className="quick-section">
-          <p className="section-label">Quick access</p>
+          <div className="section-heading-row">
+            <div><p className="section-label">Quick access</p><span>Everything you need to keep moving forward.</span></div>
+          </div>
           <div className="quick-grid">
             <Link className="quick-card" href="/youth/steps">
               <ListChecks aria-hidden size={22} />
               <strong>My Steps</strong>
               <span>See your full plan</span>
+              <ChevronRight className="quick-card-arrow" aria-hidden size={16} />
             </Link>
             <Link className="quick-card" href="/youth/ask">
               <HelpCircle aria-hidden size={22} />
               <strong>Ask</strong>
               <span>Get answers to your questions</span>
+              <ChevronRight className="quick-card-arrow" aria-hidden size={16} />
             </Link>
             <Link className="quick-card" href="/youth/find-help">
               <Lightbulb aria-hidden size={22} />
               <strong>Find Help</strong>
               <span>Discover institutions near you</span>
+              <ChevronRight className="quick-card-arrow" aria-hidden size={16} />
             </Link>
           </div>
         </section>
 
-        {/* Message strip */}
         <Link className="message-strip" href="/youth/messages">
           <MessageCircle aria-hidden size={20} />
           <span>

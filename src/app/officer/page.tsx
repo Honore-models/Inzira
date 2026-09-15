@@ -4,6 +4,8 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useSession } from "next-auth/react";
 import {
+  ArrowUpRight,
+  ClipboardPlus,
   Clock,
   Sparkles,
   TrendingUp,
@@ -121,10 +123,17 @@ export default function OfficerDashboard() {
       <div className="officer-page-wrap">
         <header className="officer-heading">
           <div>
+            <span className="officer-eyebrow">Officer workspace</span>
             <h1>Good morning, {userName}</h1>
-            <p>Here&apos;s what&apos;s happening in your caseload today.</p>
+            <p>Here&apos;s a clear view of the young people who need you today.</p>
           </div>
-          <DateSelector />
+          <div className="officer-heading-actions">
+            <DateSelector />
+            <Link className="officer-button primary" href="/officer/intake">
+              <ClipboardPlus aria-hidden size={16} />
+              New intake
+            </Link>
+          </div>
         </header>
 
         <section className="officer-stat-grid" aria-label="Caseload summary">
@@ -219,8 +228,8 @@ export default function OfficerDashboard() {
           <article className="officer-card weekly-card">
             <header className="officer-card-header">
               <div>
-                <h2>Caseload overview</h2>
-                <p>Summary of all youth cases</p>
+                <h2>Caseload health</h2>
+                <p>A clear snapshot of your current workload</p>
               </div>
             </header>
             <div className="caseload-summary">
@@ -236,6 +245,16 @@ export default function OfficerDashboard() {
                 <strong>{waitingForRoadmap.length}</strong>
                 <span>Needs roadmap</span>
               </div>
+            </div>
+            <div className="caseload-next-action">
+              <Sparkles aria-hidden size={18} />
+              <div>
+                <strong>{waitingForRoadmap.length > 0 ? `${waitingForRoadmap.length} youth need a roadmap` : "Your roadmap queue is clear"}</strong>
+                <span>{waitingForRoadmap.length > 0 ? "Start a smart intake to prepare their next steps." : "Check your active cases to keep progress moving."}</span>
+              </div>
+              <Link href={waitingForRoadmap.length > 0 ? "/officer/intake" : "/officer/youth"} aria-label="Open next action">
+                <ArrowUpRight aria-hidden size={18} />
+              </Link>
             </div>
           </article>
         </section>

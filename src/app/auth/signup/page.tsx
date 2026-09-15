@@ -8,6 +8,7 @@ import {
   ArrowRight,
   ArrowLeft,
   Briefcase,
+  FlaskConical,
   ShieldCheck,
   User,
 } from "lucide-react";
@@ -23,15 +24,31 @@ function GoogleIcon() {
   );
 }
 
+function TestOfficerHint({ onUse }: { onUse: () => void }) {
+  return (
+    <aside className="auth-test-access" role="note" aria-label="Test mode invitation code">
+      <span className="auth-test-badge">
+        <FlaskConical aria-hidden size={12} />
+        Test mode
+      </span>
+      <p>
+        Evaluating the platform? Fill in a one-time test invitation code to
+        create a demo officer account.
+      </p>
+      <button className="auth-test-use" type="button" onClick={onUse}>
+        Use test invitation code
+        <ArrowRight aria-hidden size={13} />
+      </button>
+    </aside>
+  );
+}
+
 function SignUpForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const presetRole = searchParams.get("role");
   const isGoogleReturn = searchParams.get("google") === "1";
   const googleEnabled = process.env.NEXT_PUBLIC_GOOGLE_ENABLED === "true";
-  const testOfficerCode = process.env.NEXT_PUBLIC_TEST_OFFICER_INVITATION_CODE;
-  const testOfficerSignupEnabled =
-    process.env.NEXT_PUBLIC_TEST_OFFICER_SIGNUP_ENABLED === "true" && !!testOfficerCode;
 
   // If role is in the URL or returning from Google, skip step 1
   const [step, setStep] = useState<1 | 2>(presetRole || isGoogleReturn ? 2 : 1);
@@ -47,6 +64,20 @@ function SignUpForm() {
   const [googleLoading, setGoogleLoading] = useState(false);
   const [googleName, setGoogleName] = useState("");
   const [googleEmail, setGoogleEmail] = useState("");
+  const [testOfficerCode, setTestOfficerCode] = useState<string | null>(null);
+
+  // Test access is resolved on the server, rather than being baked into the
+  // browser bundle. This lets Vercel enable it with two server-only settings.
+  useEffect(() => {
+    fetch("/api/auth/test-officer-access", { cache: "no-store" })
+      .then((response) => response.ok ? response.json() : null)
+      .then((data) => {
+        if (data?.enabled && typeof data.code === "string") {
+          setTestOfficerCode(data.code);
+        }
+      })
+      .catch(() => {});
+  }, []);
 
   // For Google return: fetch the user's session to pre-fill name/email
   useEffect(() => {
@@ -353,14 +384,8 @@ function SignUpForm() {
                       </div>
                     </label>
 
-                    {testOfficerSignupEnabled && (
-                      <div className="auth-test-access" role="status">
-                        <strong>Testing the platform?</strong>
-                        <p>Use the test invitation code to create a test officer account.</p>
-                        <button className="ob-btn ghost" type="button" onClick={() => setOfficerCode(testOfficerCode)}>
-                          Use test invitation code
-                        </button>
-                      </div>
+                    {testOfficerCode && (
+                      <TestOfficerHint onUse={() => setOfficerCode(testOfficerCode)} />
                     )}
                   </>
                 )}
@@ -439,18 +464,8 @@ function SignUpForm() {
                       </div>
                     </label>
 
-                    {testOfficerSignupEnabled && (
-                      <div className="auth-test-access" role="status">
-                        <strong>Testing the platform?</strong>
-                        <p>Use the test invitation code to create a test officer account.</p>
-                        <button
-                          className="ob-btn ghost"
-                          type="button"
-                          onClick={() => setOfficerCode(testOfficerCode)}
-                        >
-                          Use test invitation code
-                        </button>
-                      </div>
+                    {testOfficerCode && (
+                      <TestOfficerHint onUse={() => setOfficerCode(testOfficerCode)} />
                     )}
                   </>
                 )}
