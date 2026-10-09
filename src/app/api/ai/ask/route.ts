@@ -3,13 +3,12 @@
 // Grounded question answering over the verified library (Groq + BM25 RAG)
 // ============================================================
 
-import { NextResponse } from "next/server";
 import {
   generateEmbedding,
   hybridSearch,
   formatContextForPrompt,
   extractSources,
-  chatCompletion,
+  chatCompletionStream,
   describeAIError,
   ASK_SYSTEM_PROMPT,
   NO_INFO_RESPONSE,
@@ -87,26 +86,61 @@ export async function POST(request: Request) {
     content: buildAskUserPrompt(question, formatContextForPrompt(chunks)),
   });
 
+  const sources = chunks.map((c) => extractSources([c])[0]);
+
+  let stream;
   try {
-    const { content } = await chatCompletion({ messages });
-    const answer = content.trim();
-
-    const kind: AskResponse["kind"] = answer.startsWith(OFF_TOPIC_RESPONSE.slice(0, 40))
-      ? "off_topic"
-      : answer.startsWith(NO_INFO_RESPONSE.slice(0, 40))
-        ? "no_info"
-        : "answer";
-
-    const response: AskResponse = {
-      answer,
-      kind,
-      // One entry per numbered source, so citation [n] maps to sources[n - 1].
-      sources: kind === "answer" ? chunks.map((c) => extractSources([c])[0]) : [],
-    };
-    return NextResponse.json(response);
+    stream = await chatCompletionStream({ messages });
   } catch (error) {
     console.error("[ask] generation failed:", error);
     const { message, status } = describeAIError(error);
     return jsonError(message, status);
   }
+
+  // NDJSON stream: one "sources" line, many "delta" lines, then "done".
+  // Citation [n] in the answer maps to sources[n - 1].
+  const encoder = new TextEncoder();
+  const output = new ReadableStream<Uint8Array>({
+    async start(controller) {
+      const send = (event: Record<string, unknown>) =>
+        controller.enqueue(encoder.encode(`${JSON.stringify(event)}\n`));
+
+      send({ type: "sources", sources });
+      let answer = "";
+      try {
+        for await (const text of stream.tokens) {
+          answer += text;
+          send({ type: "delta", text });
+        }
+        const trimmed = answer.trim();
+        const kind: AskResponse["kind"] = !trimmed
+          ? "no_info"
+          : trimmed.startsWith(OFF_TOPIC_RESPONSE.slice(0, 40))
+            ? "off_topic"
+            : trimmed.startsWith(NO_INFO_RESPONSE.slice(0, 40))
+              ? "no_info"
+              : "answer";
+        if (!trimmed) send({ type: "delta", text: NO_INFO_RESPONSE });
+        send({ type: "done", kind });
+      } catch (error) {
+        console.error("[ask] stream interrupted:", error);
+        send({
+          type: "error",
+          message: answer
+            ? "The answer was interrupted. Please ask again."
+            : "The AI assistant is unavailable right now. Please try again shortly.",
+        });
+      } finally {
+        controller.close();
+      }
+    },
+  });
+
+  return new Response(output, {
+    headers: {
+      "Content-Type": "application/x-ndjson; charset=utf-8",
+      "Cache-Control": "no-store",
+      "X-Accel-Buffering": "no",
+    },
+  });
 }

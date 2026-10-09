@@ -17,7 +17,10 @@ export async function GET(_request: Request, { params }: Params) {
     .order("created_at", { ascending: true })
     .limit(500);
 
-  if (error) return jsonError("Could not load messages.", 500);
+  if (error) {
+    console.error("[messages] load failed:", error);
+    return jsonError("Could not load messages.", 500);
+  }
 
   // Opening a conversation marks the other side's messages as read.
   const unread = (data || []).filter((m) => !m.is_read && m.sender_id !== viewer.profileId);
@@ -63,6 +66,9 @@ export async function POST(request: Request, { params }: Params) {
     .select("id, content, sender_id, sender_role, is_read, created_at")
     .single();
 
-  if (error) return jsonError("Message could not be sent. Please try again.", 500);
+  if (error) {
+    console.error("[messages] insert failed:", error);
+    return jsonError("Message could not be sent. Please try again.", 500);
+  }
   return NextResponse.json(data, { status: 201 });
 }

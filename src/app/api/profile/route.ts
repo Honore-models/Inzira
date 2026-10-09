@@ -47,6 +47,9 @@ export async function PATCH(request: Request) {
     .select(PROFILE_FIELDS)
     .single();
 
-  if (error) return jsonError("Could not save your changes. Please try again.", 500);
+  if (error) {
+    console.error("[profile] update failed:", error);
+    return jsonError("Could not save your changes. Please try again.", 500);
+  }
   return NextResponse.json(data);
 }

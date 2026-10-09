@@ -44,7 +44,7 @@ Inzira turns that scattered knowledge into **one ordered, human-approved roadmap
 | App | Next.js 15 (App Router), React 19, TypeScript |
 | Data | Supabase Postgres (+ pgvector, optional) |
 | Auth | Auth.js v5: email/password, optional Google |
-| AI generation | **Groq** free tier: `llama-3.3-70b-versatile` → `openai/gpt-oss-120b` → `llama-3.1-8b-instant` (automatic fallback) |
+| AI generation | **Groq** free tier: `openai/gpt-oss-120b` → `openai/gpt-oss-20b` → `qwen/qwen3.8-27b` (automatic fallback) |
 | Retrieval | In-app **BM25** over verified documents; optional vector search if an embedding provider is configured |
 | Hosting | Vercel |
 

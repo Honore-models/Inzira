@@ -18,6 +18,7 @@ type Exchange = {
   sources?: Source[];
   error?: string;
   forwarded?: boolean;
+  streaming?: boolean;
 };
 
 const STORAGE_KEY = "inzira.ask.v1";
@@ -25,7 +26,7 @@ const STORAGE_KEY = "inzira.ask.v1";
 function load(): Exchange[] {
   try {
     const raw = sessionStorage.getItem(STORAGE_KEY);
-    return raw ? (JSON.parse(raw) as Exchange[]).filter((e) => e.answer || e.error) : [];
+    return raw ? (JSON.parse(raw) as Exchange[]).filter((e) => (e.answer || e.error) && !e.streaming) : [];
   } catch {
     return [];
   }
@@ -78,16 +79,43 @@ export default function AskInzira() {
     setInput("");
     setBusy(true);
 
+    const update = (patch: Partial<Exchange> | ((e: Exchange) => Partial<Exchange>)) =>
+      setExchanges((prev) => prev.map((e) => (e.id === id ? { ...e, ...(typeof patch === "function" ? patch(e) : patch) } : e)));
+
     try {
-      const data = await api<{ answer: string; kind: Exchange["kind"]; sources: Source[] }>("/api/ai/ask", {
+      const res = await fetch("/api/ai/ask", {
         method: "POST",
-        json: { question, history },
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ question, history }),
       });
-      setExchanges((prev) => prev.map((e) => (e.id === id ? { ...e, ...data } : e)));
+
+      if (!res.ok || !res.body) {
+        const data = await res.json().catch(() => null);
+        throw new Error(data?.error || "Something went wrong. Please try again.");
+      }
+
+      // The answer streams in as newline-delimited JSON events.
+      const reader = res.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = "";
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split("\n");
+        buffer = lines.pop() || "";
+        for (const line of lines) {
+          if (!line.trim()) continue;
+          const event = JSON.parse(line);
+          if (event.type === "sources") update({ sources: event.sources, streaming: true });
+          else if (event.type === "delta") update((e) => ({ answer: (e.answer || "") + event.text }));
+          else if (event.type === "done") update({ kind: event.kind, streaming: false });
+          else if (event.type === "error") update({ error: event.message, streaming: false });
+        }
+      }
+      update((e) => ({ streaming: false, answer: e.answer ?? "", kind: e.kind || "answer" }));
     } catch (e) {
-      setExchanges((prev) =>
-        prev.map((x) => (x.id === id ? { ...x, error: e instanceof Error ? e.message : "Something went wrong." } : x)),
-      );
+      update({ error: e instanceof Error ? e.message : "Something went wrong.", streaming: false });
     } finally {
       setBusy(false);
       inputRef.current?.focus();
@@ -157,7 +185,7 @@ export default function AskInzira() {
             </div>
           ) : (
             exchanges.map((ex) => {
-              const sources = ex.answer && ex.sources ? citedSources(ex.answer, ex.sources) : [];
+              const sources = ex.answer && ex.sources && ex.kind === "answer" ? citedSources(ex.answer, ex.sources) : [];
               return (
                 <div key={ex.id} style={{ display: "grid", gap: 12 }}>
                   <div className="ask-q">{ex.question}</div>
@@ -173,7 +201,7 @@ export default function AskInzira() {
                             Try again
                           </button>
                         </Alert>
-                      ) : ex.answer === undefined ? (
+                      ) : !ex.answer ? (
                         <div className="typing" aria-label="Inzira is searching verified sources">
                           <span />
                           <span />
@@ -191,7 +219,7 @@ export default function AskInzira() {
                               ) : null
                             }
                           />
-                          {sources.length ? (
+                          {!ex.streaming && sources.length ? (
                             <div className="ask-sources" aria-label="Sources">
                               {sources.map((s) => (
                                 <span className="ask-source" key={`${s.documentId}-${s.page}`}>
@@ -205,7 +233,7 @@ export default function AskInzira() {
                               ))}
                             </div>
                           ) : null}
-                          <div className="ask-actions">
+                          {ex.streaming ? null : <div className="ask-actions">
                             <button className="icon-button" type="button" onClick={() => copy(ex)} aria-label="Copy answer" title="Copy answer">
                               {copied === ex.id ? <Check size={15} aria-hidden /> : <Copy size={15} aria-hidden />}
                             </button>
@@ -217,7 +245,7 @@ export default function AskInzira() {
                                 {ex.kind === "answer" ? "Ask my officer about this" : "Send this question to my officer"}
                               </button>
                             )}
-                          </div>
+                          </div>}
                         </>
                       )}
                     </div>
@@ -267,7 +295,7 @@ export default function AskInzira() {
               {busy ? <span className="spinner" aria-hidden /> : <ArrowUp size={18} aria-hidden />}
             </button>
           </form>
-          <p className="ask-disclaimer">
+          <p className="ask-note">
             Inzira can make mistakes. Check important details with your officer or the institution.{" "}
             <Link href="/youth/find-help" style={{ textDecoration: "underline" }}>
               Find contacts

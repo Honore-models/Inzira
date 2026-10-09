@@ -89,7 +89,7 @@ export function Spinner({ label }: { label?: string }) {
 }
 
 export function Skeleton({ height = 16, width = "100%", radius }: { height?: number; width?: number | string; radius?: number }) {
-  return <div className="skeleton-block" style={{ height, width, borderRadius: radius }} aria-hidden />;
+  return <div className="ui-skeleton" style={{ height, width, borderRadius: radius }} aria-hidden />;
 }
 
 export function PageSkeleton() {

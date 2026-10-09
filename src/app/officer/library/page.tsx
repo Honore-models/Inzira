@@ -162,12 +162,12 @@ export default function KnowledgeLibrary() {
         ) : (
           visible.map((d) => (
             <div className="list-row" key={d.id} style={{ alignItems: "flex-start" }}>
-              <span className="tag" style={{ minWidth: 48, textAlign: "center" }}>{d.institution}</span>
+              <span className="tag lib-tag" title={d.institution}>{d.institution}</span>
               <div className="list-row-body">
                 <strong style={{ whiteSpace: "normal" }}>{d.title}</strong>
                 {d.description ? <span style={{ whiteSpace: "normal" }}>{d.description}</span> : null}
                 <span>
-                  {d.chunk_count} passages · verified {formatDate(d.verified_at || d.created_at)}
+                  {d.chunk_count} {d.chunk_count === 1 ? "passage" : "passages"} · verified {formatDate(d.verified_at || d.created_at)}
                 </span>
               </div>
               <div style={{ display: "flex", gap: 4 }}>

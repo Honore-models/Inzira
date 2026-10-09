@@ -21,9 +21,9 @@ export const AI_CONFIG = {
   // Generation models, tried in order. Each Groq model has its own rate-limit
   // bucket, so falling through the list is the fastest way past a 429.
   chatModels: list(
-    process.env.AI_MODEL || "llama-3.3-70b-versatile",
-    process.env.AI_MODEL_FALLBACK_1 || "openai/gpt-oss-120b",
-    process.env.AI_MODEL_FALLBACK_2 || "llama-3.1-8b-instant",
+    process.env.AI_MODEL || "openai/gpt-oss-120b",
+    process.env.AI_MODEL_FALLBACK_1 || "openai/gpt-oss-20b",
+    process.env.AI_MODEL_FALLBACK_2 || "qwen/qwen3.8-27b",
   ),
 
   // Optional embeddings (1024-d to match the pgvector column).
@@ -52,7 +52,7 @@ export const AI_CONFIG = {
   roadmapMaxTokens: 3000,
   temperature: 0.2,
 
-  requestTimeoutMs: 45_000,
+  requestTimeoutMs: 25_000,
 } as const;
 
 export function embeddingsEnabled(): boolean {

@@ -175,3 +175,141 @@ export function describeAIError(error: unknown): {
     status: 503,
   };
 }
+
+/**
+ * Streaming chat completion, resilient to slow or unstable networks.
+ *
+ * Resolves only once a model has produced its first words, so a model that
+ * hangs is abandoned after FIRST_TOKEN_MS and the next one is tried. If every
+ * model fails at the network level, one more pass is made.
+ */
+const FIRST_TOKEN_MS = 8_000;
+const STALL_MS = 12_000;
+
+export async function chatCompletionStream(params: {
+  messages: ChatMessage[];
+  maxTokens?: number;
+  temperature?: number;
+}): Promise<{ model: string; tokens: AsyncGenerator<string> }> {
+  if (!AI_CONFIG.groqApiKey) {
+    throw new AIServiceError("GROQ_API_KEY is not set.", 500);
+  }
+
+  let lastError: AIServiceError | null = null;
+
+  for (let pass = 0; pass < 2; pass++) {
+    for (const model of AI_CONFIG.chatModels) {
+      const controller = new AbortController();
+      const firstTokenTimer = setTimeout(() => controller.abort(), FIRST_TOKEN_MS);
+      try {
+        const res = await fetch(`${AI_CONFIG.groqBaseUrl}/chat/completions`, {
+          method: "POST",
+          signal: controller.signal,
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${AI_CONFIG.groqApiKey}`,
+          },
+          body: JSON.stringify({
+            model,
+            stream: true,
+            messages: params.messages,
+            max_tokens: params.maxTokens ?? AI_CONFIG.maxTokens,
+            temperature: params.temperature ?? AI_CONFIG.temperature,
+            ...(model.startsWith("openai/gpt-oss") ? { reasoning_effort: "low" } : {}),
+          }),
+        });
+
+        if (!res.ok || !res.body) {
+          const detail = await res.text().catch(() => "");
+          throw new AIServiceError(`Groq ${model} failed (${res.status}): ${detail.slice(0, 200)}`, res.status);
+        }
+
+        // Wait for the first words before committing to this model.
+        const tokens = readTokens(res.body, controller);
+        const first = await tokens.next();
+        clearTimeout(firstTokenTimer);
+        if (first.done) throw new AIServiceError(`Groq ${model} returned an empty answer`);
+
+        return {
+          model,
+          tokens: (async function* () {
+            yield first.value;
+            yield* tokens;
+          })(),
+        };
+      } catch (error) {
+        clearTimeout(firstTokenTimer);
+        lastError =
+          error instanceof AIServiceError
+            ? error
+            : new AIServiceError(
+                controller.signal.aborted
+                  ? `Groq ${model} did not respond within ${FIRST_TOKEN_MS / 1000}s`
+                  : `Groq ${model} request failed: ${error instanceof Error ? error.message : String(error)}`,
+                controller.signal.aborted ? 504 : undefined,
+              );
+        console.warn(`[Inzira AI] ${lastError.message}`);
+      }
+    }
+    if (pass === 0) await sleep(800);
+  }
+
+  throw lastError || new AIServiceError("All Groq models failed");
+}
+
+/** Parse an OpenAI-style SSE stream into answer text, hiding <think> blocks. */
+async function* readTokens(
+  body: ReadableStream<Uint8Array>,
+  controller: AbortController,
+): AsyncGenerator<string> {
+  const reader = body.getReader();
+  const decoder = new TextDecoder();
+  let buffer = "";
+  let inThink = false;
+  let stall: ReturnType<typeof setTimeout> | undefined;
+  const armStall = () => {
+    clearTimeout(stall);
+    stall = setTimeout(() => controller.abort(), STALL_MS);
+  };
+
+  try {
+    armStall();
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      armStall();
+      buffer += decoder.decode(value, { stream: true });
+
+      const lines = buffer.split("\n");
+      buffer = lines.pop() || "";
+      for (const line of lines) {
+        if (!line.startsWith("data:")) continue;
+        const data = line.slice(5).trim();
+        if (!data || data === "[DONE]") continue;
+        let text = "";
+        try {
+          text = JSON.parse(data).choices?.[0]?.delta?.content || "";
+        } catch {
+          continue;
+        }
+        if (!text) continue;
+
+        // Some models stream their reasoning inside <think>…</think>.
+        if (inThink || text.includes("<think>")) {
+          const end = text.indexOf("</think>");
+          if (end === -1) {
+            inThink = true;
+            continue;
+          }
+          inThink = false;
+          text = text.slice(end + "</think>".length);
+          if (!text) continue;
+        }
+        yield text;
+      }
+    }
+  } finally {
+    clearTimeout(stall);
+    reader.releaseLock();
+  }
+}

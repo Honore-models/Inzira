@@ -22,7 +22,10 @@ export async function GET() {
     .neq("status", "archived")
     .order("updated_at", { ascending: false });
 
-  if (error) return jsonError("Could not load cases.", 500);
+  if (error) {
+    console.error("[cases] load failed:", error);
+    return jsonError("Could not load cases.", 500);
+  }
 
   // Latest message + unread count per case, in one query.
   const ids = (cases || []).map((c) => c.id);

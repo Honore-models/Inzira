@@ -95,7 +95,7 @@ export async function pickOfficerFor(db: Db, district?: string | null) {
   const { data: cases } = await db
     .from("youth_cases")
     .select("officer_profile_id")
-    .in("status", ["pending", "active"]);
+    .eq("status", "active");
 
   const load = new Map<string, number>();
   for (const c of cases || []) {

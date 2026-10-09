@@ -6,6 +6,9 @@ import type { NextAuthConfig } from "next-auth";
 const authConfig = {
   providers: [],
   session: { strategy: "jwt" },
+  // Trust the Host header so sign-in redirects back to whatever URL the app
+  // is served from (any local port, Vercel previews, production).
+  trustHost: true,
   callbacks: {
     // Middleware creates NextAuth from this edge-safe configuration. Map the
     // custom JWT claims here as well, otherwise `req.auth.user.role` is lost

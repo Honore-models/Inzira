@@ -189,17 +189,18 @@ export async function POST(request: Request) {
   // Save as a draft against the youth's case (created if needed).
   let youthCase = await getPrimaryCase(db, youthProfileId);
   if (!youthCase) {
-    const { data: created } = await db
+    const { data: created, error: caseError } = await db
       .from("youth_cases")
       .insert({
         youth_profile_id: youthProfileId,
         officer_profile_id: viewer.profileId,
-        status: "pending",
+        status: "active", // total_steps 0 = awaiting a roadmap
         current_step: 0,
         total_steps: 0,
       })
       .select()
       .single();
+    if (caseError) console.error("[generate-roadmap] case creation failed:", caseError);
     youthCase = created;
   }
 

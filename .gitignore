@@ -3,6 +3,7 @@ node_modules
 
 # Next.js build output
 .next
+.next-*
 out
 *.tsbuildinfo
 next-env.d.ts
@@ -20,3 +21,8 @@ next-env.d.ts
 .dist
 .vercel
 .DS_Store
+
+# local test tooling
+.shots
+.e2e-test.mjs
+.shots.mjs

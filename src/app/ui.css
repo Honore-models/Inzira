@@ -41,16 +41,30 @@
   min-height: 100dvh;
 }
 
-.app-shell h1,
-.app-shell h2,
-.app-shell h3,
-.app-shell h4 {
+/* Element-level specificity: overrides the legacy global h1/h2/p rules
+   (ui.css loads last) while any component class can still set its own
+   size and spacing (section titles, card headers, empty states…). */
+:where(.app-shell) h1,
+:where(.app-shell) h2,
+:where(.app-shell) h3,
+:where(.app-shell) h4 {
   color: var(--ui-ink);
+  font-size: 18px;
   letter-spacing: -0.01em;
+  line-height: 1.3;
   margin: 0;
 }
 
-.app-shell p {
+:where(.app-shell) h1 {
+  font-size: 24px;
+}
+
+:where(.app-shell) h3,
+:where(.app-shell) h4 {
+  font-size: 15px;
+}
+
+:where(.app-shell) p {
   color: var(--ui-text);
   font-size: 14px;
   line-height: 1.6;
@@ -389,6 +403,26 @@
 .card + .card,
 .stack > * + * {
   margin-top: 16px;
+}
+
+/* Cards placed side by side in a grid must not inherit the stacking gap. */
+.grid-2 > .card,
+.grid-main > .card,
+.grid-main > .stack {
+  margin-top: 0;
+}
+
+.grid-2 {
+  align-items: stretch;
+}
+
+.card-header .btn-ghost {
+  color: var(--ui-green);
+}
+
+.card-header .btn-ghost:hover:not(:disabled) {
+  background: var(--ui-green-50);
+  color: var(--ui-green-dark);
 }
 
 .grid-2 {
@@ -1124,7 +1158,7 @@ button.list-row:hover {
   margin-top: 10px;
 }
 
-.skeleton-block {
+.ui-skeleton {
   animation: ui-pulse 1.4s ease-in-out infinite;
   background: #eceeea;
   border-radius: 8px;
@@ -1715,7 +1749,7 @@ button.list-row:hover {
   height: 46px;
 }
 
-.ask-disclaimer {
+.ask-note {
   color: var(--ui-faint);
   font-size: 12px;
   margin-top: 8px;
@@ -1830,9 +1864,13 @@ button.list-row:hover {
 
 .section-title {
   color: var(--ui-ink);
-  font-size: 15px;
+  font-size: 16px;
   font-weight: 700;
-  margin: 28px 0 12px;
+  margin: 32px 0 12px;
+}
+
+.section-title:first-child {
+  margin-top: 0;
 }
 
 .hero-card {
@@ -2093,4 +2131,19 @@ button.list-row:hover {
 
 .status-page .page-actions {
   justify-content: center;
+}
+
+.lib-tag {
+  flex-shrink: 0;
+  overflow: hidden;
+  text-align: center;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  width: 132px;
+}
+
+@media (max-width: 640px) {
+  .lib-tag {
+    width: 72px;
+  }
 }

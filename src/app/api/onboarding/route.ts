@@ -38,17 +38,24 @@ export async function POST(request: Request) {
       onboarding_submitted_at: new Date().toISOString(),
     })
     .eq("id", profileId);
-  if (error) return jsonError("We couldn't save your answers. Please try again.", 500);
+  if (error) {
+    console.error("[onboarding] profile update failed:", error);
+    return jsonError("We couldn't save your answers. Please try again.", 500);
+  }
 
   const existing = await getPrimaryCase(db, profileId);
   if (!existing) {
-    await db.from("youth_cases").insert({
+    const { error: caseError } = await db.from("youth_cases").insert({
       youth_profile_id: profileId,
       officer_profile_id: await pickOfficerFor(db, district),
-      status: "pending",
+      status: "active", // total_steps 0 = awaiting a roadmap
       current_step: 0,
       total_steps: 0,
     });
+    if (caseError) {
+      console.error("[onboarding] case creation failed:", caseError);
+      return jsonError("We saved your answers but couldn't open your case. Please try again.", 500);
+    }
   } else if (!existing.officer_profile_id) {
     await db
       .from("youth_cases")

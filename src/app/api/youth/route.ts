@@ -18,7 +18,10 @@ export async function GET() {
       .select("id, youth_profile_id, status, current_step, total_steps, officer_profile_id, created_at"),
   ]);
 
-  if (youthRes.error) return jsonError("Could not load youth.", 500);
+  if (youthRes.error) {
+    console.error("[youth] load failed:", youthRes.error);
+    return jsonError("Could not load youth.", 500);
+  }
 
   const byYouth = new Map<string, NonNullable<typeof casesRes.data>>();
   for (const c of casesRes.data || []) {

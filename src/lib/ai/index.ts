@@ -5,6 +5,7 @@
 export { AI_CONFIG, validateConfig, embeddingsEnabled } from "./config";
 export {
   chatCompletion,
+  chatCompletionStream,
   describeAIError,
   extractJsonFromModelText,
   AIServiceError,

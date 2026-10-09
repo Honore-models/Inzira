@@ -35,7 +35,7 @@ export async function POST(request: Request) {
     .insert({
       youth_profile_id: profileId,
       officer_profile_id: officerId,
-      status: "pending",
+      status: "active", // total_steps 0 = awaiting a roadmap
       current_step: 0,
       total_steps: 0,
     })
