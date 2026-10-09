@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { Providers } from "@/components/Providers";
 import "./globals.css";
 import "./officer.css";
+import "./ui.css";
 
 export const viewport: Viewport = {
   width: "device-width",
@@ -10,20 +11,25 @@ export const viewport: Viewport = {
   themeColor: "#1f6f4c",
 };
 
+const SITE_URL =
+  process.env.NEXT_PUBLIC_SITE_URL ||
+  (process.env.VERCEL_PROJECT_PRODUCTION_URL ? `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}` : "http://localhost:3000");
+
 export const metadata: Metadata = {
+  metadataBase: new URL(SITE_URL),
   title: {
     default: "Inzira - Guided Path for Rwandan Youth Employment",
     template: "%s | Inzira",
   },
   description:
-    "Inzira helps Rwandan youth discover, sequence, and access employment support programs. A guided path connecting youth with verified institutions like RDB, BDF, RTB, and RRA.",
+    "Inzira helps Rwandan youth discover, sequence, and access employment support programs. A guided path connecting youth with verified institutions like RDB, RRA, BRD and RTB.",
   keywords: [
     "Rwanda youth employment",
     "youth programs Rwanda",
     "business registration Rwanda",
     "vocational training Rwanda",
     "RDB registration",
-    "BDF loan guarantee",
+    "BRD loan guarantee",
     "TVET Rwanda",
     "youth empowerment",
     "employment support",
@@ -33,7 +39,7 @@ export const metadata: Metadata = {
   openGraph: {
     type: "website",
     locale: "en_US",
-    url: "https://inzira.rw",
+    url: "/",
     siteName: "Inzira",
     title: "Inzira — Guided Path for Rwandan Youth Employment",
     description:
@@ -66,7 +72,7 @@ export const metadata: Metadata = {
     },
   },
   alternates: {
-    canonical: "https://inzira.rw",
+    canonical: "/",
   },
 };
 
@@ -76,8 +82,8 @@ const jsonLd = {
   name: "Inzira",
   description:
     "A guided path connecting Rwandan youth with verified employment support programs.",
-  url: "https://inzira.rw",
-  applicationCategory: "SocialNetworkingApplication",
+  url: SITE_URL,
+  applicationCategory: "EducationalApplication",
   operatingSystem: "Web",
   offers: {
     "@type": "Offer",
@@ -87,7 +93,7 @@ const jsonLd = {
   author: {
     "@type": "Organization",
     name: "Inzira",
-    url: "https://inzira.rw",
+    url: SITE_URL,
   },
 };
 
@@ -108,7 +114,12 @@ export default function RootLayout({
           dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
         />
       </head>
-      <body><Providers>{children}</Providers></body>
+      <body>
+        <a className="visually-hidden" href="#main">
+          Skip to content
+        </a>
+        <Providers>{children}</Providers>
+      </body>
     </html>
   );
 }

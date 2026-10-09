@@ -1,9 +1,18 @@
 import { NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
 import { createClient } from "@/lib/supabase/server";
+import { takeToken } from "@/lib/server/rate-limit";
 
 export async function POST(request: Request) {
   try {
+    const ip = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "local";
+    if (!takeToken(`signup:${ip}`, 8, 10 * 60_000)) {
+      return NextResponse.json(
+        { error: "Too many sign-up attempts. Please try again in a few minutes." },
+        { status: 429 },
+      );
+    }
+
     const { email: rawEmail, password, fullName: rawFullName, role, officerCode } = await request.json();
     const email = typeof rawEmail === "string" ? rawEmail.trim().toLowerCase() : "";
     const fullName = typeof rawFullName === "string" ? rawFullName.trim() : "";
@@ -22,10 +31,10 @@ export async function POST(request: Request) {
       );
     }
 
-    if (!/^\S+@\S+\.\S+$/.test(email) || fullName.length > 120) {
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || fullName.length < 2 || fullName.length > 120) {
       return NextResponse.json({ error: "Enter a valid name and email address" }, { status: 400 });
     }
-    if (typeof password !== "string" || password.length < 8) {
+    if (typeof password !== "string" || password.length < 8 || password.length > 128) {
       return NextResponse.json({ error: "Password must be at least 8 characters" }, { status: 400 });
     }
     if (role === "officer") {
@@ -50,7 +59,7 @@ export async function POST(request: Request) {
 
     if (existing) {
       return NextResponse.json(
-        { error: "User already exists" },
+        { error: "An account with this email already exists. Try signing in instead." },
         { status: 409 },
       );
     }
@@ -66,7 +75,11 @@ export async function POST(request: Request) {
 
     if (authError || !authUser.user) {
       return NextResponse.json(
-        { error: authError?.message || "Failed to create user" },
+        {
+          error: authError?.message?.includes("already")
+            ? "An account with this email already exists. Try signing in instead."
+            : "We couldn't create your account. Please try again.",
+        },
         { status: 500 },
       );
     }
@@ -86,7 +99,7 @@ export async function POST(request: Request) {
     if (profileError) {
       await supabase.auth.admin.deleteUser(authUser.user.id);
       return NextResponse.json(
-        { error: "Failed to create profile" },
+        { error: "We couldn't create your account. Please try again." },
         { status: 500 },
       );
     }

@@ -1,458 +1,299 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
-import { useParams, useRouter } from "next/navigation";
-import {
-  ArrowLeft,
-  Check,
-  Lock,
-  MapPin,
-  Sparkles,
-  ClipboardList,
-  Briefcase,
-  Clock,
-} from "lucide-react";
-import { OfficerAvatar, OfficerShell } from "@/components/officer/OfficerShell";
+import { useParams } from "next/navigation";
+import { ArrowLeft, Building2, Check, CheckCircle2, Compass, FileText, Lock, MapPin, MessageCircle, RefreshCw } from "lucide-react";
+import { ConfirmModal } from "@/components/ConfirmModal";
+import { Alert, Avatar, EmptyState, PageSkeleton, ProgressBar } from "@/components/ui";
+import { api } from "@/lib/api-client";
+import { STATUS_LABELS, completedSteps, progressPercent, type YouthStatus } from "@/lib/case-status";
+import { formatDate } from "@/lib/format";
 
-interface YouthProfile {
-  id: string;
-  user_id: string;
-  email: string;
-  full_name: string;
-  goal: string;
-  skills: string;
-  skills_background: string;
-  situation: string;
-  district: string;
-  sector: string;
-  onboarding_completed: boolean;
-}
-
-interface CaseStep {
+interface Step {
   id: string;
   step_number: number;
   title: string;
-  detail: string;
-  institution: string;
-  status: string;
-  state: string;
+  detail: string | null;
+  institution: string | null;
   location: string | null;
   source: string | null;
+  state: "done" | "current" | "locked";
 }
 
-interface YouthCase {
-  id: string;
-  status: string;
-  current_step: number;
-  total_steps: number;
-  created_at: string;
-  steps: CaseStep[];
-}
-
-interface AiRoadmap {
+interface Roadmap {
   id: string;
   title: string;
-  summary: string;
-  steps_data: unknown;
+  summary: string | null;
   status: string;
+  steps_data: { order: number; whatToBring?: string[] }[] | null;
+  officer_notes: string | null;
   created_at: string;
+  approved_at: string | null;
 }
 
-interface YouthDetailData {
-  profile: YouthProfile;
-  cases: YouthCase[];
-  aiRoadmaps: AiRoadmap[];
+interface Detail {
+  profile: {
+    id: string;
+    full_name: string;
+    email: string;
+    goal: string | null;
+    skills: string | null;
+    skills_background: string | null;
+    situation: string | null;
+    district: string | null;
+    sector: string | null;
+    onboarding_completed: boolean;
+    onboarding_submitted_at: string | null;
+    created_at: string;
+  };
+  case: { id: string; status: string; current_step: number; total_steps: number } | null;
+  status: YouthStatus;
+  steps: Step[];
+  roadmaps: Roadmap[];
+  officer: { id: string; full_name: string } | null;
 }
+
+const ROADMAP_STATUS: Record<string, string> = { draft: "Draft", approved: "Approved", reviewed: "Superseded", sent: "Approved" };
 
 export default function OfficerYouthDetail() {
-  const params = useParams();
-  const router = useRouter();
-  const youthId = params.id as string;
-  const [detail, setDetail] = useState<YouthDetailData | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [generating, setGenerating] = useState(false);
-  const [aiError, setAiError] = useState("");
+  const { id } = useParams<{ id: string }>();
+  const [detail, setDetail] = useState<Detail | null>(null);
+  const [error, setError] = useState("");
+  const [confirmStep, setConfirmStep] = useState<Step | null>(null);
+  const [notice, setNotice] = useState<{ tone: "success" | "error"; text: string } | null>(null);
 
-  useEffect(() => {
-    async function load() {
-      try {
-        const res = await fetch(`/api/youth/${youthId}`);
-        if (res.ok) {
-          setDetail(await res.json());
-        }
-      } catch {
-        // Silently handle errors
-      } finally {
-        setLoading(false);
-      }
+  const load = useCallback(() => {
+    api<Detail>(`/api/youth/${id}`).then(setDetail).catch((e) => setError(e.message));
+  }, [id]);
+
+  useEffect(load, [load]);
+
+  if (error) {
+    return (
+      <>
+        <Link className="back-link" href="/officer/youth">
+          <ArrowLeft size={15} aria-hidden /> All youth
+        </Link>
+        <Alert tone="error" title="We couldn't load this profile">{error}</Alert>
+      </>
+    );
+  }
+  if (!detail) return <PageSkeleton />;
+
+  const { profile, case: youthCase, steps, roadmaps, officer, status } = detail;
+  const approved = roadmaps.find((r) => r.status === "approved");
+  const latestDraft = roadmaps.find((r) => r.status === "draft");
+  const bring = new Map((approved?.steps_data || []).map((s) => [s.order, s.whatToBring || []]));
+  const pct = progressPercent(youthCase);
+
+  async function completeStep(step: Step) {
+    setConfirmStep(null);
+    setNotice(null);
+    try {
+      await api(`/api/cases/${youthCase!.id}/steps`, { method: "PATCH", json: { stepId: step.id } });
+      setNotice({ tone: "success", text: `"${step.title}" marked as done.` });
+      load();
+    } catch (e) {
+      setNotice({ tone: "error", text: e instanceof Error ? e.message : "Could not update the step." });
     }
-    load();
-  }, [youthId]);
-
-  async function handleGenerateRoadmap() {
-    setGenerating(true);
-    setAiError("");
-    // Redirect to intake with youthId so form is pre-filled
-    router.push(`/officer/intake?youthId=${youthId}`);
   }
-
-  if (loading) {
-    return (
-      <OfficerShell active="Youth List">
-        <div className="officer-page-wrap">
-          <div className="yd-loading">
-            <div className="yd-loading-spinner" />
-            <p>Loading youth details…</p>
-          </div>
-        </div>
-      </OfficerShell>
-    );
-  }
-
-  if (!detail) {
-    return (
-      <OfficerShell active="Youth List">
-        <div className="officer-page-wrap">
-          <Link className="officer-back-link" href="/officer/youth">
-            <ArrowLeft aria-hidden size={15} />
-            Back to list
-          </Link>
-          <div className="officer-card" style={{ padding: 40, textAlign: "center" }}>
-            <p style={{ color: "#545d65" }}>Youth not found.</p>
-          </div>
-        </div>
-      </OfficerShell>
-    );
-  }
-
-  const { profile, cases, aiRoadmaps } = detail;
-  const name = profile.full_name || "Unknown";
-  const initials = name
-    .split(" ")
-    .map((w) => w[0])
-    .join("");
-  const activeCase = cases.find((c) => c.status === "active");
-  const pendingCase = cases.find((c) => c.status === "pending");
-  const hasActiveRoadmap = activeCase && activeCase.total_steps > 0;
-  const draftRoadmap = aiRoadmaps.find((r) => r.status === "draft");
-  const approvedRoadmap = aiRoadmaps.find((r) => r.status === "approved");
-
-  // CASE 1: No case at all — just submitted onboarding
-  if (!cases.length || (pendingCase && !activeCase && !draftRoadmap)) {
-    return (
-      <OfficerShell active="Youth List">
-        <div className="officer-page-wrap">
-          <Link className="officer-back-link" href="/officer/youth">
-            <ArrowLeft aria-hidden size={15} />
-            Back to list
-          </Link>
-
-          <header className="officer-profile-card">
-            <OfficerAvatar avatar={{ label: initials, bg: "#1f6f4c" }} size="large" />
-            <div className="officer-profile-copy">
-              <div className="officer-profile-title">
-                <h1>{name}</h1>
-                <span className="status-pill" style={{ background: "#fef9e7", color: "#8a6d00" }}>
-                  Waiting for roadmap
-                </span>
-              </div>
-              <p>{profile.email}</p>
-            </div>
-          </header>
-
-          {/* Submitted Information Card */}
-          <div className="officer-card" style={{ marginBottom: 16 }}>
-            <header className="officer-card-header">
-              <div>
-                <h2 style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                  <ClipboardList size={18} />
-                  Submitted Information
-                </h2>
-                <p>This youth submitted the following during onboarding</p>
-              </div>
-            </header>
-
-            <dl className="intake-readonly" style={{ display: "grid", gap: 0 }}>
-              <div style={{ padding: "12px 0", borderBottom: "1px solid #eef0ed" }}>
-                <dt style={{ color: "#777f87", fontSize: 12, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.04em", marginBottom: 4 }}>
-                  Goal
-                </dt>
-                <dd style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 14, fontWeight: 500 }}>
-                  <Briefcase size={16} style={{ color: "#1f6f4c" }} />
-                  {profile.goal || "Not specified"}
-                </dd>
-              </div>
-
-              <div style={{ padding: "12px 0", borderBottom: "1px solid #eef0ed" }}>
-                <dt style={{ color: "#777f87", fontSize: 12, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.04em", marginBottom: 4 }}>
-                  Skills / Background
-                </dt>
-                <dd style={{ fontSize: 14 }}>
-                  {profile.skills_background || profile.skills || "No skills listed"}
-                </dd>
-              </div>
-
-              <div style={{ padding: "12px 0", borderBottom: "1px solid #eef0ed" }}>
-                <dt style={{ color: "#777f87", fontSize: 12, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.04em", marginBottom: 4 }}>
-                  Location
-                </dt>
-                <dd style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 14 }}>
-                  <MapPin size={16} style={{ color: "#1f6f4c" }} />
-                  {profile.district || "Not specified"}
-                  {profile.sector ? ` • ${profile.sector}` : ""}
-                </dd>
-              </div>
-
-              {profile.situation && (
-                <div style={{ padding: "12px 0" }}>
-                  <dt style={{ color: "#777f87", fontSize: 12, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.04em", marginBottom: 4 }}>
-                    Situation
-                  </dt>
-                  <dd style={{ fontSize: 14 }}>{profile.situation}</dd>
-                </div>
-              )}
-            </dl>
-          </div>
-
-          {/* Generate Roadmap CTA */}
-          <div className="officer-card" style={{ textAlign: "center", padding: 32 }}>
-            <Sparkles size={28} style={{ color: "#1f6f4c", marginBottom: 12 }} />
-            <h2 style={{ fontSize: 18, marginBottom: 8 }}>Ready to create a roadmap?</h2>
-            <p style={{ color: "#5f6860", fontSize: 14, marginBottom: 20, maxWidth: 400, margin: "0 auto 20px" }}>
-              Use Smart Intake to generate a personalized roadmap based on this youth&apos;s goals and situation.
-            </p>
-            {aiError && (
-              <p style={{ color: "#c0392b", fontSize: 13, marginBottom: 12 }}>{aiError}</p>
-            )}
-            <button
-              className="officer-button primary"
-              type="button"
-              onClick={handleGenerateRoadmap}
-              disabled={generating}
-              style={{ fontSize: 15, padding: "12px 28px" }}
-            >
-              <Sparkles aria-hidden size={16} />
-              {generating ? "Opening Smart Intake…" : "Generate Roadmap"}
-            </button>
-          </div>
-        </div>
-      </OfficerShell>
-    );
-  }
-
-  // CASE 2: Has an active case with roadmap steps
-  const pct =
-    activeCase && activeCase.total_steps > 0
-      ? Math.round((activeCase.current_step / activeCase.total_steps) * 100)
-      : 0;
-
-  const currentCase = activeCase || pendingCase || cases[0];
-  const steps = currentCase?.steps || [];
 
   return (
-    <OfficerShell active="Youth List">
-      <div className="officer-page-wrap">
-        <Link className="officer-back-link" href="/officer/youth">
-          <ArrowLeft aria-hidden size={15} />
-          Back to list
-        </Link>
+    <>
+      <Link className="back-link" href="/officer/youth">
+        <ArrowLeft size={15} aria-hidden /> All youth
+      </Link>
 
-        <header className="officer-profile-card">
-          <OfficerAvatar avatar={{ label: initials, bg: "#1f6f4c" }} size="large" />
-          <div className="officer-profile-copy">
-            <div className="officer-profile-title">
-              <h1>{name}</h1>
-              <span className={`status-pill ${currentCase?.status === "active" ? "on-track" : ""}`}>
-                {currentCase?.status === "active" ? "Active" : currentCase?.status || "Pending"}
-              </span>
-            </div>
-            <p>
-              {profile.goal || "No goal"} • {profile.district || "No location"}
-              {profile.sector ? ` • ${profile.sector}` : ""}
-            </p>
+      <section className="card card-body" style={{ display: "flex", gap: 16, alignItems: "center", flexWrap: "wrap", marginBottom: 20 }}>
+        <Avatar name={profile.full_name} email={profile.email} size="lg" />
+        <div style={{ flex: 1, minWidth: 220 }}>
+          <div style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap" }}>
+            <h1 style={{ fontSize: 22, fontWeight: 700 }}>{profile.full_name}</h1>
+            <span className={`badge badge-${status}`}>{STATUS_LABELS[status]}</span>
           </div>
-        </header>
-
-        {/* Progress */}
-        {currentCase && currentCase.total_steps > 0 && (
-          <div className="officer-card" style={{ marginBottom: 16, padding: 16 }}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
-              <strong style={{ fontSize: 14 }}>Progress</strong>
-              <span style={{ fontSize: 13, color: "#545d65" }}>
-                Step {currentCase.current_step} of {currentCase.total_steps} • {pct}%
-              </span>
-            </div>
-            <div className="progress-bar-wrap" style={{ height: 8, borderRadius: 4, background: "#eef0ed", overflow: "hidden" }}>
-              <div
-                className="progress-bar-fill"
-                style={{
-                  width: `${pct}%`,
-                  height: "100%",
-                  background: "#1f6f4c",
-                  borderRadius: 4,
-                  transition: "width 0.3s ease",
-                }}
-              />
-            </div>
-          </div>
-        )}
-
-        {/* Roadmap Timeline */}
-        {steps.length > 0 ? (
-          <div className="officer-card" style={{ marginBottom: 16 }}>
-            <header className="officer-card-header">
-              <div>
-                <h2>Roadmap</h2>
-                <p>{steps.length} steps toward {(profile.goal || "their goal").toLowerCase()}</p>
-              </div>
-              {approvedRoadmap && (
-                <span className="status-badge active" style={{ fontSize: 12 }}>Approved</span>
-              )}
-            </header>
-            <div className="detail-timeline" style={{ padding: "0 16px 16px" }}>
-              {steps.map((step) => (
-                <article
-                  className={`detail-step ${step.state}`}
-                  key={step.id}
-                  style={{
-                    display: "flex",
-                    alignItems: "flex-start",
-                    gap: 12,
-                    padding: "12px 0",
-                    borderBottom: "1px solid #eef0ed",
-                    opacity: step.state === "locked" ? 0.5 : 1,
-                  }}
-                >
-                  <div
-                    className="detail-step-node"
-                    style={{
-                      width: 32,
-                      height: 32,
-                      borderRadius: "50%",
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      fontSize: 13,
-                      fontWeight: 600,
-                      flexShrink: 0,
-                      background:
-                        step.state === "done"
-                          ? "#1f6f4c"
-                          : step.state === "current"
-                            ? "#e8f5e9"
-                            : "#f0f2ef",
-                      color:
-                        step.state === "done"
-                          ? "#fff"
-                          : step.state === "current"
-                            ? "#1f6f4c"
-                            : "#a0a8a5",
-                    }}
-                  >
-                    {step.state === "done" ? (
-                      <Check size={16} />
-                    ) : step.state === "locked" ? (
-                      <Lock size={14} />
-                    ) : (
-                      step.step_number
-                    )}
-                  </div>
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <strong style={{ fontSize: 14, display: "block", marginBottom: 2 }}>
-                      {step.title}
-                    </strong>
-                    <p style={{ fontSize: 13, color: "#545d65", margin: 0, lineHeight: 1.5 }}>
-                      {step.detail}
-                    </p>
-                    <div style={{ display: "flex", gap: 12, marginTop: 6, flexWrap: "wrap" }}>
-                      <span style={{ fontSize: 12, color: "#777f87" }}>
-                        <Briefcase size={12} style={{ marginRight: 4, verticalAlign: -2 }} />
-                        {step.institution}
-                      </span>
-                      {step.location && (
-                        <span style={{ fontSize: 12, color: "#777f87" }}>
-                          <MapPin size={12} style={{ marginRight: 4, verticalAlign: -2 }} />
-                          {step.location}
-                        </span>
-                      )}
-                      {step.state === "done" && (
-                        <span style={{ fontSize: 12, color: "#1f6f4c", fontWeight: 500 }}>
-                          ✓ Completed
-                        </span>
-                      )}
-                      {step.state === "current" && (
-                        <span style={{ fontSize: 12, color: "#d4a017", fontWeight: 500 }}>
-                          <Clock size={12} style={{ marginRight: 4, verticalAlign: -2 }} />
-                          Current step
-                        </span>
-                      )}
-                    </div>
-                  </div>
-                  <span className={`status-badge ${step.state}`} style={{ flexShrink: 0, fontSize: 11 }}>
-                    {step.state === "done" ? "Done" : step.state === "current" ? "Current" : "Locked"}
-                  </span>
-                </article>
-              ))}
-            </div>
-          </div>
-        ) : (
-          /* No roadmap yet */
-          <div className="officer-card" style={{ textAlign: "center", padding: 32, marginBottom: 16 }}>
-            <Sparkles size={28} style={{ color: "#1f6f4c", marginBottom: 12 }} />
-            <h2 style={{ fontSize: 18, marginBottom: 8 }}>No roadmap yet</h2>
-            <p style={{ color: "#5f6860", fontSize: 14, marginBottom: 20 }}>
-              Generate a personalized roadmap using Smart Intake and verified sources.
-            </p>
-            {aiError && (
-              <p style={{ color: "#c0392b", fontSize: 13, marginBottom: 12 }}>{aiError}</p>
-            )}
-            <button
-              className="officer-button primary"
-              type="button"
-              onClick={handleGenerateRoadmap}
-              disabled={generating}
-            >
-              <Sparkles aria-hidden size={16} />
-              {generating ? "Opening Smart Intake…" : "Generate Roadmap"}
-            </button>
-          </div>
-        )}
-
-        {/* Intake info */}
-        <div className="officer-card" style={{ marginBottom: 16 }}>
-          <header className="officer-card-header">
-            <div>
-              <h2>Intake Notes</h2>
-              <p>Recorded during onboarding</p>
-            </div>
-          </header>
-          <dl className="intake-readonly" style={{ padding: "0 16px 16px" }}>
-            <div style={{ padding: "12px 0", borderBottom: "1px solid #eef0ed" }}>
-              <dt style={{ color: "#777f87", fontSize: 12, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.04em", marginBottom: 4 }}>Goal</dt>
-              <dd style={{ fontSize: 14, fontWeight: 500 }}>{profile.goal || "—"}</dd>
-            </div>
-            <div style={{ padding: "12px 0", borderBottom: "1px solid #eef0ed" }}>
-              <dt style={{ color: "#777f87", fontSize: 12, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.04em", marginBottom: 4 }}>Skills</dt>
-              <dd style={{ fontSize: 14 }}>{profile.skills_background || profile.skills || "—"}</dd>
-            </div>
-            <div style={{ padding: "12px 0" }}>
-              <dt style={{ color: "#777f87", fontSize: 12, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.04em", marginBottom: 4 }}>Location</dt>
-              <dd style={{ fontSize: 14 }}>{profile.district || "—"}{profile.sector ? ` • ${profile.sector}` : ""}</dd>
-            </div>
-          </dl>
+          <p className="muted">
+            {profile.email}
+            {officer ? ` · Officer: ${officer.full_name}` : " · No officer assigned"}
+          </p>
         </div>
+        <div className="page-actions">
+          {youthCase ? (
+            <Link className="btn btn-secondary" href={`/officer/messages?case=${youthCase.id}`}>
+              <MessageCircle size={16} aria-hidden /> Message
+            </Link>
+          ) : null}
+          <Link className="btn btn-primary" href={`/officer/intake?youthId=${profile.id}`}>
+            {steps.length ? <RefreshCw size={16} aria-hidden /> : <Compass size={16} aria-hidden />}
+            {steps.length ? "Revise roadmap" : "Create roadmap"}
+          </Link>
+        </div>
+      </section>
 
-        <aside className="officer-banner">
-          <span className="officer-banner-icon">
-            <Check aria-hidden size={22} />
-          </span>
-          <div>
-            <strong>This is exactly what the youth sees on their dashboard.</strong>
-            <p>Any changes you make will be reflected after approval.</p>
-          </div>
+      {notice ? <Alert tone={notice.tone}>{notice.text}</Alert> : null}
+      {!profile.onboarding_completed ? (
+        <Alert tone="warning" title="Onboarding not finished">
+          This youth hasn&apos;t completed onboarding yet, so some information may be missing. You can still prepare a roadmap with
+          them in Smart Intake.
+        </Alert>
+      ) : null}
+
+      <div className="grid-main" style={{ marginTop: notice || !profile.onboarding_completed ? 16 : 0 }}>
+        <section className="card">
+          <header className="card-header">
+            <div>
+              <h2>{approved?.title || "Roadmap"}</h2>
+              <p>
+                {steps.length
+                  ? `${completedSteps(youthCase)} of ${youthCase?.total_steps} steps complete${approved?.approved_at ? ` · approved ${formatDate(approved.approved_at)}` : ""}`
+                  : "No approved roadmap yet"}
+              </p>
+            </div>
+            {steps.length ? (
+              <div className="progress-row" style={{ width: 160 }}>
+                <ProgressBar value={pct} />
+                <span>{pct}%</span>
+              </div>
+            ) : null}
+          </header>
+
+          {steps.length === 0 ? (
+            <EmptyState
+              icon={<Compass size={24} />}
+              title={latestDraft ? "A draft is waiting for your review" : "This youth needs a roadmap"}
+              action={
+                <Link
+                  className="btn btn-primary"
+                  href={`/officer/intake?youthId=${profile.id}${latestDraft ? `&draft=${latestDraft.id}` : ""}`}
+                >
+                  {latestDraft ? "Review draft" : "Start Smart Intake"}
+                </Link>
+              }
+            >
+              {latestDraft
+                ? `"${latestDraft.title}" was drafted on ${formatDate(latestDraft.created_at)} but hasn't been approved.`
+                : "Smart Intake drafts a plan from the verified library. You review, edit and approve it."}
+            </EmptyState>
+          ) : (
+            <div className="card-body">
+              {approved?.summary ? <p style={{ marginBottom: 16 }}>{approved.summary}</p> : null}
+              <ol className="timeline">
+                {steps.map((step) => (
+                  <li className={`timeline-item ${step.state}`} key={step.id}>
+                    <span className="timeline-node" aria-hidden>
+                      {step.state === "done" ? <Check size={18} /> : step.state === "locked" ? <Lock size={14} /> : step.step_number}
+                    </span>
+                    <article className="timeline-card">
+                      <div className="timeline-head">
+                        <h3>{step.title}</h3>
+                        <span className={`badge badge-${step.state}`}>
+                          {step.state === "done" ? "Done" : step.state === "current" ? "Current" : "Locked"}
+                        </span>
+                      </div>
+                      {step.detail ? <p>{step.detail}</p> : null}
+                      <div className="timeline-meta">
+                        {step.institution ? (
+                          <span>
+                            <Building2 size={14} aria-hidden /> {step.institution}
+                          </span>
+                        ) : null}
+                        {step.location ? (
+                          <span>
+                            <MapPin size={14} aria-hidden /> {step.location}
+                          </span>
+                        ) : null}
+                      </div>
+                      {(bring.get(step.step_number) || []).length ? (
+                        <div className="bring-list">
+                          <strong>What to bring</strong>
+                          <ul>
+                            {bring.get(step.step_number)!.map((b) => (
+                              <li key={b}>
+                                <CheckCircle2 size={14} aria-hidden /> {b}
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+                      ) : null}
+                      {step.source ? (
+                        <p className="source-note">
+                          <FileText size={13} aria-hidden /> {step.source}
+                        </p>
+                      ) : null}
+                      {step.state === "current" ? (
+                        <button className="btn btn-secondary btn-sm" type="button" style={{ marginTop: 12 }} onClick={() => setConfirmStep(step)}>
+                          <Check size={14} aria-hidden /> Mark done for youth
+                        </button>
+                      ) : null}
+                    </article>
+                  </li>
+                ))}
+              </ol>
+            </div>
+          )}
+        </section>
+
+        <aside className="stack">
+          <section className="card">
+            <header className="card-header">
+              <h2>Intake information</h2>
+            </header>
+            <dl className="dl">
+              <div>
+                <dt>Goal</dt>
+                <dd>{profile.goal || <span className="muted">Not set</span>}</dd>
+              </div>
+              <div>
+                <dt>Skills</dt>
+                <dd>{profile.skills_background || profile.skills || <span className="muted">Not provided</span>}</dd>
+              </div>
+              <div>
+                <dt>Location</dt>
+                <dd>{[profile.district, profile.sector].filter(Boolean).join(", ") || <span className="muted">Not set</span>}</dd>
+              </div>
+              {profile.situation ? (
+                <div>
+                  <dt>Situation</dt>
+                  <dd>{profile.situation}</dd>
+                </div>
+              ) : null}
+              <div>
+                <dt>Submitted</dt>
+                <dd>{profile.onboarding_submitted_at ? formatDate(profile.onboarding_submitted_at) : <span className="muted">Not yet</span>}</dd>
+              </div>
+            </dl>
+          </section>
+
+          {roadmaps.length ? (
+            <section className="card">
+              <header className="card-header">
+                <h2>Roadmap history</h2>
+              </header>
+              {roadmaps.map((r) => (
+                <div className="list-row" key={r.id}>
+                  <div className="list-row-body">
+                    <strong>{r.title || "Roadmap"}</strong>
+                    <span>{formatDate(r.approved_at || r.created_at)}</span>
+                  </div>
+                  <span className={`badge badge-${r.status === "approved" ? "green" : r.status === "draft" ? "draft" : "gray"}`}>
+                    {ROADMAP_STATUS[r.status] || r.status}
+                  </span>
+                </div>
+              ))}
+            </section>
+          ) : null}
         </aside>
       </div>
-    </OfficerShell>
+
+      <ConfirmModal
+        open={!!confirmStep}
+        title="Mark this step as done?"
+        message={`Use this when ${profile.full_name.split(" ")[0]} has completed "${confirmStep?.title}" but couldn't update it themselves. The next step will unlock.`}
+        confirmText="Mark as done"
+        variant="info"
+        onConfirm={() => confirmStep && completeStep(confirmStep)}
+        onCancel={() => setConfirmStep(null)}
+      />
+    </>
   );
 }

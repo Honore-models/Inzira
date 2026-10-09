@@ -1,155 +1,105 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { Plus } from "lucide-react";
-import { OfficerShell } from "@/components/officer/OfficerShell";
-import { TableSkeleton } from "@/components/Skeleton";
-import { getPhotoUrl } from "@/lib/photos";
+import { useRouter, useSearchParams } from "next/navigation";
+import { Search, Users } from "lucide-react";
+import { Alert, Avatar, EmptyState, PageHeader, PageSkeleton, ProgressBar } from "@/components/ui";
+import { api } from "@/lib/api-client";
+import { STATUS_LABELS, completedSteps, progressPercent, type YouthStatus } from "@/lib/case-status";
+import { formatDate } from "@/lib/format";
 
-interface YouthProfile {
+interface YouthRow {
   id: string;
-  user_id: string;
-  email: string;
   full_name: string;
-  goal: string;
-  skills: string;
-  skills_background: string;
-  situation: string;
-  district: string;
-  sector: string;
-  onboarding_completed: boolean;
-  onboarding_submitted_at: string | null;
+  email: string;
+  goal: string | null;
+  district: string | null;
+  sector: string | null;
   created_at: string;
-  youth_cases: {
-    id: string;
-    status: string;
-    current_step: number;
-    total_steps: number;
-    officer_profile_id: string | null;
-  }[] | null;
+  status: YouthStatus;
+  case: { id: string; current_step: number; total_steps: number; status: string } | null;
 }
 
-export default function OfficerYouthList() {
-  const [youth, setYouth] = useState<YouthProfile[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [filter, setFilter] = useState("all");
-  const [search, setSearch] = useState("");
+const FILTERS: ("all" | YouthStatus)[] = ["all", "needs_roadmap", "in_progress", "completed", "not_onboarded"];
+
+function YouthList() {
+  const router = useRouter();
+  const params = useSearchParams();
+  const initial = params.get("status");
+  const [filter, setFilter] = useState<"all" | YouthStatus>(
+    FILTERS.includes(initial as YouthStatus) ? (initial as YouthStatus) : "all",
+  );
+  const [query, setQuery] = useState("");
+  const [youth, setYouth] = useState<YouthRow[] | null>(null);
+  const [error, setError] = useState("");
 
   useEffect(() => {
-    async function load() {
-      try {
-        const res = await fetch("/api/youth");
-        if (res.ok) {
-          setYouth(await res.json());
-        }
-      } catch {
-        // Silently handle errors
-      } finally {
-        setLoading(false);
-      }
-    }
-    load();
+    api<YouthRow[]>("/api/youth").then(setYouth).catch((e) => setError(e.message));
   }, []);
 
-  // Determine status for each youth
-  function getStatus(y: YouthProfile): string {
-    const youthCase = y.youth_cases?.[0];
-    if (youthCase) {
-      if (youthCase.status === "active" && youthCase.total_steps > 0) return "active";
-      if (youthCase.status === "completed") return "completed";
-      if (youthCase.status === "pending") return "pending";
-    }
-    if (!y.onboarding_completed) return "new";
-    return "waiting";
-  }
+  const counts = useMemo(() => {
+    const c: Record<string, number> = { all: youth?.length || 0 };
+    for (const y of youth || []) c[y.status] = (c[y.status] || 0) + 1;
+    return c;
+  }, [youth]);
 
-  const filtered = youth.filter((y) => {
-    const status = getStatus(y);
-    const matchesFilter = filter === "all" || status === filter;
-    const q = search.trim().toLowerCase();
-    const matchesSearch = !q ||
-      y.full_name.toLowerCase().includes(q) ||
-      y.email.toLowerCase().includes(q) ||
-      (y.goal || "").toLowerCase().includes(q) ||
-      (y.district || "").toLowerCase().includes(q);
-    return matchesFilter && matchesSearch;
-  });
+  if (error) return <Alert tone="error" title="We couldn't load the youth list">{error}</Alert>;
+  if (!youth) return <PageSkeleton />;
 
-  const statusCounts = {
-    all: youth.length,
-    waiting: youth.filter((y) => getStatus(y) === "waiting").length,
-    pending: youth.filter((y) => getStatus(y) === "pending").length,
-    active: youth.filter((y) => getStatus(y) === "active").length,
-    completed: youth.filter((y) => getStatus(y) === "completed").length,
-    new: youth.filter((y) => getStatus(y) === "new").length,
-  };
-
-  if (loading) {
-    return (
-      <OfficerShell active="Youth List">
-        <div className="officer-page-wrap">
-          <TableSkeleton rows={6} />
-        </div>
-      </OfficerShell>
-    );
-  }
+  const q = query.trim().toLowerCase();
+  const rows = youth.filter(
+    (y) =>
+      (filter === "all" || y.status === filter) &&
+      (!q || `${y.full_name} ${y.email} ${y.goal || ""} ${y.district || ""}`.toLowerCase().includes(q)),
+  );
 
   return (
-    <OfficerShell active="Youth List">
-      <div className="officer-page-wrap">
-        <header className="officer-heading">
-          <div>
-            <h1>Youth List</h1>
-            <p>All youth registered in the system. Review and follow up.</p>
-          </div>
-          <div className="officer-heading-actions">
-            <Link className="officer-button primary" href="/officer/intake">
-              <Plus aria-hidden size={15} />
-              Add new youth
-            </Link>
-          </div>
-        </header>
+    <>
+      <PageHeader
+        title="Youth"
+        description="Everyone registered on Inzira. Open a profile to review their information, roadmap and progress."
+      />
 
-        <div className="officer-card" style={{ padding: 0 }}>
-          {/* Search */}
-          <div style={{ padding: "12px 16px", borderBottom: "1px solid #eef0ed" }}>
-            <input
-              type="search"
-              placeholder="Search by name, email, goal, or district…"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              style={{
-                border: "1px solid #e2e5df",
-                borderRadius: 8,
-                fontSize: 14,
-                padding: "10px 14px",
-                width: "100%",
-                outline: "none",
-              }}
-              onFocus={(e) => (e.currentTarget.style.borderColor = "#1f6f4c")}
-              onBlur={(e) => (e.currentTarget.style.borderColor = "#e2e5df")}
-            />
-          </div>
-
-          {/* Filter tabs */}
-          <div className="youth-filter-tabs">
-            {(["all", "waiting", "pending", "active", "completed", "new"] as const).map((f) => (
+      <section className="card">
+        <div className="toolbar">
+          <div className="chip-row" role="tablist" aria-label="Filter by status">
+            {FILTERS.map((f) => (
               <button
                 key={f}
-                className={filter === f ? "active" : ""}
                 type="button"
+                role="tab"
+                aria-selected={filter === f}
+                className={`chip ${filter === f ? "active" : ""}`}
                 onClick={() => setFilter(f)}
               >
-                {f === "all" ? "All" : f.charAt(0).toUpperCase() + f.slice(1)}
-                <span>{statusCounts[f]}</span>
+                {f === "all" ? "All" : STATUS_LABELS[f]}
+                <span className="count">{counts[f] || 0}</span>
               </button>
             ))}
           </div>
+          <label className="search-input">
+            <Search size={16} aria-hidden />
+            <input
+              className="input"
+              type="search"
+              placeholder="Search name, email, goal, district"
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              aria-label="Search youth"
+            />
+          </label>
+        </div>
 
-          {/* Youth table */}
-          <div className="youth-table-wrap">
-            <table className="youth-table">
+        {rows.length === 0 ? (
+          <EmptyState icon={<Users size={24} />} title={youth.length ? "No youth match these filters" : "No youth registered yet"}>
+            {youth.length
+              ? "Try a different search or status."
+              : "Youth appear here as soon as they create an account."}
+          </EmptyState>
+        ) : (
+          <div className="table-wrap">
+            <table className="table">
               <thead>
                 <tr>
                   <th>Name</th>
@@ -157,89 +107,54 @@ export default function OfficerYouthList() {
                   <th>District</th>
                   <th>Progress</th>
                   <th>Status</th>
-                  <th>Actions</th>
+                  <th>Joined</th>
                 </tr>
               </thead>
               <tbody>
-                {filtered.map((y) => {
-                  const name = y.full_name || "Unknown";
-                  const initials = name.split(" ").map((w) => w[0]).join("");
-                  const youthCase = y.youth_cases?.[0];
-                  const status = getStatus(y);
-                  const pct = youthCase && youthCase.total_steps > 0
-                    ? Math.round((youthCase.current_step / youthCase.total_steps) * 100)
-                    : 0;
-
-                  const statusLabels: Record<string, string> = {
-                    waiting: "Needs roadmap",
-                    pending: "Officer review",
-                    active: "In progress",
-                    completed: "Completed",
-                    new: "Not onboarded",
-                  };
-
-                  return (
-                    <tr key={y.id}>
-                      <td>
-                        <div className="youth-name-cell">
-                          <div className={`youth-avatar ${getPhotoUrl(y.email) ? "" : "initials"}`}>
-                            {getPhotoUrl(y.email) ? (
-                              <img src={getPhotoUrl(y.email)!} alt={name} />
-                            ) : (
-                              initials
-                            )}
-                          </div>
-                          <div className="youth-info">
-                            <strong>{name}</strong>
-                            <span>{y.email}</span>
-                          </div>
-                        </div>
-                      </td>
-                      <td>{y.goal || "—"}</td>
-                      <td>{y.district || "—"}{y.sector ? ` • ${y.sector}` : ""}</td>
-                      <td>
-                        {youthCase && youthCase.total_steps > 0 ? (
-                          <div className="progress-cell">
-                            <div className="progress-bar-wrap">
-                              <div
-                                className="progress-bar-fill"
-                                style={{ width: `${pct}%` }}
-                              />
-                            </div>
-                            <span>{youthCase.current_step}/{youthCase.total_steps}</span>
-                          </div>
-                        ) : (
-                          <span style={{ color: "#a0a8a5", fontSize: 12 }}>—</span>
-                        )}
-                      </td>
-                      <td>
-                        <span className={`status-badge ${status}`}>
-                          {statusLabels[status] || status}
+                {rows.map((y) => (
+                  <tr key={y.id} onClick={() => router.push(`/officer/youth/${y.id}`)}>
+                    <td>
+                      <Link className="person" href={`/officer/youth/${y.id}`} onClick={(e) => e.stopPropagation()}>
+                        <Avatar name={y.full_name} email={y.email} size="sm" />
+                        <span className="person-text">
+                          <strong>{y.full_name}</strong>
+                          <span>{y.email}</span>
                         </span>
-                      </td>
-                      <td>
-                        <Link
-                          className={status === "waiting" || status === "new" ? "generate-link" : "officer-text-link"}
-                          href={status === "waiting" || status === "new" ? `/officer/intake?youthId=${y.id}` : `/officer/youth/${y.id}`}
-                        >
-                          {status === "waiting" || status === "new" ? "Generate Roadmap" : "View"}
-                        </Link>
-                      </td>
-                    </tr>
-                  );
-                })}
-                {filtered.length === 0 && (
-                  <tr>
-                    <td colSpan={6} className="youth-table-empty">
-                      No youth found.
+                      </Link>
                     </td>
+                    <td>{y.goal || <span className="muted">—</span>}</td>
+                    <td>{y.district ? y.district.replace(/\s*District$/, "") : <span className="muted">—</span>}</td>
+                    <td style={{ minWidth: 150 }}>
+                      {y.case && y.case.total_steps > 0 ? (
+                        <div className="progress-row">
+                          <ProgressBar value={progressPercent(y.case)} />
+                          <span>
+                            {completedSteps(y.case)}/{y.case.total_steps}
+                          </span>
+                        </div>
+                      ) : (
+                        <span className="muted">—</span>
+                      )}
+                    </td>
+                    <td>
+                      <span className={`badge badge-${y.status}`}>{STATUS_LABELS[y.status]}</span>
+                    </td>
+                    <td className="muted">{formatDate(y.created_at)}</td>
                   </tr>
-                )}
+                ))}
               </tbody>
             </table>
           </div>
-        </div>
-      </div>
-    </OfficerShell>
+        )}
+      </section>
+    </>
+  );
+}
+
+export default function OfficerYouthPage() {
+  return (
+    <Suspense fallback={<PageSkeleton />}>
+      <YouthList />
+    </Suspense>
   );
 }

@@ -1,34 +1,18 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 
-export async function GET(request: Request) {
-  try {
-    const supabase = await createClient();
-    const { searchParams } = new URL(request.url);
-    const category = searchParams.get("category");
-    const search = searchParams.get("q");
+/** GET /api/institutions — public directory of verified institutions. */
+export async function GET() {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("institutions")
+    .select("id, title, description, location, category, initials, logo_bg, logo_url, details")
+    .order("title");
 
-    let query = supabase.from("institutions").select("*");
-
-    if (category && category !== "all") {
-      query = query.eq("category", category);
-    }
-
-    if (search) {
-      query = query.or(`title.ilike.%${search}%,description.ilike.%${search}%`);
-    }
-
-    const { data, error } = await query.order("title");
-
-    if (error) {
-      return NextResponse.json({ error: error.message }, { status: 500 });
-    }
-
-    return NextResponse.json(data);
-  } catch {
-    return NextResponse.json(
-      { error: "Internal server error" },
-      { status: 500 },
-    );
+  if (error) {
+    return NextResponse.json({ error: "Could not load institutions." }, { status: 500 });
   }
+  return NextResponse.json(data, {
+    headers: { "Cache-Control": "public, s-maxage=300, stale-while-revalidate=600" },
+  });
 }

@@ -1,238 +1,205 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { Check, ChevronDown, Clock, Lock, MapPin } from "lucide-react";
-import { ProgressMeter, YouthShell } from "@/components/youth/YouthShell";
+import { useState } from "react";
+import Link from "next/link";
+import { Building2, Check, CheckCircle2, FileText, Lock, MapPin, MessageCircle, Route } from "lucide-react";
+import { ConfirmModal } from "@/components/ConfirmModal";
+import { Alert, EmptyState, PageHeader, PageSkeleton, ProgressBar } from "@/components/ui";
+import { api } from "@/lib/api-client";
+import { completedSteps, progressPercent } from "@/lib/case-status";
+import { formatDate } from "@/lib/format";
+import { useJourney, type JourneyStep } from "@/lib/use-journey";
 
-interface Step {
-  id: string;
-  step_number: number;
-  title: string;
-  detail: string;
-  institution: string;
-  status: string;
-  state: string;
-  location: string | null;
-  source: string | null;
-}
+const STATE_LABEL = { done: "Completed", current: "Current step", locked: "Locked" } as const;
 
-interface CaseData {
-  id: string;
-  current_step: number;
-  total_steps: number;
-  status: string;
-  youth: { goal: string } | null;
-  officer: { full_name: string } | null;
-}
+export default function YouthRoadmap() {
+  const { data, error, loading, reload } = useJourney();
+  const [confirming, setConfirming] = useState<JourneyStep | null>(null);
+  const [saving, setSaving] = useState(false);
+  const [notice, setNotice] = useState<{ tone: "success" | "error"; text: string } | null>(null);
 
-export default function YouthSteps() {
-  const [steps, setSteps] = useState<Step[]>([]);
-  const [youthCase, setYouthCase] = useState<CaseData | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [completing, setCompleting] = useState<string | null>(null);
-  const [justCompleted, setJustCompleted] = useState(false);
-  const [error, setError] = useState("");
+  if (loading) return <PageSkeleton />;
+  if (error || !data) return <Alert tone="error" title="We couldn't load your roadmap">{error}</Alert>;
 
-  useEffect(() => {
-    loadSteps();
-  }, []);
+  const { case: youthCase, steps, roadmap, officer } = data;
 
-  async function loadSteps() {
-    try {
-      const casesRes = await fetch("/api/cases");
-      if (casesRes.ok) {
-        const cases = await casesRes.json();
-        if (cases.length > 0) {
-          const c = cases[0];
-          setYouthCase(c);
-          const stepsRes = await fetch(`/api/cases/${c.id}/steps`);
-          if (stepsRes.ok) {
-            setSteps(await stepsRes.json());
-          }
-        }
-      }
-    } catch {
-      // Silently handle errors
-    } finally {
-      setLoading(false);
-    }
+  if (!youthCase || steps.length === 0) {
+    return (
+      <>
+        <PageHeader title="My roadmap" description="Your personalised, step-by-step plan." />
+        <div className="card">
+          <EmptyState
+            icon={<Route size={24} />}
+            title="Your roadmap is being prepared"
+            action={
+              <Link className="btn btn-secondary" href="/youth/messages">
+                <MessageCircle size={16} aria-hidden /> Message your officer
+              </Link>
+            }
+          >
+            Your youth officer reviews your information and prepares a plan built from official programs. It will
+            appear here as soon as it&apos;s approved.
+          </EmptyState>
+        </div>
+      </>
+    );
   }
 
-  const completedCount = steps.filter((s) => s.state === "done").length;
-  const percent =
-    steps.length > 0
-      ? Math.round((completedCount / steps.length) * 100)
-      : 0;
+  const done = completedSteps(youthCase);
+  const pct = progressPercent(youthCase);
+  const finished = youthCase.status === "completed";
 
-  async function markDone(step: Step) {
-    if (!youthCase || completing) return;
-    setCompleting(step.id);
-    setError("");
-
+  async function markDone(step: JourneyStep) {
+    setConfirming(null);
+    setSaving(true);
+    setNotice(null);
     try {
-      const res = await fetch(`/api/cases/${youthCase.id}/steps`, {
+      const result = await api<{ completed: boolean }>(`/api/cases/${youthCase!.id}/steps`, {
         method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          stepId: step.id,
-          status: "done",
-          state: "done",
-        }),
+        json: { stepId: step.id },
       });
-
-      const data = await res.json();
-
-      if (!res.ok) {
-        setError(data.error || "Could not complete step");
-        return;
-      }
-
-      // Reload all steps to get updated states
-      await loadSteps();
-      setJustCompleted(true);
-      window.setTimeout(() => setJustCompleted(false), 3000);
-    } catch {
-      setError("Something went wrong. Please try again.");
+      await reload();
+      setNotice({
+        tone: "success",
+        text: result.completed
+          ? "You've completed your whole roadmap. Well done!"
+          : "Step completed. Your next step is now unlocked.",
+      });
+    } catch (e) {
+      setNotice({ tone: "error", text: e instanceof Error ? e.message : "Could not update the step." });
     } finally {
-      setCompleting(null);
+      setSaving(false);
     }
-  }
-
-  if (loading) {
-    return (
-      <YouthShell active="My Steps">
-        <div className="youth-page-wrap">
-          <div className="yd-loading">
-            <div className="yd-loading-spinner" />
-            <p>Loading your roadmap…</p>
-          </div>
-        </div>
-      </YouthShell>
-    );
-  }
-
-  if (steps.length === 0) {
-    return (
-      <YouthShell active="My Steps">
-        <div className="youth-page-wrap">
-          <header className="page-heading">
-            <h1>My Steps</h1>
-            <p>Your personalized roadmap</p>
-          </header>
-          <div className="content-card" style={{ padding: 40, textAlign: "center" }}>
-            <p style={{ color: "#545d65" }}>
-              No roadmap assigned yet. Your officer will create one for you soon.
-            </p>
-          </div>
-        </div>
-      </YouthShell>
-    );
   }
 
   return (
-    <YouthShell active="My Steps">
-      <div className="youth-page-wrap steps-page">
-        <header className="page-heading two-column-heading">
-          <div>
-            <h1>My Steps</h1>
-            <p>Your personalized roadmap</p>
+    <>
+      <PageHeader
+        title={roadmap?.title || "My roadmap"}
+        description={
+          officer
+            ? `Reviewed and approved by ${officer.full_name}${roadmap?.approvedAt ? ` on ${formatDate(roadmap.approvedAt)}` : ""}.`
+            : "Your personalised, step-by-step plan."
+        }
+      />
+
+      <div className="grid-main">
+        <div>
+          {notice ? <Alert tone={notice.tone}>{notice.text}</Alert> : null}
+          {finished ? (
+            <Alert tone="success" title="Roadmap complete">
+              You&apos;ve finished every step. Let your officer know how it went — they can help with what comes next.
+            </Alert>
+          ) : null}
+
+          <ol className="timeline" style={{ marginTop: notice || finished ? 16 : 0 }}>
+            {steps.map((step) => (
+              <li className={`timeline-item ${step.state}`} key={step.id}>
+                <span className="timeline-node" aria-hidden>
+                  {step.state === "done" ? <Check size={18} /> : step.state === "locked" ? <Lock size={14} /> : step.step_number}
+                </span>
+                <article className="timeline-card">
+                  <div className="timeline-head">
+                    <h3>
+                      <span className="visually-hidden">Step {step.step_number}: </span>
+                      {step.title}
+                    </h3>
+                    <span className={`badge badge-${step.state}`}>{STATE_LABEL[step.state]}</span>
+                  </div>
+                  {step.detail ? <p>{step.detail}</p> : null}
+
+                  {(step.institution || step.location) && (
+                    <div className="timeline-meta">
+                      {step.institution ? (
+                        <span>
+                          <Building2 size={14} aria-hidden /> {step.institution}
+                        </span>
+                      ) : null}
+                      {step.location ? (
+                        <span>
+                          <MapPin size={14} aria-hidden /> {step.location}
+                        </span>
+                      ) : null}
+                    </div>
+                  )}
+
+                  {step.state !== "locked" && step.why_this_step ? <p className="why-note">{step.why_this_step}</p> : null}
+
+                  {step.state !== "locked" && step.what_to_bring.length > 0 ? (
+                    <div className="bring-list">
+                      <strong>What to bring</strong>
+                      <ul>
+                        {step.what_to_bring.map((item) => (
+                          <li key={item}>
+                            <CheckCircle2 size={14} aria-hidden /> {item}
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  ) : null}
+
+                  {step.source ? (
+                    <p className="source-note">
+                      <FileText size={13} aria-hidden /> Source: {step.source}
+                    </p>
+                  ) : null}
+
+                  {step.state === "current" ? (
+                    <div style={{ marginTop: 14 }}>
+                      <button className="btn btn-primary" type="button" disabled={saving} onClick={() => setConfirming(step)}>
+                        {saving ? <span className="spinner" aria-hidden /> : <Check size={16} aria-hidden />}
+                        {saving ? "Saving…" : "Mark as done"}
+                      </button>
+                    </div>
+                  ) : null}
+                </article>
+              </li>
+            ))}
+          </ol>
+        </div>
+
+        <aside className="stack">
+          <div className="card card-body">
+            <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 10 }}>
+              <strong>Progress</strong>
+              <strong>{pct}%</strong>
+            </div>
+            <ProgressBar value={pct} label="Roadmap progress" />
+            <p className="muted" style={{ marginTop: 10, fontSize: 13 }}>
+              {done} of {youthCase.total_steps} steps complete. Steps unlock in order.
+            </p>
           </div>
-          <ProgressMeter
-            showHeader
-            value={percent}
-            label={`Overall progress: ${completedCount} of ${steps.length} steps done`}
-          />
-        </header>
 
-        {youthCase && (
-          <section className="roadmap-summary">
-            <div>
-              <span>Goal</span>
-              <strong>{youthCase.youth?.goal || "Not set"}</strong>
+          {roadmap?.summary ? (
+            <div className="card card-body">
+              <strong style={{ display: "block", marginBottom: 6 }}>About this plan</strong>
+              <p style={{ fontSize: 13 }}>{roadmap.summary}</p>
             </div>
-            <div>
-              <span>Officer approval</span>
-              <strong>
-                {youthCase.officer
-                  ? `Reviewed by ${youthCase.officer.full_name}`
-                  : "Pending assignment"}
-              </strong>
-            </div>
-            <div>
-              <span>Status</span>
-              <strong>{youthCase.status === "active" ? "In progress" : youthCase.status}</strong>
-            </div>
-          </section>
-        )}
+          ) : null}
 
-        {error && (
-          <div style={{ color: "#c0392b", fontSize: 13, padding: "8px 12px", background: "#fdf0ef", borderRadius: 8, marginBottom: 12 }}>
-            {error}
+          <div className="card card-body">
+            <strong style={{ display: "block", marginBottom: 6 }}>Stuck on a step?</strong>
+            <p style={{ fontSize: 13, marginBottom: 12 }}>
+              Ask Inzira about requirements, or message your officer for help with your situation.
+            </p>
+            <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+              <Link className="btn btn-secondary btn-sm" href="/youth/ask">Ask Inzira</Link>
+              <Link className="btn btn-secondary btn-sm" href="/youth/messages">Message officer</Link>
+            </div>
           </div>
-        )}
-
-        <section className="roadmap-list" aria-label="Roadmap steps">
-          {steps.map((step) => (
-            <article
-              className={`roadmap-item ${step.state}`}
-              key={step.id}
-            >
-              <div className="roadmap-number">
-                {step.state === "done" ? (
-                  <Check aria-hidden size={18} />
-                ) : (
-                  step.step_number
-                )}
-              </div>
-              <div className="roadmap-body">
-                <div className="roadmap-title-row">
-                  <h2>{step.title}</h2>
-                  <span className={`status-pill ${step.state}`}>
-                    {step.state === "locked" && <Lock aria-hidden size={12} />}
-                    {step.state === "done"
-                      ? "Completed"
-                      : step.state === "current"
-                        ? "Current step"
-                        : "Locked"}
-                  </span>
-                </div>
-                <p>{step.detail}</p>
-                {step.location && (
-                  <span className="meta-line">
-                    <MapPin aria-hidden size={15} />
-                    {step.location}
-                  </span>
-                )}
-                {step.source && (
-                  <span className="source-line">{step.source}</span>
-                )}
-                {step.state === "current" && (
-                  <button
-                    className="outline-action"
-                    type="button"
-                    onClick={() => markDone(step)}
-                    disabled={completing === step.id}
-                  >
-                    <Clock aria-hidden size={15} />
-                    {completing === step.id ? "Completing…" : "Mark as done"}
-                  </button>
-                )}
-              </div>
-              <ChevronDown aria-hidden size={18} />
-            </article>
-          ))}
-        </section>
-        {justCompleted ? (
-          <p className="roadmap-note done-note">
-            ✓ Step completed — the next step is now unlocked. Your officer will
-            be notified.
-          </p>
-        ) : (
-          <p className="roadmap-note">
-            Steps unlock in order. Complete the current step to move forward.
-          </p>
-        )}
+        </aside>
       </div>
-    </YouthShell>
+
+      <ConfirmModal
+        open={!!confirming}
+        title="Mark this step as done?"
+        message={`"${confirming?.title}" will be marked complete and your next step will unlock. Your officer can see your progress.`}
+        confirmText="Yes, mark as done"
+        cancelText="Not yet"
+        variant="info"
+        onConfirm={() => confirming && markDone(confirming)}
+        onCancel={() => setConfirming(null)}
+      />
+    </>
   );
 }

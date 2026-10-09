@@ -52,6 +52,8 @@ export interface Source {
 export interface AskResponse {
   answer: string;
   sources: Source[];
+  /** "answer" when grounded in sources, otherwise why no grounded answer was given. */
+  kind: "answer" | "no_info" | "off_topic";
 }
 
 export interface RoadmapYouth {
@@ -89,11 +91,6 @@ export interface GenerateRoadmapRequest {
   officerNotes: string;
   caseId?: string;
   youthProfileId?: string;
-}
-
-export interface AskRequest {
-  question: string;
-  youthId?: string;
 }
 
 export interface ChunkedText {

@@ -2,260 +2,171 @@
 
 import { useEffect, useState } from "react";
 import { useSession } from "next-auth/react";
-import {
-  User,
-  Mail,
-  MapPin,
-  ShieldCheck,
-  Clock,
-  Users,
-  Briefcase,
-  CheckCircle2,
-} from "lucide-react";
-import { OfficerShell } from "@/components/officer/OfficerShell";
-import { getPhotoUrl } from "@/lib/photos";
+import { Pencil } from "lucide-react";
+import { Alert, Avatar, PageHeader, PageSkeleton } from "@/components/ui";
+import { districts } from "@/data/options";
+import { api } from "@/lib/api-client";
+import { formatDate } from "@/lib/format";
 
-interface OfficerProfile {
+interface Profile {
   id: string;
   full_name: string;
   email: string;
-  role: string;
-  department: string;
-  district_assigned: string;
+  department: string | null;
+  district_assigned: string | null;
   created_at: string;
 }
 
-interface CaseStats {
-  total: number;
-  active: number;
-  completed: number;
-  pending: number;
+interface CaseRow {
+  officer_profile_id: string | null;
+  status: string;
+  total_steps: number;
 }
 
 export default function OfficerProfile() {
-  const { data: session } = useSession();
-  const [profile, setProfile] = useState<OfficerProfile | null>(null);
-  const [caseStats, setCaseStats] = useState<CaseStats>({
-    total: 0,
-    active: 0,
-    completed: 0,
-    pending: 0,
-  });
-  const [loading, setLoading] = useState(true);
+  const { update } = useSession();
+  const [profile, setProfile] = useState<Profile | null>(null);
+  const [cases, setCases] = useState<CaseRow[]>([]);
+  const [error, setError] = useState("");
+  const [editing, setEditing] = useState(false);
+  const [form, setForm] = useState({ full_name: "", department: "", district_assigned: "" });
+  const [saving, setSaving] = useState(false);
+  const [notice, setNotice] = useState<{ tone: "success" | "error"; text: string } | null>(null);
 
   useEffect(() => {
-    async function load() {
-      try {
-        // Fetch the officer's own profile via the profile API
-        const profileRes = await fetch("/api/profile");
-        if (profileRes.ok) {
-          const data = await profileRes.json();
-          setProfile(data);
-        }
-
-        // Fetch cases to compute stats
-        const casesRes = await fetch("/api/cases");
-        if (casesRes.ok) {
-          const cases = await casesRes.json();
-          setCaseStats({
-            total: cases.length,
-            active: cases.filter((c: { status: string }) => c.status === "active").length,
-            completed: cases.filter((c: { status: string }) => c.status === "completed").length,
-            pending: cases.filter(
-              (c: { status: string }) => c.status === "pending"
-            ).length,
-          });
-        }
-      } catch {
-        // Silently handle errors
-      } finally {
-        setLoading(false);
-      }
-    }
-    load();
+    Promise.all([api<Profile>("/api/profile"), api<CaseRow[]>("/api/cases")])
+      .then(([p, c]) => {
+        setProfile(p);
+        setCases(c);
+      })
+      .catch((e) => setError(e.message));
   }, []);
 
-  const userName = session?.user?.name || profile?.full_name || "Officer";
-  const email = session?.user?.email || profile?.email || "";
-  const initials = userName
-    .split(" ")
-    .map((w) => w[0])
-    .join("")
-    .toUpperCase();
-  const photoUrl = getPhotoUrl(email);
+  if (error) return <Alert tone="error" title="We couldn't load your profile">{error}</Alert>;
+  if (!profile) return <PageSkeleton />;
 
-  if (loading) {
-    return (
-      <OfficerShell active="Profile">
-        <div className="officer-page-wrap">
-          <div className="yd-loading">
-            <div className="yd-loading-spinner" />
-            <p>Loading profile…</p>
-          </div>
-        </div>
-      </OfficerShell>
-    );
+  const mine = cases.filter((c) => c.officer_profile_id === profile.id);
+  const stats = [
+    { label: "Assigned youth", value: mine.length },
+    { label: "Active roadmaps", value: mine.filter((c) => c.status === "active" && c.total_steps > 0).length },
+    { label: "Completed", value: mine.filter((c) => c.status === "completed").length },
+    { label: "Awaiting roadmap", value: mine.filter((c) => c.total_steps === 0).length },
+  ];
+
+  async function save(e: React.FormEvent) {
+    e.preventDefault();
+    setSaving(true);
+    setNotice(null);
+    try {
+      const updated = await api<Profile>("/api/profile", { method: "PATCH", json: form });
+      setProfile(updated);
+      if (updated.full_name !== profile!.full_name) await update?.();
+      setEditing(false);
+      setNotice({ tone: "success", text: "Your profile has been updated." });
+    } catch (err) {
+      setNotice({ tone: "error", text: err instanceof Error ? err.message : "Could not save changes." });
+    } finally {
+      setSaving(false);
+    }
   }
 
   return (
-    <OfficerShell active="Profile">
-      <div className="officer-page-wrap">
-        {/* Page header */}
-        <header className="officer-heading">
-          <div>
-            <h1>My Profile</h1>
-            <p>View your account details and caseload summary.</p>
+    <>
+      <PageHeader title="My profile" description="Youth in your assigned district are routed to you when they sign up." />
+
+      {notice ? <Alert tone={notice.tone}>{notice.text}</Alert> : null}
+
+      <section className="stat-grid" style={{ marginTop: notice ? 16 : 0 }}>
+        {stats.map((s) => (
+          <article className="stat" key={s.label}>
+            <div className="stat-top">
+              <span>{s.label}</span>
+            </div>
+            <strong>{s.value}</strong>
+          </article>
+        ))}
+      </section>
+
+      <section className="card">
+        <header className="card-header">
+          <div style={{ display: "flex", gap: 14, alignItems: "center" }}>
+            <Avatar name={profile.full_name} email={profile.email} size="lg" />
+            <div>
+              <h2 style={{ fontSize: 18 }}>{profile.full_name}</h2>
+              <p>{profile.email}</p>
+            </div>
           </div>
+          {!editing ? (
+            <button
+              className="btn btn-secondary btn-sm"
+              type="button"
+              onClick={() => {
+                setForm({
+                  full_name: profile.full_name,
+                  department: profile.department || "",
+                  district_assigned: profile.district_assigned || "",
+                });
+                setNotice(null);
+                setEditing(true);
+              }}
+            >
+              <Pencil size={14} aria-hidden /> Edit
+            </button>
+          ) : null}
         </header>
 
-        {/* Profile hero card */}
-        <section className="officer-profile-hero">
-          <div className="officer-profile-hero-inner">
-            <div className="officer-profile-hero-left">
-              {photoUrl ? (
-                <img
-                  src={photoUrl}
-                  alt={userName}
-                  className="officer-profile-hero-photo"
-                />
-              ) : (
-                <div className="officer-profile-hero-initials">
-                  {initials}
-                </div>
-              )}
-              <div className="officer-profile-hero-info">
-                <h2>{userName}</h2>
-                <span className="officer-role-badge">
-                  <ShieldCheck size={13} />
-                  Youth Officer
-                </span>
-              </div>
+        {editing ? (
+          <form className="card-body" onSubmit={save}>
+            <div className="form-grid">
+              <label className="field span-2">
+                <span className="field-label">Full name</span>
+                <input className="input" required maxLength={120} value={form.full_name} onChange={(e) => setForm({ ...form, full_name: e.target.value })} />
+              </label>
+              <label className="field">
+                <span className="field-label">Department</span>
+                <input className="input" maxLength={120} value={form.department} onChange={(e) => setForm({ ...form, department: e.target.value })} placeholder="e.g. Youth Empowerment" />
+              </label>
+              <label className="field">
+                <span className="field-label">Assigned district</span>
+                <select className="select" value={form.district_assigned} onChange={(e) => setForm({ ...form, district_assigned: e.target.value })}>
+                  <option value="">Not assigned</option>
+                  {Array.from(new Set([...districts, ...(form.district_assigned ? [form.district_assigned] : [])])).map((d) => (
+                    <option key={d}>{d}</option>
+                  ))}
+                </select>
+              </label>
             </div>
-            <div className="officer-profile-hero-meta">
-              <span>
-                <Mail size={14} />
-                {email}
-              </span>
-              {profile?.department && (
-                <span>
-                  <Briefcase size={14} />
-                  {profile.department}
-                </span>
-              )}
-              {profile?.district_assigned && (
-                <span>
-                  <MapPin size={14} />
-                  {profile.district_assigned}
-                </span>
-              )}
-              {profile?.created_at && (
-                <span>
-                  <Clock size={14} />
-                  Joined{" "}
-                  {new Date(profile.created_at).toLocaleDateString("en-US", {
-                    year: "numeric",
-                    month: "long",
-                    day: "numeric",
-                  })}
-                </span>
-              )}
+            <div className="form-actions">
+              <button className="btn btn-ghost" type="button" onClick={() => setEditing(false)} disabled={saving}>
+                Cancel
+              </button>
+              <button className="btn btn-primary" type="submit" disabled={saving}>
+                {saving ? <span className="spinner" aria-hidden /> : null}
+                {saving ? "Saving…" : "Save changes"}
+              </button>
             </div>
-          </div>
-        </section>
-
-        {/* Stats grid */}
-        <section className="officer-profile-stats">
-          <div className="officer-stat-card green">
-            <div className="officer-stat-icon">
-              <Users size={19} />
-            </div>
-            <div className="officer-stat-body">
-              <span>Total cases</span>
-              <strong>{caseStats.total}</strong>
-            </div>
-          </div>
-          <div className="officer-stat-card blue">
-            <div className="officer-stat-icon">
-              <Clock size={19} />
-            </div>
-            <div className="officer-stat-body">
-              <span>Active</span>
-              <strong>{caseStats.active}</strong>
-            </div>
-          </div>
-          <div className="officer-stat-card purple">
-            <div className="officer-stat-icon">
-              <CheckCircle2 size={19} />
-            </div>
-            <div className="officer-stat-body">
-              <span>Completed</span>
-              <strong>{caseStats.completed}</strong>
-            </div>
-          </div>
-          <div className="officer-stat-card amber">
-            <div className="officer-stat-icon">
-              <Briefcase size={19} />
-            </div>
-            <div className="officer-stat-body">
-              <span>Pending</span>
-              <strong>{caseStats.pending}</strong>
-            </div>
-          </div>
-        </section>
-
-        {/* Details card */}
-        <section className="officer-card">
-          <header className="officer-card-header">
+          </form>
+        ) : (
+          <dl className="dl">
             <div>
-              <h2>
-                <User size={16} />
-                Account Details
-              </h2>
-              <p>Your officer account information</p>
+              <dt>Role</dt>
+              <dd>Youth officer</dd>
             </div>
-          </header>
-          <div className="officer-profile-details-grid">
-            <div className="officer-profile-detail-row">
-              <span className="officer-detail-label">Full name</span>
-              <span className="officer-detail-value">{userName}</span>
+            <div>
+              <dt>Department</dt>
+              <dd>{profile.department || <span className="muted">Not set</span>}</dd>
             </div>
-            <div className="officer-profile-detail-row">
-              <span className="officer-detail-label">Email</span>
-              <span className="officer-detail-value">{email}</span>
+            <div>
+              <dt>Assigned district</dt>
+              <dd>{profile.district_assigned || <span className="muted">Not set — you&apos;ll receive youth from any district</span>}</dd>
             </div>
-            <div className="officer-profile-detail-row">
-              <span className="officer-detail-label">Role</span>
-              <span className="officer-detail-value officer-role-pill">
-                Youth Officer
-              </span>
+            <div>
+              <dt>Member since</dt>
+              <dd>{formatDate(profile.created_at, { day: "numeric", month: "long", year: "numeric" })}</dd>
             </div>
-            <div className="officer-profile-detail-row">
-              <span className="officer-detail-label">Department</span>
-              <span className="officer-detail-value">
-                {profile?.department || "—"}
-              </span>
-            </div>
-            <div className="officer-profile-detail-row">
-              <span className="officer-detail-label">District assigned</span>
-              <span className="officer-detail-value">
-                {profile?.district_assigned || "—"}
-              </span>
-            </div>
-            <div className="officer-profile-detail-row">
-              <span className="officer-detail-label">Member since</span>
-              <span className="officer-detail-value">
-                {profile?.created_at
-                  ? new Date(profile.created_at).toLocaleDateString("en-US", {
-                      year: "numeric",
-                      month: "long",
-                      day: "numeric",
-                    })
-                  : "—"}
-              </span>
-            </div>
-          </div>
-        </section>
-      </div>
-    </OfficerShell>
+          </dl>
+        )}
+      </section>
+    </>
   );
 }

@@ -13,11 +13,12 @@ import {
   MapPin,
   Pencil,
   User,
+  Wallet,
   CircleDot,
   CheckCircle2,
 } from "lucide-react";
 import Link from "next/link";
-import { districts, sectors } from "@/data/officer";
+import { districts, sectorsFor } from "@/data/options";
 
 type Step = 1 | 2 | 3 | 4;
 
@@ -33,6 +34,12 @@ const goalOptions = [
     label: "Get vocational training",
     desc: "Find programs to learn practical skills and get certified",
     icon: Pencil,
+  },
+  {
+    value: "Get funding for my business",
+    label: "Get funding for my business",
+    desc: "Access youth loans, the Youth Fund and BRD loan guarantees",
+    icon: Wallet,
   },
   {
     value: "Find a job",
@@ -61,7 +68,7 @@ export default function Onboarding() {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
 
-  const sectorOptions = districts.includes(district) ? sectors[district] || [] : [];
+  const sectorOptions = sectorsFor(district);
 
   const stepLabels = ["Goal", "Skills", "Location"];
 
@@ -295,7 +302,7 @@ export default function Onboarding() {
                 className="onboard-btn primary"
                 type="button"
                 onClick={handleSubmit}
-                disabled={submitting}
+                disabled={submitting || !district}
               >
                 {submitting && <span className="btn-spinner" />}
                 {submitting ? "Submitting…" : "Submit information"}
@@ -312,13 +319,13 @@ export default function Onboarding() {
               <CheckCircle size={52} />
             </div>
             <h1>Thanks, {userName}.</h1>
-            <p>Your information has been sent to your youth officer.</p>
+            <p>Your information has been sent to a youth officer in your area.</p>
 
             <div className="onboard-status-card">
               <p>
                 Your officer will review your information and prepare your
-                personalized roadmap. You&apos;ll be notified when your roadmap
-                is ready.
+                personalised roadmap. It will appear on your home screen as
+                soon as it&apos;s approved — usually within a few working days.
               </p>
             </div>
 

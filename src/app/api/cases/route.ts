@@ -1,103 +1,55 @@
 import { NextResponse } from "next/server";
-import { auth } from "@/lib/auth";
-import { createClient } from "@/lib/supabase/server";
+import { isResponse, jsonError, requireViewer } from "@/lib/server/access";
 
+/**
+ * GET /api/cases
+ * Officers: every case, with youth details and the latest message, for the
+ * dashboard and inbox. Youth: use /api/me instead.
+ */
 export async function GET() {
-  try {
-    const session = await auth();
+  const viewer = await requireViewer("officer");
+  if (isResponse(viewer)) return viewer;
+  const { db } = viewer;
 
-    if (!session?.user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+  const { data: cases, error } = await db
+    .from("youth_cases")
+    .select(`
+      id, status, current_step, total_steps, created_at, updated_at,
+      youth_profile_id, officer_profile_id,
+      youth:profiles!youth_cases_youth_profile_id_fkey (id, full_name, email, goal, district),
+      officer:profiles!youth_cases_officer_profile_id_fkey (id, full_name)
+    `)
+    .neq("status", "archived")
+    .order("updated_at", { ascending: false });
 
-    const supabase = await createClient();
+  if (error) return jsonError("Could not load cases.", 500);
 
-    if (session.user.role === "officer") {
-      // Officers see all cases
-      const { data: cases, error } = await supabase
-        .from("youth_cases")
-        .select(`
-          *,
-          youth:profiles!youth_cases_youth_profile_id_fkey (full_name, email, goal, district, sector),
-          officer:profiles!youth_cases_officer_profile_id_fkey (full_name)
-        `)
-        .order("created_at", { ascending: false });
+  // Latest message + unread count per case, in one query.
+  const ids = (cases || []).map((c) => c.id);
+  const latest = new Map<string, { content: string; created_at: string; sender_role: string }>();
+  const unread = new Map<string, number>();
 
-      if (error) {
-        return NextResponse.json({ error: error.message }, { status: 500 });
+  if (ids.length) {
+    const { data: messages } = await db
+      .from("messages")
+      .select("case_id, content, created_at, sender_role, is_read")
+      .in("case_id", ids)
+      .order("created_at", { ascending: false })
+      .limit(2000);
+
+    for (const m of messages || []) {
+      if (!latest.has(m.case_id)) latest.set(m.case_id, m);
+      if (!m.is_read && m.sender_role === "youth") {
+        unread.set(m.case_id, (unread.get(m.case_id) || 0) + 1);
       }
-
-      return NextResponse.json(cases);
-    } else {
-      // Youth see their own cases
-      const { data: cases, error } = await supabase
-        .from("youth_cases")
-        .select(`
-          *,
-          officer:profiles!youth_cases_officer_profile_id_fkey (full_name, district_assigned)
-        `)
-        .eq(
-          "youth_profile_id",
-          (
-            await supabase
-              .from("profiles")
-              .select("id")
-              .eq("user_id", session.user.id)
-              .single()
-          ).data?.id || "",
-        )
-        .order("created_at", { ascending: false });
-
-      if (error) {
-        return NextResponse.json({ error: error.message }, { status: 500 });
-      }
-
-      return NextResponse.json(cases);
     }
-  } catch {
-    return NextResponse.json(
-      { error: "Internal server error" },
-      { status: 500 },
-    );
   }
-}
 
-export async function POST(request: Request) {
-  try {
-    const session = await auth();
-
-    if (!session?.user || session.user.role !== "officer") {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
-    const { youthProfileId, totalSteps } = await request.json();
-    const supabase = await createClient();
-
-    const { data: youthCase, error } = await supabase
-      .from("youth_cases")
-      .insert({
-        youth_profile_id: youthProfileId,
-        officer_profile_id: (
-          await supabase
-            .from("profiles")
-            .select("id")
-            .eq("user_id", session.user.id)
-            .single()
-        ).data?.id,
-        total_steps: totalSteps || 0,
-      })
-      .select()
-      .single();
-
-    if (error) {
-      return NextResponse.json({ error: error.message }, { status: 500 });
-    }
-
-    return NextResponse.json(youthCase, { status: 201 });
-  } catch {
-    return NextResponse.json(
-      { error: "Internal server error" },
-      { status: 500 },
-    );
-  }
+  return NextResponse.json(
+    (cases || []).map((c) => ({
+      ...c,
+      lastMessage: latest.get(c.id) || null,
+      unreadCount: unread.get(c.id) || 0,
+    })),
+  );
 }

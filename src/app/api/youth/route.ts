@@ -1,44 +1,40 @@
 import { NextResponse } from "next/server";
-import { auth } from "@/lib/auth";
-import { createClient } from "@/lib/supabase/server";
+import { deriveYouthStatus, primaryCase } from "@/lib/case-status";
+import { YOUTH_FIELDS, isResponse, jsonError, requireViewer } from "@/lib/server/access";
 
+/** GET /api/youth — every registered youth with their case and status. */
 export async function GET() {
-  try {
-    const session = await auth();
+  const viewer = await requireViewer("officer");
+  if (isResponse(viewer)) return viewer;
 
-    if (!session?.user || session.user.role !== "officer") {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
-    const supabase = await createClient();
-
-    // Get all youth profiles
-    const { data: youth, error: youthError } = await supabase
+  const [youthRes, casesRes] = await Promise.all([
+    viewer.db
       .from("profiles")
-      .select("*")
+      .select(YOUTH_FIELDS)
       .eq("role", "youth")
-      .order("created_at", { ascending: false });
-
-    if (youthError) {
-      return NextResponse.json({ error: youthError.message }, { status: 500 });
-    }
-
-    // Get all cases separately (to avoid ambiguous foreign key join)
-    const { data: cases } = await supabase
+      .order("created_at", { ascending: false }),
+    viewer.db
       .from("youth_cases")
-      .select("id, youth_profile_id, status, current_step, total_steps, officer_profile_id");
+      .select("id, youth_profile_id, status, current_step, total_steps, officer_profile_id, created_at"),
+  ]);
 
-    // Merge cases into youth profiles
-    const youthWithCases = (youth || []).map((y) => ({
-      ...y,
-      youth_cases: (cases || []).filter((c) => c.youth_profile_id === y.id),
-    }));
+  if (youthRes.error) return jsonError("Could not load youth.", 500);
 
-    return NextResponse.json(youthWithCases);
-  } catch {
-    return NextResponse.json(
-      { error: "Internal server error" },
-      { status: 500 },
-    );
+  const byYouth = new Map<string, NonNullable<typeof casesRes.data>>();
+  for (const c of casesRes.data || []) {
+    const list = byYouth.get(c.youth_profile_id) || [];
+    list.push(c);
+    byYouth.set(c.youth_profile_id, list);
   }
+
+  return NextResponse.json(
+    (youthRes.data || []).map((y) => {
+      const cases = byYouth.get(y.id) || [];
+      return {
+        ...y,
+        case: primaryCase(cases),
+        status: deriveYouthStatus(!!y.onboarding_completed, cases),
+      };
+    }),
+  );
 }

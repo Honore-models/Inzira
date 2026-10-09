@@ -1,186 +1,81 @@
 import { NextResponse } from "next/server";
-import { auth } from "@/lib/auth";
-import { createClient } from "@/lib/supabase/server";
+import { canAccessCase, isResponse, jsonError, requireViewer } from "@/lib/server/access";
 
-export async function GET(
-  request: Request,
-  { params }: { params: Promise<{ caseId: string }> },
-) {
-  try {
-    const session = await auth();
+type Params = { params: Promise<{ caseId: string }> };
 
-    if (!session?.user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+export async function GET(_request: Request, { params }: Params) {
+  const viewer = await requireViewer();
+  if (isResponse(viewer)) return viewer;
 
-    const { caseId } = await params;
-    const supabase = await createClient();
+  const { caseId } = await params;
+  if (!(await canAccessCase(viewer, caseId))) return jsonError("Roadmap not found.", 404);
 
-    const { data: steps, error } = await supabase
-      .from("roadmap_steps")
-      .select("*")
-      .eq("case_id", caseId)
-      .order("step_number", { ascending: true });
+  const { data, error } = await viewer.db
+    .from("roadmap_steps")
+    .select("*")
+    .eq("case_id", caseId)
+    .order("step_number", { ascending: true });
 
-    if (error) {
-      return NextResponse.json({ error: error.message }, { status: 500 });
-    }
-
-    return NextResponse.json(steps);
-  } catch {
-    return NextResponse.json(
-      { error: "Internal server error" },
-      { status: 500 },
-    );
-  }
+  if (error) return jsonError("Could not load the roadmap.", 500);
+  return NextResponse.json(data);
 }
 
-export async function POST(
-  request: Request,
-  { params }: { params: Promise<{ caseId: string }> },
-) {
-  try {
-    const session = await auth();
+/**
+ * Mark the current step as done. Youth may only complete their own current
+ * step; officers may complete it on a youth's behalf. Completing the final
+ * step completes the case.
+ */
+export async function PATCH(request: Request, { params }: Params) {
+  const viewer = await requireViewer();
+  if (isResponse(viewer)) return viewer;
 
-    if (!session?.user || session.user.role !== "officer") {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+  const { caseId } = await params;
+  const youthCase = await canAccessCase(viewer, caseId);
+  if (!youthCase) return jsonError("Roadmap not found.", 404);
 
-    const { caseId } = await params;
-    const { stepNumber, title, detail, institution, location, source } =
-      await request.json();
+  const body = await request.json().catch(() => null);
+  const stepId = typeof body?.stepId === "string" ? body.stepId : "";
+  if (!stepId) return jsonError("stepId is required.", 400);
 
-    if (!stepNumber || !title) {
-      return NextResponse.json(
-        { error: "stepNumber and title are required" },
-        { status: 400 },
-      );
-    }
+  const { db } = viewer;
+  const { data: step } = await db
+    .from("roadmap_steps")
+    .select("id, step_number, state")
+    .eq("id", stepId)
+    .eq("case_id", caseId)
+    .single();
 
-    const supabase = await createClient();
-
-    const { data: step, error } = await supabase
-      .from("roadmap_steps")
-      .insert({
-        case_id: caseId,
-        step_number: stepNumber,
-        title,
-        detail,
-        institution,
-        location,
-        source,
-      })
-      .select()
-      .single();
-
-    if (error) {
-      return NextResponse.json({ error: error.message }, { status: 500 });
-    }
-
-    return NextResponse.json(step, { status: 201 });
-  } catch {
-    return NextResponse.json(
-      { error: "Internal server error" },
-      { status: 500 },
-    );
+  if (!step) return jsonError("Step not found.", 404);
+  if (step.state === "done") return jsonError("This step is already complete.", 409);
+  if (step.step_number !== youthCase.current_step) {
+    return jsonError("Steps must be completed in order. Finish your current step first.", 409);
   }
-}
 
-export async function PATCH(
-  request: Request,
-  { params }: { params: Promise<{ caseId: string }> },
-) {
-  try {
-    const session = await auth();
+  const { error } = await db
+    .from("roadmap_steps")
+    .update({ status: "done", state: "done" })
+    .eq("id", stepId);
+  if (error) return jsonError("Could not update the step. Please try again.", 500);
 
-    if (!session?.user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+  const nextStep = youthCase.current_step + 1;
+  const finished = nextStep > youthCase.total_steps;
 
-    const { caseId } = await params;
-    const { stepId, status, state } = await request.json();
-
-    if (!stepId) {
-      return NextResponse.json(
-        { error: "stepId is required" },
-        { status: 400 },
-      );
-    }
-
-    const supabase = await createClient();
-
-    // Build update object
-    const updates: Record<string, string> = {};
-    if (status) updates.status = status;
-    if (state) updates.state = state;
-
-    // Youth can only mark their current step as done
-    if (session.user.role === "youth") {
-      if (status !== "done" && state !== "done") {
-        return NextResponse.json(
-          { error: "You can only mark steps as done" },
-          { status: 403 },
-        );
-      }
-
-      const { data: youthProfile } = await supabase
-        .from("profiles")
-        .select("id")
-        .eq("user_id", session.user.id)
-        .single();
-
-      const { data: youthCase } = await supabase
-        .from("youth_cases")
-        .select("current_step")
-        .eq("id", caseId)
-        .eq("youth_profile_id", youthProfile?.id || "")
-        .single();
-
-      const { data: step } = await supabase
-        .from("roadmap_steps")
-        .select("step_number")
-        .eq("id", stepId)
-        .single();
-
-      if (!youthCase || !step || step.step_number !== youthCase.current_step) {
-        return NextResponse.json(
-          { error: "You can only complete your current step" },
-          { status: 403 },
-        );
-      }
-
-      // Advance the case current_step
-      await supabase
-        .from("youth_cases")
-        .update({ current_step: youthCase.current_step + 1 })
-        .eq("id", caseId);
-
-      // Unlock the next step
-      const nextStepNum = youthCase.current_step + 1;
-      await supabase
-        .from("roadmap_steps")
-        .update({ status: "current", state: "current" })
-        .eq("case_id", caseId)
-        .eq("step_number", nextStepNum);
-    }
-
-    const { data: updatedStep, error } = await supabase
+  if (!finished) {
+    await db
       .from("roadmap_steps")
-      .update(updates)
-      .eq("id", stepId)
+      .update({ status: "current", state: "current" })
       .eq("case_id", caseId)
-      .select()
-      .single();
-
-    if (error) {
-      return NextResponse.json({ error: error.message }, { status: 500 });
-    }
-
-    return NextResponse.json(updatedStep);
-  } catch {
-    return NextResponse.json(
-      { error: "Internal server error" },
-      { status: 500 },
-    );
+      .eq("step_number", nextStep);
   }
+
+  await db
+    .from("youth_cases")
+    .update(
+      finished
+        ? { current_step: youthCase.total_steps, status: "completed" }
+        : { current_step: nextStep },
+    )
+    .eq("id", caseId);
+
+  return NextResponse.json({ ok: true, completed: finished, currentStep: finished ? null : nextStep });
 }

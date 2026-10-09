@@ -8,6 +8,7 @@ import {
   MapPin,
   Phone,
 } from "lucide-react";
+import { getOrgLogo } from "@/lib/photos";
 
 interface InstitutionData {
   id: string;
@@ -39,6 +40,8 @@ export function InstitutionCard({ item }: { item: InstitutionData }) {
       >
         {item.logo_url ? (
           <img src={item.logo_url} alt={`${item.initials} logo`} style={{ width: "100%", height: "100%", objectFit: "contain" }} />
+        ) : getOrgLogo(item.initials) ? (
+          <img src={getOrgLogo(item.initials)!} alt={`${item.initials} logo`} style={{ width: "100%", height: "100%", objectFit: "contain", background: "#fff" }} />
         ) : (
           item.initials
         )}
@@ -83,14 +86,18 @@ export function InstitutionCard({ item }: { item: InstitutionData }) {
             <div className="details-block">
               <h3>Contact &amp; hours</h3>
               <ul className="details-contact">
-                <li>
-                  <Phone aria-hidden size={14} />
-                  {item.details.phone}
-                </li>
-                <li>
-                  <Mail aria-hidden size={14} />
-                  {item.details.email}
-                </li>
+                {item.details.phone ? (
+                  <li>
+                    <Phone aria-hidden size={14} />
+                    <a href={`tel:${item.details.phone.replace(/\s+/g, "")}`}>{item.details.phone}</a>
+                  </li>
+                ) : null}
+                {item.details.email ? (
+                  <li>
+                    <Mail aria-hidden size={14} />
+                    <a href={`mailto:${item.details.email}`}>{item.details.email}</a>
+                  </li>
+                ) : null}
                 <li>
                   <Clock aria-hidden size={14} />
                   {item.details.hours}

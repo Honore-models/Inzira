@@ -26,6 +26,7 @@ function SignInForm() {
     ? requestedCallbackUrl
     : null;
   const isNewYouth = searchParams.get("new") === "youth";
+  const justRegistered = searchParams.get("registered") === "true";
   const googleEnabled = process.env.NEXT_PUBLIC_GOOGLE_ENABLED === "true";
 
   const [email, setEmail] = useState("");
@@ -86,6 +87,12 @@ function SignInForm() {
           Sign in to continue to your dashboard.
         </p>
 
+        {justRegistered && !error && (
+          <div className="alert alert-success" role="status" style={{ marginBottom: 16 }}>
+            <div>Your account was created. Sign in to continue.</div>
+          </div>
+        )}
+
         {error && (
           <div className="auth-error">
             <p>{error}</p>
@@ -104,6 +111,7 @@ function SignInForm() {
                 onChange={(e) => setEmail(e.target.value)}
                 required
                 autoFocus
+                autoComplete="email"
               />
             </div>
           </label>
@@ -113,6 +121,7 @@ function SignInForm() {
             <PasswordInput
               id="signin-password"
               placeholder="Enter your password"
+              autoComplete="current-password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               required

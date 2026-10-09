@@ -1,208 +1,150 @@
 "use client";
 
-import { useEffect, useState } from "react";
 import Link from "next/link";
 import {
-  ChevronRight,
-  ClipboardList,
-  Compass,
-  HelpCircle,
-  Lightbulb,
-  ListChecks,
+  ArrowRight,
+  CheckCircle2,
+  Circle,
+  Clock,
+  LifeBuoy,
   MapPin,
   MessageCircle,
+  Sparkles,
   Target,
-  Sun,
 } from "lucide-react";
-import { YouthShell, ProgressMeter } from "@/components/youth/YouthShell";
-import { DashboardSkeleton } from "@/components/Skeleton";
+import { Alert, PageSkeleton, ProgressBar } from "@/components/ui";
+import { completedSteps, progressPercent } from "@/lib/case-status";
+import { firstName, greeting } from "@/lib/format";
+import { useJourney } from "@/lib/use-journey";
 
-interface Profile {
-  full_name: string;
-  goal: string;
-  district: string;
-}
+export default function YouthHome() {
+  const { data, error, loading } = useJourney();
 
-interface Case {
-  id: string;
-  current_step: number;
-  total_steps: number;
-  youth: Profile;
-  officer: { full_name: string } | null;
-}
+  if (loading) return <PageSkeleton />;
+  if (error || !data) return <Alert tone="error" title="We couldn't load your dashboard">{error}</Alert>;
 
-interface Step {
-  id: string;
-  title: string;
-  detail: string;
-  location: string | null;
-  status: string;
-  state: string;
-}
-
-export default function YouthDashboard() {
-  const [profile, setProfile] = useState<Profile | null>(null);
-  const [youthCase, setYouthCase] = useState<Case | null>(null);
-  const [steps, setSteps] = useState<Step[]>([]);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    async function load() {
-      try {
-        // Fetch profile
-        const profileRes = await fetch("/api/profile");
-        if (profileRes.ok) {
-          const profileData = await profileRes.json();
-          setProfile(profileData);
-        }
-
-        // Fetch cases
-        const casesRes = await fetch("/api/cases");
-        if (casesRes.ok) {
-          const casesData = await casesRes.json();
-          if (casesData.length > 0) {
-            const activeCase = casesData[0];
-            setYouthCase(activeCase);
-
-            // Fetch steps for this case
-            const stepsRes = await fetch(`/api/cases/${activeCase.id}/steps`);
-            if (stepsRes.ok) {
-              const stepsData = await stepsRes.json();
-              setSteps(stepsData);
-            }
-          }
-        }
-      } catch {
-        // Silently handle errors - show empty state
-      } finally {
-        setLoading(false);
-      }
-    }
-
-    load();
-  }, []);
-
-  const currentStep = steps.find((s) => s.state === "current");
-  const completedSteps = steps.filter((s) => s.state === "done").length;
-  const totalSteps = youthCase?.total_steps || steps.length || 5;
-  const progressPercent = totalSteps > 0 ? Math.round((completedSteps / totalSteps) * 100) : 0;
-  const currentStepNumber = currentStep ? steps.indexOf(currentStep) + 1 : 0;
-
-  if (loading) {
-    return (
-      <YouthShell active="Home">
-        <div className="youth-page-wrap">
-          <DashboardSkeleton />
-        </div>
-      </YouthShell>
-    );
-  }
-
-  const userName = profile?.full_name?.split(" ")[0] || "there";
+  const { profile, case: youthCase, steps, officer, unreadCount } = data;
+  const current = steps.find((s) => s.state === "current");
+  const done = completedSteps(youthCase);
+  const total = youthCase?.total_steps || 0;
+  const pct = progressPercent(youthCase);
+  const finished = youthCase?.status === "completed";
+  const hasRoadmap = total > 0;
 
   return (
-    <YouthShell active="Home">
-      <div className="youth-page-wrap">
-        <section className="welcome-card">
-          <div className="welcome-copy">
-            <Sun aria-hidden size={28} />
-            <div>
-              <p className="dashboard-eyebrow">Your personal pathway</p>
-              <h1>{userName}</h1>
-              <span>Every completed step brings your goal closer.</span>
-            </div>
-          </div>
-          <div className="progress-card compact-card">
-            <p>Pathway progress</p>
-            <strong className="progress-steps">
-              {completedSteps} of {totalSteps} steps
-            </strong>
-            <ProgressMeter
-              value={progressPercent}
-              label={`${progressPercent}% complete`}
-              showHeader
-            />
-          </div>
-          <div className="welcome-meta" aria-label="Your profile summary">
-            <span><Target aria-hidden size={15} /> {profile?.goal || "Set your career goal"}</span>
-            {profile?.district && <span><MapPin aria-hidden size={15} /> {profile.district}</span>}
-          </div>
-        </section>
+    <>
+      <section className="hero-card">
+        <p style={{ fontSize: 13, fontWeight: 600, letterSpacing: "0.04em" }}>{greeting()}</p>
+        <h1 style={{ fontSize: 28, fontWeight: 700, margin: "4px 0 8px" }}>{firstName(profile?.full_name)}</h1>
+        <p>
+          {finished
+            ? "You've completed every step of your roadmap. Congratulations!"
+            : hasRoadmap
+              ? "Every step you complete brings your goal closer."
+              : "Your youth officer is preparing your personalised roadmap."}
+        </p>
 
-        {currentStep && (
-          <section className="content-card next-step-card">
-            <div className="card-kicker-row">
-              <p className="section-label">Recommended next step</p>
-              <span className="step-count">Step {currentStepNumber} of {totalSteps}</span>
+        <div style={{ display: "flex", flexWrap: "wrap", gap: "8px 20px", marginTop: 16, fontSize: 13, position: "relative" }}>
+          {profile?.goal ? (
+            <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
+              <Target size={15} aria-hidden /> {profile.goal}
+            </span>
+          ) : null}
+          {profile?.district ? (
+            <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
+              <MapPin size={15} aria-hidden /> {profile.district}
+            </span>
+          ) : null}
+        </div>
+
+        {hasRoadmap ? (
+          <div style={{ marginTop: 20, maxWidth: 420, position: "relative" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", fontSize: 13, marginBottom: 8 }}>
+              <strong>{done} of {total} steps complete</strong>
+              <strong>{pct}%</strong>
             </div>
-            <div className="next-step">
-              <div className="large-icon">
-                <ClipboardList aria-hidden size={28} />
+            <ProgressBar value={pct} label="Roadmap progress" />
+          </div>
+        ) : null}
+      </section>
+
+      {current ? (
+        <>
+          <h2 className="section-title">Your next step</h2>
+          <article className="card card-body">
+            <div style={{ display: "flex", gap: 16, alignItems: "flex-start", flexWrap: "wrap" }}>
+              <span className="quick-link-icon" aria-hidden>
+                <Clock size={20} />
+              </span>
+              <div style={{ flex: 1, minWidth: 220 }}>
+                <span className="badge badge-current">Step {current.step_number} of {total}</span>
+                <h3 style={{ fontSize: 18, fontWeight: 700, margin: "10px 0 6px" }}>{current.title}</h3>
+                {current.detail ? <p>{current.detail}</p> : null}
+                <div className="timeline-meta">
+                  {current.institution ? <span>{current.institution}</span> : null}
+                  {current.location ? (
+                    <span>
+                      <MapPin size={14} aria-hidden /> {current.location}
+                    </span>
+                  ) : null}
+                </div>
               </div>
-              <div className="next-step-info">
-                <h2>{currentStep.title}</h2>
-                <p>{currentStep.detail}</p>
-                {currentStep.location && (
-                  <span className="next-step-location">
-                    <MapPin aria-hidden size={14} />
-                    {currentStep.location}
-                  </span>
-                )}
-              </div>
-              <Link className="small-action" href="/youth/steps">
-                View this step
+              <Link className="btn btn-primary" href="/youth/steps">
+                Open roadmap <ArrowRight size={16} aria-hidden />
               </Link>
             </div>
-          </section>
-        )}
+          </article>
+        </>
+      ) : !hasRoadmap ? (
+        <>
+          <h2 className="section-title">Where things stand</h2>
+          <article className="card card-body">
+            <ol className="status-steps">
+              <li className="done">
+                <CheckCircle2 size={18} aria-hidden /> Information submitted
+              </li>
+              <li className="current">
+                <Circle size={18} aria-hidden /> Officer review
+                {officer ? <span className="muted" style={{ fontWeight: 400 }}>— {officer.full_name}</span> : null}
+              </li>
+              <li>
+                <Circle size={18} aria-hidden /> Roadmap ready
+              </li>
+            </ol>
+            <p className="muted" style={{ marginTop: 8 }}>
+              While you wait, you can ask Inzira questions about programs or message your officer.
+            </p>
+          </article>
+        </>
+      ) : null}
 
-        {!currentStep && (
-          <section className="content-card empty-path-card">
-            <div className="large-icon"><Compass aria-hidden size={28} /></div>
-            <div>
-              <p className="section-label">Your pathway is being prepared</p>
-              <h2>There&apos;s no active step just yet.</h2>
-              <p>Your youth officer will review your information and share the next steps here.</p>
-            </div>
-            <Link className="small-action" href="/youth/messages">Message officer</Link>
-          </section>
-        )}
-
-        <section className="quick-section">
-          <div className="section-heading-row">
-            <div><p className="section-label">Quick access</p><span>Everything you need to keep moving forward.</span></div>
+      <h2 className="section-title">Quick access</h2>
+      <div className="quick-links">
+        <Link className="quick-link" href="/youth/ask">
+          <span className="quick-link-icon"><Sparkles size={20} aria-hidden /></span>
+          <div>
+            <strong>Ask Inzira</strong>
+            <span>Answers from official sources</span>
           </div>
-          <div className="quick-grid">
-            <Link className="quick-card" href="/youth/steps">
-              <ListChecks aria-hidden size={22} />
-              <strong>My Steps</strong>
-              <span>See your full plan</span>
-              <ChevronRight className="quick-card-arrow" aria-hidden size={16} />
-            </Link>
-            <Link className="quick-card" href="/youth/ask">
-              <HelpCircle aria-hidden size={22} />
-              <strong>Ask</strong>
-              <span>Get answers to your questions</span>
-              <ChevronRight className="quick-card-arrow" aria-hidden size={16} />
-            </Link>
-            <Link className="quick-card" href="/youth/find-help">
-              <Lightbulb aria-hidden size={22} />
-              <strong>Find Help</strong>
-              <span>Discover institutions near you</span>
-              <ChevronRight className="quick-card-arrow" aria-hidden size={16} />
-            </Link>
+          <ArrowRight size={16} aria-hidden className="muted" />
+        </Link>
+        <Link className="quick-link" href="/youth/messages">
+          <span className="quick-link-icon"><MessageCircle size={20} aria-hidden /></span>
+          <div>
+            <strong>Messages{unreadCount ? ` (${unreadCount} new)` : ""}</strong>
+            <span>{officer ? `Talk to ${firstName(officer.full_name)}` : "Talk to a youth officer"}</span>
           </div>
-        </section>
-
-        <Link className="message-strip" href="/youth/messages">
-          <MessageCircle aria-hidden size={20} />
-          <span>
-            <strong>Need help from a real person?</strong>
-            <em className="message-link">Message your youth officer</em>
-          </span>
-          <ChevronRight aria-hidden size={18} />
+          <ArrowRight size={16} aria-hidden className="muted" />
+        </Link>
+        <Link className="quick-link" href="/youth/find-help">
+          <span className="quick-link-icon"><LifeBuoy size={20} aria-hidden /></span>
+          <div>
+            <strong>Find help</strong>
+            <span>Verified institutions and contacts</span>
+          </div>
+          <ArrowRight size={16} aria-hidden className="muted" />
         </Link>
       </div>
-    </YouthShell>
+    </>
   );
 }

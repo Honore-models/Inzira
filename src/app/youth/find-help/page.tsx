@@ -3,8 +3,7 @@
 import { useEffect, useState } from "react";
 import { ChevronDown, Search, X } from "lucide-react";
 import { InstitutionCard } from "@/components/youth/InstitutionCard";
-import { YouthShell } from "@/components/youth/YouthShell";
-import { CardSkeleton, SkeletonGroup } from "@/components/Skeleton";
+import { Alert, PageHeader, Skeleton } from "@/components/ui";
 
 const INITIAL_VISIBLE = 4;
 
@@ -35,16 +34,16 @@ export default function YouthFindHelp() {
   const [visible, setVisible] = useState(INITIAL_VISIBLE);
   const [institutions, setInstitutions] = useState<Institution[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
 
   useEffect(() => {
     async function load() {
       try {
         const res = await fetch("/api/institutions");
-        if (res.ok) {
-          setInstitutions(await res.json());
-        }
+        if (!res.ok) throw new Error();
+        setInstitutions(await res.json());
       } catch {
-        // Silently handle errors
+        setError("We couldn't load the directory. Please refresh the page.");
       } finally {
         setLoading(false);
       }
@@ -72,12 +71,12 @@ export default function YouthFindHelp() {
   const shown = filtered.slice(0, visible);
 
   return (
-    <YouthShell active="Find Help">
-      <div className="youth-page-wrap find-help-page">
-        <header className="page-heading">
-          <h1>Find Help</h1>
-          <p>Find verified institutions and programs near you.</p>
-        </header>
+    <div className="find-help-page">
+        <PageHeader
+          title="Find help"
+          description="Verified institutions and programs that support young people in Rwanda, with how to reach them."
+        />
+        {error ? <Alert tone="error">{error}</Alert> : null}
 
         <div className="find-help-toolbar">
           <div className="find-help-search-row">
@@ -125,8 +124,10 @@ export default function YouthFindHelp() {
         </div>
 
         {loading ? (
-          <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-            <SkeletonGroup count={4} className="h-16" />
+          <div style={{ display: "grid", gap: 12 }}>
+            {[0, 1, 2, 3].map((i) => (
+              <Skeleton key={i} height={96} radius={12} />
+            ))}
           </div>
         ) : filtered.length === 0 ? (
           <div className="find-help-empty">
@@ -150,7 +151,6 @@ export default function YouthFindHelp() {
             <ChevronDown aria-hidden size={18} />
           </button>
         ) : null}
-      </div>
-    </YouthShell>
+    </div>
   );
 }

@@ -56,7 +56,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         // Look up user in profiles table
         const { data: profile } = await supabase
           .from("profiles")
-          .select("*")
+          .select("id, user_id, email, full_name, role, password_hash, onboarding_completed")
           .eq("email", email)
           .single();
 
@@ -65,10 +65,10 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         }
 
         // Verify password
-        const isValid = await bcrypt.compare(
-          credentials.password as string,
-          profile.password_hash,
-        );
+        // Google-only accounts have no usable hash; bcrypt throws on those.
+        const isValid = await bcrypt
+          .compare(credentials.password as string, profile.password_hash || "")
+          .catch(() => false);
 
         if (!isValid) {
           return null;
@@ -127,7 +127,21 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
       }
       return true;
     },
-    async jwt({ token, user }) {
+    async jwt({ token, user, trigger }) {
+      // Client called session.update(): refresh display fields from the DB.
+      if (trigger === "update" && token.profileId) {
+        const { data: profile } = await getSupabaseAdmin()
+          .from("profiles")
+          .select("full_name, onboarding_completed")
+          .eq("id", token.profileId as string)
+          .single();
+        if (profile) {
+          token.name = profile.full_name;
+          token.onboardingCompleted = profile.onboarding_completed;
+        }
+        return token;
+      }
+
       if (user) {
         token.id = user.id;
         // For Google users, fetch profile from DB

@@ -1,86 +1,47 @@
 import { NextResponse } from "next/server";
-import { auth } from "@/lib/auth";
-import { createClient } from "@/lib/supabase/server";
+import { deriveYouthStatus } from "@/lib/case-status";
+import { YOUTH_FIELDS, getPrimaryCase, isResponse, jsonError, requireViewer } from "@/lib/server/access";
 
-export async function GET(
-  _request: Request,
-  { params }: { params: Promise<{ id: string }> },
-) {
-  try {
-    const session = await auth();
+/** GET /api/youth/:id — a youth's profile, case, roadmap and drafts. */
+export async function GET(_request: Request, { params }: { params: Promise<{ id: string }> }) {
+  const viewer = await requireViewer("officer");
+  if (isResponse(viewer)) return viewer;
+  const { db } = viewer;
+  const { id } = await params;
 
-    if (!session?.user || session.user.role !== "officer") {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+  const { data: profile } = await db
+    .from("profiles")
+    .select(`${YOUTH_FIELDS}, role`)
+    .eq("id", id)
+    .single();
+  if (!profile || profile.role !== "youth") return jsonError("Youth not found.", 404);
 
-    const { id } = await params;
-    const supabase = await createClient();
+  const youthCase = await getPrimaryCase(db, id);
 
-    // Fetch the youth profile
-    const { data: profile, error: profileError } = await supabase
-      .from("profiles")
-      .select("*")
-      .eq("id", id)
-      .single();
-
-    if (profileError || !profile) {
-      return NextResponse.json({ error: "Youth not found" }, { status: 404 });
-    }
-
-    // Fetch their cases with steps
-    const { data: cases } = await supabase
-      .from("youth_cases")
-      .select("*")
+  const [stepsRes, roadmapsRes, officerRes] = await Promise.all([
+    youthCase
+      ? db.from("roadmap_steps").select("*").eq("case_id", youthCase.id).order("step_number")
+      : Promise.resolve({ data: [] }),
+    db
+      .from("ai_roadmaps")
+      .select("id, title, summary, steps_data, status, officer_notes, created_at, approved_at")
       .eq("youth_profile_id", id)
-      .order("created_at", { ascending: false });
+      .order("created_at", { ascending: false })
+      .limit(10),
+    youthCase?.officer_profile_id
+      ? db.from("profiles").select("id, full_name").eq("id", youthCase.officer_profile_id).single()
+      : Promise.resolve({ data: null }),
+  ]);
 
-    // Fetch steps for all their cases
-    const caseIds = (cases || []).map((c) => c.id);
-    let allSteps: Record<string, unknown[]> = {};
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const { role, ...publicProfile } = profile;
 
-    if (caseIds.length > 0) {
-      const { data: steps } = await supabase
-        .from("roadmap_steps")
-        .select("*")
-        .in("case_id", caseIds)
-        .order("step_number", { ascending: true });
-
-      if (steps) {
-        for (const step of steps) {
-          const caseId = (step as { case_id: string }).case_id;
-          if (!allSteps[caseId]) allSteps[caseId] = [];
-          allSteps[caseId].push(step);
-        }
-      }
-    }
-
-    // Fetch any AI roadmaps for their cases
-    let aiRoadmaps: unknown[] = [];
-    if (caseIds.length > 0) {
-      const { data: roadmaps } = await supabase
-        .from("ai_roadmaps")
-        .select("*")
-        .in("case_id", caseIds)
-        .order("created_at", { ascending: false });
-
-      aiRoadmaps = roadmaps || [];
-    }
-
-    // Merge steps into cases
-    const casesWithSteps = (cases || []).map((c) => ({
-      ...c,
-      steps: allSteps[c.id] || [],
-    }));
-
-    return NextResponse.json({
-      profile,
-      cases: casesWithSteps,
-      aiRoadmaps,
-    });
-  } catch {
-    return NextResponse.json(
-      { error: "Internal server error" },
-      { status: 500 },
-    );
-  }
+  return NextResponse.json({
+    profile: publicProfile,
+    case: youthCase,
+    status: deriveYouthStatus(!!profile.onboarding_completed, youthCase ? [youthCase] : []),
+    steps: stepsRes.data || [],
+    roadmaps: roadmapsRes.data || [],
+    officer: officerRes.data,
+  });
 }

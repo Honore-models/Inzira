@@ -1,84 +1,60 @@
 import { NextResponse } from "next/server";
-import { auth } from "@/lib/auth";
-import { createClient } from "@/lib/supabase/server";
+import {
+  getPrimaryCase,
+  isResponse,
+  jsonError,
+  pickOfficerFor,
+  requireViewer,
+} from "@/lib/server/access";
 
+function str(value: unknown, max: number): string {
+  return typeof value === "string" ? value.trim().slice(0, max) : "";
+}
+
+/**
+ * POST /api/onboarding
+ * Saves the youth's intake answers and opens a case with an officer
+ * (preferring one assigned to the youth's district).
+ */
 export async function POST(request: Request) {
-  try {
-    const session = await auth();
+  const viewer = await requireViewer("youth");
+  if (isResponse(viewer)) return viewer;
+  const { db, profileId } = viewer;
 
-    if (!session?.user || session.user.role !== "youth") {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+  const body = await request.json().catch(() => null);
+  const goal = str(body?.goal, 200);
+  const district = str(body?.district, 100);
+  if (!goal) return jsonError("Please choose a goal.", 400);
+  if (!district) return jsonError("Please choose your district.", 400);
 
-    const { goal, skillsBackground, district, sector } = await request.json();
+  const { error } = await db
+    .from("profiles")
+    .update({
+      goal,
+      skills_background: str(body?.skillsBackground, 1000),
+      district,
+      sector: str(body?.sector, 100),
+      onboarding_completed: true,
+      onboarding_submitted_at: new Date().toISOString(),
+    })
+    .eq("id", profileId);
+  if (error) return jsonError("We couldn't save your answers. Please try again.", 500);
 
-    if (!goal) {
-      return NextResponse.json(
-        { error: "Goal is required" },
-        { status: 400 },
-      );
-    }
-
-    const supabase = await createClient();
-
-    // 1. Update the youth's profile with onboarding data
-    const { error: profileError } = await supabase
-      .from("profiles")
-      .update({
-        goal,
-        skills_background: skillsBackground || "",
-        district: district || "",
-        sector: sector || "",
-        onboarding_completed: true,
-        onboarding_submitted_at: new Date().toISOString(),
-      })
-      .eq("user_id", session.user.id);
-
-    if (profileError) {
-      return NextResponse.json({ error: profileError.message }, { status: 500 });
-    }
-
-    // 2. Get the youth's profile ID
-    const { data: youthProfile } = await supabase
-      .from("profiles")
-      .select("id")
-      .eq("user_id", session.user.id)
-      .single();
-
-    if (!youthProfile) {
-      return NextResponse.json({ error: "Profile not found" }, { status: 500 });
-    }
-
-    // 3. Find an available officer to assign (pick the first officer, or you can add logic)
-    const { data: officers } = await supabase
-      .from("profiles")
-      .select("id")
-      .eq("role", "officer")
-      .limit(1);
-
-    const officerId = officers?.[0]?.id || null;
-
-    // 4. Create a case so the officer can see this youth
-    const { error: caseError } = await supabase
+  const existing = await getPrimaryCase(db, profileId);
+  if (!existing) {
+    await db.from("youth_cases").insert({
+      youth_profile_id: profileId,
+      officer_profile_id: await pickOfficerFor(db, district),
+      status: "pending",
+      current_step: 0,
+      total_steps: 0,
+    });
+  } else if (!existing.officer_profile_id) {
+    await db
       .from("youth_cases")
-      .insert({
-        youth_profile_id: youthProfile.id,
-        officer_profile_id: officerId,
-        status: "pending",
-        current_step: 0,
-        total_steps: 0,
-      });
-
-    if (caseError) {
-      // Case might already exist, that's okay
-      console.log("Case creation note:", caseError.message);
-    }
-
-    return NextResponse.json({ message: "Onboarding completed" });
-  } catch {
-    return NextResponse.json(
-      { error: "Internal server error" },
-      { status: 500 },
-    );
+      .update({ officer_profile_id: await pickOfficerFor(db, district) })
+      .eq("id", existing.id);
   }
+
+  return NextResponse.json({ ok: true });
 }

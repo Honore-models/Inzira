@@ -24,6 +24,7 @@ export function SpeechReader() {
       }
     }
 
+    if (!("speechSynthesis" in window)) return;
     loadVoices();
     window.speechSynthesis.onvoiceschanged = loadVoices;
     return () => {
@@ -33,10 +34,10 @@ export function SpeechReader() {
 
   // Get visible text from the page
   const getPageText = useCallback(() => {
-    const main = document.querySelector("main") || document.body;
-    const elements = main.querySelectorAll(
-      "h1, h2, h3, h4, p, span, strong, em, li, td, th, label, button, a, div"
-    );
+    const main = document.querySelector(".shell-main") || document.querySelector("main") || document.body;
+    // Block-level text only; nested matches are skipped so nothing is read twice.
+    const selector = "h1, h2, h3, h4, p, li, dt, dd, th, td, blockquote";
+    const elements = main.querySelectorAll(selector);
 
     const textParts: string[] = [];
     const seen = new Set<string>();
@@ -46,9 +47,9 @@ export function SpeechReader() {
       if (
         el.closest(".speech-reader") ||
         el.closest("nav") ||
-        el.closest("aside") ||
-        el.closest("header") ||
-        el.closest("footer") ||
+        el.closest("button") ||
+        el.closest("[aria-hidden='true']") ||
+        el.parentElement?.closest(selector) ||
         (el as HTMLElement).offsetParent === null
       ) {
         return;

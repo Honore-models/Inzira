@@ -207,26 +207,16 @@ export function getAllPathways(): PathwayRule[] {
  * Returns the pathway ID or null if no match.
  */
 export function matchGoalToPathway(goal: string): string | null {
-  const lowerGoal = goal.toLowerCase();
+  const g = goal.toLowerCase();
 
-  if (
-    lowerGoal.includes("business") ||
-    lowerGoal.includes("register") ||
-    lowerGoal.includes("start") ||
-    lowerGoal.includes("entrepreneur")
-  ) {
+  if (/\b(loan|fund|funding|financ|capital|credit)/.test(g)) {
+    return "youth-funding";
+  }
+  if (/\b(business|register|start|entrepreneur|company|enterprise|shop|trade)/.test(g)) {
     return "business-registration";
   }
-
-  if (
-    lowerGoal.includes("training") ||
-    lowerGoal.includes("vocational") ||
-    lowerGoal.includes("tvet") ||
-    lowerGoal.includes("skills") ||
-    lowerGoal.includes("learn")
-  ) {
+  if (/\b(training|vocational|tvet|skill|learn|certif|course)/.test(g)) {
     return "vocational-training";
   }
-
   return null;
 }

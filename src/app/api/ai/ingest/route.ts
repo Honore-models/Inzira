@@ -1,93 +1,46 @@
 // ============================================================
 // POST /api/ai/ingest
-// Document ingestion endpoint for the RAG system
-// Accepts JSON with text content (plain text, not PDF binary)
+// Adds a verified document (plain text) to the RAG library. Officers only.
 // ============================================================
 
 import { NextResponse } from "next/server";
-import { auth } from "@/lib/auth";
 import { ingestDocument } from "@/lib/ai/ingestion";
+import { isResponse, jsonError, requireViewer } from "@/lib/server/access";
+
+function str(value: unknown, max: number): string {
+  return typeof value === "string" ? value.trim().slice(0, max) : "";
+}
 
 export async function POST(request: Request) {
+  const viewer = await requireViewer("officer");
+  if (isResponse(viewer)) return viewer;
+
+  const body = await request.json().catch(() => null);
+  const title = str(body?.title, 200);
+  const institution = str(body?.institution, 80);
+  const text = typeof body?.text === "string" ? body.text.trim() : "";
+  const sourceUrl = str(body?.sourceUrl, 500);
+
+  if (!title) return jsonError("A document title is required.", 400);
+  if (!institution) return jsonError("The institution is required.", 400);
+  if (text.length < 50) return jsonError("Paste at least 50 characters of document text.", 400);
+  if (text.length > 500_000) return jsonError("The document is too long (max 500,000 characters).", 400);
+  if (sourceUrl && !/^https?:\/\//i.test(sourceUrl)) {
+    return jsonError("The source link must start with http:// or https://", 400);
+  }
+
   try {
-    // 1. Authenticate - only officers can ingest documents
-    const session = await auth();
-    if (!session?.user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
-    if (session.user.role !== "officer") {
-      return NextResponse.json(
-        { error: "Only officers can ingest documents" },
-        { status: 403 },
-      );
-    }
-
-    // 2. Parse request body
-    const body = await request.json();
-
-    if (!body.title || typeof body.title !== "string") {
-      return NextResponse.json(
-        { error: "A document title is required" },
-        { status: 400 },
-      );
-    }
-
-    if (!body.institution || typeof body.institution !== "string") {
-      return NextResponse.json(
-        { error: "Institution name is required" },
-        { status: 400 },
-      );
-    }
-
-    if (!body.text || typeof body.text !== "string") {
-      return NextResponse.json(
-        { error: "Document text content is required" },
-        { status: 400 },
-      );
-    }
-
-    if (body.text.length < 50) {
-      return NextResponse.json(
-        {
-          error:
-            "Document text is too short. Please provide at least 50 characters.",
-        },
-        { status: 400 },
-      );
-    }
-
-    if (body.text.length > 500000) {
-      return NextResponse.json(
-        {
-          error:
-            "Document text is too long. Maximum 500,000 characters.",
-        },
-        { status: 400 },
-      );
-    }
-
-    // 3. Ingest the document
     const result = await ingestDocument({
-      title: body.title,
-      institution: body.institution,
-      description: body.description || undefined,
-      text: body.text,
-      sourceUrl: body.sourceUrl || undefined,
-      fileName: body.fileName || undefined,
-      metadata: body.metadata || undefined,
+      title,
+      institution,
+      description: str(body?.description, 500) || undefined,
+      text,
+      sourceUrl: sourceUrl || undefined,
+      metadata: { addedBy: viewer.profileId },
     });
-
-    return NextResponse.json({
-      message: "Document ingested successfully",
-      ...result,
-    });
+    return NextResponse.json(result, { status: 201 });
   } catch (error) {
-    console.error("Document ingestion error:", error);
-    const message =
-      error instanceof Error
-        ? error.message
-        : "An unexpected error occurred";
-    return NextResponse.json({ error: message }, { status: 500 });
+    console.error("[ingest] failed:", error);
+    return jsonError("The document could not be added. Please try again.", 500);
   }
 }

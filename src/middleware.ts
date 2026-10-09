@@ -1,75 +1,57 @@
 import { NextResponse } from "next/server";
-import type { NextRequest } from "next/server";
 import NextAuth from "next-auth";
 import authConfig from "@/lib/auth.config";
 
 const { auth } = NextAuth(authConfig);
 
+const PUBLIC_PAGES = new Set(["/", "/privacy", "/terms"]);
+const AUTH_PAGES = new Set(["/auth/signin", "/auth/signup", "/auth/error"]);
+// Public API endpoints. Every other API route checks the session itself, but
+// unauthenticated calls get a JSON 401 here instead of an HTML redirect.
+const PUBLIC_API_PREFIXES = ["/api/auth", "/api/institutions"];
+
 export default auth((req) => {
   const { pathname } = req.nextUrl;
-  const isLoggedIn = !!req.auth;
-  const userRole = req.auth?.user?.role as string | undefined;
-  const hasValidRole = userRole === "youth" || userRole === "officer";
+  const role = req.auth?.user?.role as string | undefined;
+  const hasValidRole = role === "youth" || role === "officer";
+  const home = role === "officer" ? "/officer" : "/youth";
 
-  // Root / landing page — always allow
-  if (pathname === "/") {
-    return NextResponse.next();
-  }
+  if (PUBLIC_PAGES.has(pathname)) return NextResponse.next();
 
-  // Auth pages — allow through (but redirect logged-in users to their dashboard)
-  // Exception: /auth/signup?google=1 allows logged-in Google users to complete profile
-  const authPages = ["/auth/signin", "/auth/signup", "/auth/error"];
-  if (authPages.some((route) => pathname === route)) {
-    if (isLoggedIn && hasValidRole) {
-      const isGoogleSignup = pathname === "/auth/signup" && req.nextUrl.searchParams.get("google") === "1";
-      if (isGoogleSignup) {
-        return NextResponse.next();
-      }
-      return NextResponse.redirect(
-        new URL(userRole === "officer" ? "/officer" : "/youth", req.url),
-      );
+  if (AUTH_PAGES.has(pathname)) {
+    // Logged-in users skip the auth pages, except a Google user finishing
+    // sign-up (/auth/signup?google=1).
+    const isGoogleSignup =
+      pathname === "/auth/signup" && req.nextUrl.searchParams.get("google") === "1";
+    if (hasValidRole && !isGoogleSignup && pathname !== "/auth/error") {
+      return NextResponse.redirect(new URL(home, req.url));
     }
     return NextResponse.next();
   }
 
-  // Public authentication endpoints only. Administrative maintenance routes
-  // authorize themselves and must not be exposed anonymously.
-  if (
-    pathname.startsWith("/api/auth") ||
-    pathname === "/api/institutions"
-  ) {
-    return NextResponse.next();
-  }
-
-  // Onboarding page — only accessible by logged-in youth
-  if (pathname === "/onboarding") {
-    if (!isLoggedIn) {
-      return NextResponse.redirect(new URL("/auth/signin", req.url));
-    }
-    if (userRole !== "youth") {
-      return NextResponse.redirect(
-        new URL(userRole === "officer" ? "/officer" : "/", req.url),
-      );
+  if (pathname.startsWith("/api/")) {
+    if (PUBLIC_API_PREFIXES.some((p) => pathname.startsWith(p))) return NextResponse.next();
+    if (!hasValidRole) {
+      return NextResponse.json({ error: "Please sign in to continue." }, { status: 401 });
     }
     return NextResponse.next();
   }
 
-  // If not logged in, redirect to sign in
-  // A session without a recognised role can exist after an auth configuration
-  // change or an interrupted sign-up. Let the user sign in again instead of
-  // bouncing indefinitely between the two role dashboards.
-  if (!isLoggedIn || !hasValidRole) {
+  // A session without a recognised role can exist after an interrupted
+  // sign-up; send it back to sign in rather than bouncing between dashboards.
+  if (!hasValidRole) {
     const signInUrl = new URL("/auth/signin", req.url);
-    signInUrl.searchParams.set("callbackUrl", pathname);
+    signInUrl.searchParams.set("callbackUrl", pathname + req.nextUrl.search);
     return NextResponse.redirect(signInUrl);
   }
 
-  // Role-based route protection
-  if (pathname.startsWith("/officer") && userRole !== "officer") {
+  if (pathname === "/onboarding" && role !== "youth") {
+    return NextResponse.redirect(new URL(home, req.url));
+  }
+  if (pathname.startsWith("/officer") && role !== "officer") {
     return NextResponse.redirect(new URL("/youth", req.url));
   }
-
-  if (pathname.startsWith("/youth") && userRole !== "youth") {
+  if (pathname.startsWith("/youth") && role !== "youth") {
     return NextResponse.redirect(new URL("/officer", req.url));
   }
 
@@ -78,6 +60,6 @@ export default auth((req) => {
 
 export const config = {
   matcher: [
-    "/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
+    "/((?!_next/static|_next/image|favicon.ico|robots.txt|sitemap.xml|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico)$).*)",
   ],
 };

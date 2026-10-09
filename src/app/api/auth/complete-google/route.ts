@@ -39,6 +39,16 @@ export async function POST(request: Request) {
 
     const supabase = await createClient();
 
+    // Only a first-time Google account (no password yet) may pick its role.
+    const { data: existing } = await supabase
+      .from("profiles")
+      .select("password_hash")
+      .eq("user_id", session.user.id)
+      .single();
+    if (!existing || existing.password_hash !== "google") {
+      return NextResponse.json({ error: "Your account is already set up." }, { status: 409 });
+    }
+
     // Hash the password and update the profile
     const passwordHash = await bcrypt.hash(password, 12);
 

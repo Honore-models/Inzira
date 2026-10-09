@@ -1,331 +1,280 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import {
-  Building2,
-  ClipboardList,
-  ExternalLink,
-  GraduationCap,
-  Info,
-  Send,
-  ThumbsDown,
-  ThumbsUp,
-  Wallet,
-} from "lucide-react";
-import { YouthShell } from "@/components/youth/YouthShell";
-import { askCommonTopics, askSuggestions } from "@/data/youth";
+import { ArrowUp, Check, Copy, FileText, MessageCircle, RotateCcw, Sparkles } from "lucide-react";
+import { Alert, PageHeader, RichText } from "@/components/ui";
+import { ASK_SUGGESTIONS, ASK_TOPICS } from "@/data/options";
+import { api } from "@/lib/api-client";
+import type { Journey } from "@/lib/use-journey";
 
-const topicIcons = {
-  building: Building2,
-  wallet: Wallet,
-  graduation: GraduationCap,
-  clipboard: ClipboardList,
-};
-
-type Source = {
-  institution: string;
-  document: string;
-  page: number | null;
-  documentId: string;
-};
+type Source = { documentId: string; documentTitle: string; institution: string; page: number | null };
 
 type Exchange = {
+  id: string;
   question: string;
-  answer: string;
-  sources: Source[];
-  loading?: boolean;
+  answer?: string;
+  kind?: "answer" | "no_info" | "off_topic";
+  sources?: Source[];
   error?: string;
+  forwarded?: boolean;
 };
 
-export default function YouthAsk() {
-  const [input, setInput] = useState("");
+const STORAGE_KEY = "inzira.ask.v1";
+
+function load(): Exchange[] {
+  try {
+    const raw = sessionStorage.getItem(STORAGE_KEY);
+    return raw ? (JSON.parse(raw) as Exchange[]).filter((e) => e.answer || e.error) : [];
+  } catch {
+    return [];
+  }
+}
+
+/** Sources actually cited in the answer (or all, if the model cited none). */
+function citedSources(answer: string, sources: Source[]) {
+  const cited = new Set(Array.from(answer.matchAll(/\[(\d+)\]/g)).map((m) => parseInt(m[1], 10)));
+  const picked = cited.size ? sources.filter((_, i) => cited.has(i + 1)) : sources.slice(0, 3);
+  const seen = new Set<string>();
+  return picked.filter((s) => {
+    const key = `${s.documentId}-${s.page ?? ""}`;
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+}
+
+export default function AskInzira() {
   const [exchanges, setExchanges] = useState<Exchange[]>([]);
-  const [feedback, setFeedback] = useState<Record<string, string>>({});
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [input, setInput] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [copied, setCopied] = useState<string | null>(null);
+  const [forwardError, setForwardError] = useState("");
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLTextAreaElement>(null);
 
-  async function submit(question: string) {
-    const q = question.trim();
-    if (!q || isSubmitting) return;
+  useEffect(() => setExchanges(load()), []);
 
-    // Add the question immediately with a loading state
-    const loadingExchange: Exchange = {
-      question: q,
-      answer: "",
-      sources: [],
-      loading: true,
-    };
-    setExchanges((prev) => [...prev, loadingExchange]);
+  useEffect(() => {
+    try {
+      sessionStorage.setItem(STORAGE_KEY, JSON.stringify(exchanges.slice(-20)));
+    } catch {
+      /* storage unavailable */
+    }
+    scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" });
+  }, [exchanges]);
+
+  async function ask(raw: string) {
+    const question = raw.trim();
+    if (!question || busy) return;
+
+    const id = `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+    const history = exchanges
+      .filter((e) => e.answer && e.kind === "answer")
+      .slice(-4)
+      .map((e) => ({ question: e.question, answer: e.answer! }));
+
+    setExchanges((prev) => [...prev, { id, question }]);
     setInput("");
-    setIsSubmitting(true);
+    setBusy(true);
 
     try {
-      const res = await fetch("/api/ai/ask", {
+      const data = await api<{ answer: string; kind: Exchange["kind"]; sources: Source[] }>("/api/ai/ask", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ question: q }),
+        json: { question, history },
       });
-
-      if (!res.ok) {
-        const errorData = await res.json();
-        setExchanges((prev) =>
-          prev.map((ex) =>
-            ex.question === q && ex.loading
-              ? {
-                  ...ex,
-                  loading: false,
-                  error:
-                    errorData.error ||
-                    "Failed to get an answer. Please try again.",
-                }
-              : ex,
-          ),
-        );
-      } else {
-        const data = await res.json();
-        setExchanges((prev) =>
-          prev.map((ex) =>
-            ex.question === q && ex.loading
-              ? {
-                  ...ex,
-                  loading: false,
-                  answer: data.answer,
-                  sources: data.sources || [],
-                }
-              : ex,
-          ),
-        );
-      }
-    } catch {
+      setExchanges((prev) => prev.map((e) => (e.id === id ? { ...e, ...data } : e)));
+    } catch (e) {
       setExchanges((prev) =>
-        prev.map((ex) =>
-          ex.question === q && ex.loading
-            ? {
-                ...ex,
-                loading: false,
-                error:
-                  "Failed to connect to Inzira AI. Please check your connection and try again.",
-              }
-            : ex,
-          ),
-        );
+        prev.map((x) => (x.id === id ? { ...x, error: e instanceof Error ? e.message : "Something went wrong." } : x)),
+      );
     } finally {
-      setIsSubmitting(false);
+      setBusy(false);
+      inputRef.current?.focus();
     }
   }
 
-  function notifyOfficer() {
-    window.alert(
-      "Your youth officer has been notified and will follow up with you.",
-    );
+  async function forwardToOfficer(exchange: Exchange) {
+    setForwardError("");
+    try {
+      const me = await api<Journey>("/api/me");
+      if (!me.case) {
+        setForwardError("You don't have an officer yet. Open Messages to choose one.");
+        return;
+      }
+      await api(`/api/cases/${me.case.id}/messages`, {
+        method: "POST",
+        json: { content: `Question from Ask Inzira:\n\n${exchange.question}` },
+      });
+      setExchanges((prev) => prev.map((e) => (e.id === exchange.id ? { ...e, forwarded: true } : e)));
+    } catch (e) {
+      setForwardError(e instanceof Error ? e.message : "Could not send to your officer.");
+    }
+  }
+
+  async function copy(exchange: Exchange) {
+    try {
+      await navigator.clipboard.writeText((exchange.answer || "").replace(/\s*\[\d+(?:,\s*\d+)*\]/g, ""));
+      setCopied(exchange.id);
+      setTimeout(() => setCopied(null), 1500);
+    } catch {
+      /* clipboard unavailable */
+    }
   }
 
   return (
-    <YouthShell active="Ask">
-      <div className="youth-page-wrap ask-page">
-        <header className="ask-page-heading">
-          <div>
-            <h1>Ask Inzira</h1>
-            <p>Ask anything about programs, requirements, or next steps.</p>
-          </div>
-          <button
-            className="ask-how-link"
-            type="button"
-            onClick={() =>
-              window.alert(
-                "Inzira answers using verified official sources. You can ask about programs, requirements, documents, and next steps.",
-              )
-            }
-          >
-            <Info aria-hidden size={16} />
-            How it works
-          </button>
-        </header>
+    <>
+      <PageHeader
+        title="Ask Inzira"
+        description="Answers come only from verified documents published by RDB, RRA, BRD, RTB and the Ministry of Youth. For decisions about your situation, your officer has the final word."
+        actions={
+          exchanges.length ? (
+            <button className="btn btn-secondary btn-sm" type="button" onClick={() => setExchanges([])} disabled={busy}>
+              <RotateCcw size={14} aria-hidden /> New conversation
+            </button>
+          ) : null
+        }
+      />
 
-        <div className="ask-layout">
-          <div className="ask-chat-column">
-            {exchanges.length === 0 && (
-              <div className="ask-empty-state">
-                <Info aria-hidden size={32} />
-                <h3>Ask a question to get started</h3>
-                <p>
-                  Inzira will search verified documents from RDB, RRA, BDF,
-                  RTB, and other institutions to answer your questions.
-                </p>
+      {forwardError ? <Alert tone="warning" className="ask-alert">{forwardError}</Alert> : null}
+
+      <section className="card ask" aria-label="Conversation with Inzira" style={{ marginTop: forwardError ? 12 : 0 }}>
+        <div className="ask-scroll" ref={scrollRef} aria-live="polite">
+          {exchanges.length === 0 ? (
+            <div className="ask-welcome">
+              <span className="empty-icon">
+                <Sparkles size={24} aria-hidden />
+              </span>
+              <h2>What would you like to know?</h2>
+              <p>Ask about registering a business, getting a TIN, youth loans, or vocational training.</p>
+              <div className="chip-row">
+                {ASK_SUGGESTIONS.map((s) => (
+                  <button key={s} className="chip" type="button" onClick={() => ask(s)}>
+                    {s}
+                  </button>
+                ))}
               </div>
-            )}
-
-            <div className="chat-thread">
-              {exchanges.map((exchange, index) => (
-                <div
-                  className="ask-exchange"
-                  key={`${exchange.question}-${index}`}
-                >
-                  <div className="user-message">{exchange.question}</div>
-
-                  {exchange.loading ? (
-                    <article className="ai-response-card">
-                      <div className="ai-loading">
-                        <div style={{ display: "flex", flexDirection: "column", gap: 8, width: "100%" }}>
-                          <div className="skeleton skeleton-line-long" />
-                          <div className="skeleton skeleton-line-medium" />
-                          <div className="skeleton skeleton-line-short" />
-                        </div>
-                      </div>
-                    </article>
-                  ) : exchange.error ? (
-                    <article className="ai-response-card">
-                      <p className="ai-response-intro" style={{ color: "#c0392b" }}>
-                        {exchange.error}
-                      </p>
-                    </article>
-                  ) : (
-                    <article className="ai-response-card">
-                      <p className="ai-response-intro">
-                        Here&apos;s what I found from verified sources:
-                      </p>
-                      <div className="ai-answer-text">
-                        {exchange.answer.split("\n").map((paragraph, i) =>
-                          paragraph.trim() ? (
-                            <p key={i}>{paragraph}</p>
-                          ) : null,
-                        )}
-                      </div>
-
-                      {exchange.sources.length > 0 && (
-                        <footer className="ai-response-footer">
-                          <div className="ai-sources-list">
-                            <span className="ai-sources-label">Sources:</span>
-                            {exchange.sources.map((source, si) => (
-                              <span className="ai-source-item" key={si}>
-                                {source.institution} – {source.document}
-                                {source.page
-                                  ? ` (Page ${source.page})`
-                                  : ""}
-                              </span>
-                            ))}
-                          </div>
-
-                          <div className="ai-feedback">
-                            <span>Is this answer helpful?</span>
-                            <button
-                              aria-label="Yes, helpful"
-                              type="button"
-                              className={
-                                feedback[exchange.question] === "yes"
-                                  ? "active"
-                                  : ""
-                              }
-                              onClick={() =>
-                                setFeedback((f) => ({
-                                  ...f,
-                                  [exchange.question]: "yes",
-                                }))
-                              }
-                            >
-                              <ThumbsUp aria-hidden size={16} />
-                            </button>
-                            <button
-                              aria-label="No, not helpful"
-                              type="button"
-                              className={
-                                feedback[exchange.question] === "no"
-                                  ? "active"
-                                  : ""
-                              }
-                              onClick={() =>
-                                setFeedback((f) => ({
-                                  ...f,
-                                  [exchange.question]: "no",
-                                }))
-                              }
-                            >
-                              <ThumbsDown aria-hidden size={16} />
-                            </button>
-                          </div>
-                        </footer>
-                      )}
-                    </article>
-                  )}
-                </div>
-              ))}
             </div>
+          ) : (
+            exchanges.map((ex) => {
+              const sources = ex.answer && ex.sources ? citedSources(ex.answer, ex.sources) : [];
+              return (
+                <div key={ex.id} style={{ display: "grid", gap: 12 }}>
+                  <div className="ask-q">{ex.question}</div>
+                  <div className="ask-a">
+                    <span className="ask-a-icon" aria-hidden>
+                      <Sparkles size={16} />
+                    </span>
+                    <div className="ask-a-body">
+                      {ex.error ? (
+                        <Alert tone="error">
+                          {ex.error}{" "}
+                          <button className="btn btn-ghost btn-sm" type="button" onClick={() => ask(ex.question)} disabled={busy}>
+                            Try again
+                          </button>
+                        </Alert>
+                      ) : ex.answer === undefined ? (
+                        <div className="typing" aria-label="Inzira is searching verified sources">
+                          <span />
+                          <span />
+                          <span />
+                        </div>
+                      ) : (
+                        <>
+                          <RichText
+                            text={ex.answer}
+                            onCite={(n) =>
+                              ex.sources?.[n - 1] ? (
+                                <span className="cite" title={`${ex.sources[n - 1].institution} – ${ex.sources[n - 1].documentTitle}`}>
+                                  {n}
+                                </span>
+                              ) : null
+                            }
+                          />
+                          {sources.length ? (
+                            <div className="ask-sources" aria-label="Sources">
+                              {sources.map((s) => (
+                                <span className="ask-source" key={`${s.documentId}-${s.page}`}>
+                                  <FileText size={12} aria-hidden />
+                                  <b>{s.institution}</b>
+                                  <span>
+                                    {s.documentTitle}
+                                    {s.page ? `, p. ${s.page}` : ""}
+                                  </span>
+                                </span>
+                              ))}
+                            </div>
+                          ) : null}
+                          <div className="ask-actions">
+                            <button className="icon-button" type="button" onClick={() => copy(ex)} aria-label="Copy answer" title="Copy answer">
+                              {copied === ex.id ? <Check size={15} aria-hidden /> : <Copy size={15} aria-hidden />}
+                            </button>
+                            {ex.forwarded ? (
+                              <span className="badge badge-green">Sent to your officer</span>
+                            ) : (
+                              <button className="btn btn-ghost btn-sm" type="button" onClick={() => forwardToOfficer(ex)}>
+                                <MessageCircle size={14} aria-hidden />
+                                {ex.kind === "answer" ? "Ask my officer about this" : "Send this question to my officer"}
+                              </button>
+                            )}
+                          </div>
+                        </>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              );
+            })
+          )}
+        </div>
 
-            <div className="ask-suggestions">
-              {askSuggestions.map((item) => (
-                <button
-                  type="button"
-                  key={item}
-                  onClick={() => submit(item)}
-                  disabled={isSubmitting}
-                >
-                  {item}
+        <div className="ask-compose">
+          {exchanges.length > 0 && !busy ? (
+            <div className="chip-row" style={{ marginBottom: 10 }}>
+              {ASK_TOPICS.map((t) => (
+                <button key={t.label} className="chip" type="button" onClick={() => ask(t.question)}>
+                  {t.label}
                 </button>
               ))}
             </div>
-
-            <form
-              className="ask-input"
-              onSubmit={(e) => {
-                e.preventDefault();
-                submit(input);
+          ) : null}
+          <form
+            onSubmit={(e) => {
+              e.preventDefault();
+              ask(input);
+            }}
+          >
+            <label className="visually-hidden" htmlFor="ask-input">
+              Your question
+            </label>
+            <textarea
+              id="ask-input"
+              ref={inputRef}
+              className="textarea"
+              rows={1}
+              maxLength={1000}
+              placeholder="Ask a question…"
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" && !e.shiftKey) {
+                  e.preventDefault();
+                  ask(input);
+                }
               }}
-            >
-              <input
-                aria-label="Ask a question"
-                placeholder="Ask a question..."
-                value={input}
-                onChange={(e) => setInput(e.target.value)}
-                disabled={isSubmitting}
-              />
-              <button
-                aria-label="Send question"
-                type="submit"
-                disabled={isSubmitting || !input.trim()}
-              >
-                <Send aria-hidden size={18} />
-              </button>
-            </form>
-
-            <div className="ask-disclaimer">
-              <Info aria-hidden size={16} />
-              <p>
-                Inzira gives answers based only on verified official sources.
-                For financial, legal, or complex cases, we&apos;ll connect you
-                to a real officer.
-              </p>
-            </div>
-          </div>
-
-          <aside className="ask-sidebar">
-            <div className="officer-notify-card">
-              <h2>Need to speak with a real person?</h2>
-              <p>
-                If your question needs a human review, we can notify your youth
-                officer to follow up with you.
-              </p>
-              <button type="button" onClick={notifyOfficer}>
-                Notify my officer
-              </button>
-            </div>
-
-            <div className="common-topics">
-              <h2>Common topics</h2>
-              <ul>
-                {askCommonTopics.map((topic) => {
-                  const Icon =
-                    topicIcons[topic.icon as keyof typeof topicIcons];
-                  return (
-                    <li key={topic.label}>
-                      <button type="button">{topic.label}</button>
-                    </li>
-                  );
-                })}
-              </ul>
-            </div>
-          </aside>
+            />
+            <button className="btn btn-primary" type="submit" disabled={busy || !input.trim()} aria-label="Send question">
+              {busy ? <span className="spinner" aria-hidden /> : <ArrowUp size={18} aria-hidden />}
+            </button>
+          </form>
+          <p className="ask-disclaimer">
+            Inzira can make mistakes. Check important details with your officer or the institution.{" "}
+            <Link href="/youth/find-help" style={{ textDecoration: "underline" }}>
+              Find contacts
+            </Link>
+          </p>
         </div>
-      </div>
-    </YouthShell>
+      </section>
+    </>
   );
 }

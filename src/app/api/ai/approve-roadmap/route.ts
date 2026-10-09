@@ -1,298 +1,169 @@
 // ============================================================
 // POST /api/ai/approve-roadmap
-// Officer approves a draft roadmap, creates case + steps,
-// and makes it visible to the youth.
-//
-// Accepts EITHER:
-//   - roadmapId: fetches existing roadmap from DB
-//   - roadmapData: inline roadmap (title, summary, steps) to save + approve in one shot
+// The officer approves a (possibly edited) roadmap. Its steps replace the
+// youth's current roadmap and become visible to the youth immediately.
 // ============================================================
 
 import { NextResponse } from "next/server";
-import { auth } from "@/lib/auth";
-import { createClient } from "@/lib/supabase/server";
+import type { RoadmapStep } from "@/lib/ai";
+import {
+  getPrimaryCase,
+  isResponse,
+  jsonError,
+  requireViewer,
+} from "@/lib/server/access";
 
-interface RoadmapStepData {
-  order: number;
-  title: string;
-  description: string;
-  institution: string;
-  location: string | null;
-  whatToBring: string[];
-  whyThisStep: string;
-  sources: {
-    documentId: string;
-    documentTitle: string;
-    institution: string;
-    page: number | null;
-  }[];
+function str(value: unknown, max: number): string {
+  return typeof value === "string" ? value.trim().slice(0, max) : "";
 }
 
-interface ApproveRequest {
-  youthProfileId: string;
-  roadmapId?: string;
-  roadmapData?: {
-    title: string;
-    summary: string;
-    steps: RoadmapStepData[];
-  };
-  goal?: string;
-  skillsBackground?: string;
-  district?: string;
-  sector?: string;
-  situation?: string;
+function normaliseSteps(raw: unknown): RoadmapStep[] {
+  if (!Array.isArray(raw)) return [];
+  return raw
+    .map((item) => (item && typeof item === "object" ? item : {}) as Record<string, unknown>)
+    .filter((s) => str(s.title, 160))
+    .slice(0, 12)
+    .map((s, index) => ({
+      order: index + 1,
+      title: str(s.title, 160),
+      description: str(s.description, 1200),
+      institution: str(s.institution, 80),
+      location: str(s.location, 160) || null,
+      whatToBring: Array.isArray(s.whatToBring)
+        ? s.whatToBring.map((x) => str(x, 160)).filter(Boolean).slice(0, 10)
+        : [],
+      whyThisStep: str(s.whyThisStep, 400),
+      sources: Array.isArray(s.sources)
+        ? (s.sources as RoadmapStep["sources"]).slice(0, 6)
+        : [],
+    }));
 }
 
 export async function POST(request: Request) {
-  try {
-    const session = await auth();
-    if (!session?.user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+  const viewer = await requireViewer("officer");
+  if (isResponse(viewer)) return viewer;
+  const { db } = viewer;
 
-    if (session.user.role !== "officer") {
-      return NextResponse.json(
-        { error: "Only officers can approve roadmaps" },
-        { status: 403 },
-      );
-    }
+  const body = await request.json().catch(() => null);
+  const youthProfileId = str(body?.youthProfileId, 64);
+  const roadmapId = str(body?.roadmapId, 64) || null;
+  const title = str(body?.roadmap?.title, 160) || "Your roadmap";
+  const summary = str(body?.roadmap?.summary, 800);
+  const steps = normaliseSteps(body?.roadmap?.steps);
+  const noteToYouth = str(body?.noteToYouth, 2000);
 
-    const body: ApproveRequest = await request.json();
-    const {
-      youthProfileId,
-      roadmapId,
-      roadmapData,
-      goal,
-      skillsBackground,
-      district,
-      sector,
-      situation,
-    } = body;
+  if (!youthProfileId) return jsonError("youthProfileId is required.", 400);
+  if (steps.length === 0) return jsonError("The roadmap needs at least one step.", 400);
 
-    if (!youthProfileId) {
-      return NextResponse.json(
-        { error: "youthProfileId is required" },
-        { status: 400 },
-      );
-    }
+  const { data: youth } = await db
+    .from("profiles")
+    .select("id, role")
+    .eq("id", youthProfileId)
+    .single();
+  if (!youth || youth.role !== "youth") return jsonError("Youth not found.", 404);
 
-    if (!roadmapId && (!roadmapData || !roadmapData.steps || roadmapData.steps.length === 0)) {
-      return NextResponse.json(
-        { error: "Either roadmapId or roadmapData with steps is required" },
-        { status: 400 },
-      );
-    }
-
-    const supabase = await createClient();
-
-    // Get the officer's profile ID
-    const { data: officerProfile } = await supabase
-      .from("profiles")
-      .select("id")
-      .eq("user_id", session.user.id)
-      .single();
-
-    // -------------------------------------------------------
-    // Get or create the roadmap record
-    // -------------------------------------------------------
-    let finalRoadmapId: string | null | undefined = roadmapId;
-    let stepsData: RoadmapStepData[];
-
-    if (roadmapId) {
-      // Fetch existing roadmap from DB
-      const { data: roadmap, error: roadmapError } = await supabase
-        .from("ai_roadmaps")
-        .select("*")
-        .eq("id", roadmapId)
-        .single();
-
-      if (roadmapError || !roadmap) {
-        return NextResponse.json(
-          { error: "Roadmap not found" },
-          { status: 404 },
-        );
-      }
-
-      if (roadmap.status === "approved" || roadmap.status === "sent") {
-        return NextResponse.json(
-          { error: "Roadmap is already approved" },
-          { status: 400 },
-        );
-      }
-
-      stepsData = roadmap.steps_data as RoadmapStepData[];
-    } else {
-      // Use inline roadmapData — save it as approved directly
-      stepsData = roadmapData!.steps;
-
-      // We still need a case to link to (created below)
-      finalRoadmapId = null; // will be set after creating the roadmap record
-    }
-
-    // -------------------------------------------------------
-    // Create or reuse a youth_case
-    // -------------------------------------------------------
-    const { data: existingCase } = await supabase
+  // Reuse the youth's case; create one only if they have none.
+  let youthCase = await getPrimaryCase(db, youthProfileId);
+  if (!youthCase) {
+    const { data, error } = await db
       .from("youth_cases")
-      .select("id, total_steps")
-      .eq("youth_profile_id", youthProfileId)
-      .in("status", ["active", "pending"])
-      .order("created_at", { ascending: false })
-      .limit(1)
+      .insert({ youth_profile_id: youthProfileId, officer_profile_id: viewer.profileId })
+      .select()
       .single();
+    if (error || !data) return jsonError("Could not create a case for this youth.", 500);
+    youthCase = data;
+  }
+  const caseId: string = youthCase.id;
 
-    let caseId: string;
+  // Replace the roadmap steps.
+  const { error: deleteError } = await db.from("roadmap_steps").delete().eq("case_id", caseId);
+  if (deleteError) return jsonError("Could not update the roadmap. Please try again.", 500);
 
-    if (existingCase && existingCase.total_steps === 0) {
-      // Reuse existing pending case — update it
-      caseId = existingCase.id;
-      await supabase
-        .from("youth_cases")
-        .update({
-          officer_profile_id: officerProfile?.id || null,
-          total_steps: stepsData.length,
-          current_step: 1,
-          status: "active",
-        })
-        .eq("id", caseId);
-    } else {
-      // Create a new case
-      const { data: newCase, error: caseError } = await supabase
-        .from("youth_cases")
-        .insert({
-          youth_profile_id: youthProfileId,
-          officer_profile_id: officerProfile?.id || null,
-          total_steps: stepsData.length,
-          current_step: 1,
-          status: "active",
-        })
-        .select()
-        .single();
-
-      if (caseError || !newCase) {
-        console.error("Failed to create case:", caseError);
-        return NextResponse.json(
-          { error: caseError?.message || "Failed to create case" },
-          { status: 500 },
-        );
-      }
-      caseId = newCase.id;
-    }
-
-    // -------------------------------------------------------
-    // Save or update the roadmap record
-    // -------------------------------------------------------
-    if (finalRoadmapId) {
-      // Update existing roadmap → approved
-      await supabase
-        .from("ai_roadmaps")
-        .update({
-          case_id: caseId,
-          status: "approved",
-          approved_at: new Date().toISOString(),
-          youth_profile_id: youthProfileId,
-        })
-        .eq("id", finalRoadmapId);
-    } else {
-      // Create a new roadmap record from inline data
-      const sources = stepsData.flatMap((s) => s.sources || []);
-      const { data: savedRoadmap } = await supabase
-        .from("ai_roadmaps")
-        .insert({
-          case_id: caseId,
-          title: roadmapData!.title,
-          summary: roadmapData!.summary,
-          steps_data: stepsData,
-          sources,
-          status: "approved",
-          approved_at: new Date().toISOString(),
-          youth_profile_id: youthProfileId,
-          officer_notes: situation || null,
-        })
-        .select()
-        .single();
-
-      if (savedRoadmap) {
-        finalRoadmapId = savedRoadmap.id;
-      }
-    }
-
-    // -------------------------------------------------------
-    // Delete any existing steps for this case (if re-approving)
-    // -------------------------------------------------------
-    await supabase.from("roadmap_steps").delete().eq("case_id", caseId);
-
-    // -------------------------------------------------------
-    // Create roadmap_steps from the AI-generated data
-    // -------------------------------------------------------
-    if (!stepsData || stepsData.length === 0) {
-      return NextResponse.json(
-        { error: "Roadmap has no steps to approve" },
-        { status: 400 },
-      );
-    }
-
-    const roadmapSteps = stepsData.map((step) => ({
+  const { error: stepsError } = await db.from("roadmap_steps").insert(
+    steps.map((step) => ({
       case_id: caseId,
       step_number: step.order,
       title: step.title,
       detail: step.description,
-      institution: step.institution,
-      status: step.order === 1 ? ("current" as const) : ("locked" as const),
-      state: step.order === 1 ? ("current" as const) : ("locked" as const),
-      location: step.location || null,
-      source: step.sources?.length
+      institution: step.institution || null,
+      location: step.location,
+      status: step.order === 1 ? "current" : "locked",
+      state: step.order === 1 ? "current" : "locked",
+      source: step.sources.length
         ? step.sources
-            .map(
-              (s) =>
-                `${s.institution} - ${s.documentTitle}${s.page ? ` (p.${s.page})` : ""}`,
-            )
-            .join(", ")
-        : "Verified sources",
-    }));
-
-    const { error: stepsError } = await supabase
-      .from("roadmap_steps")
-      .insert(roadmapSteps);
-
-    if (stepsError) {
-      console.error("Failed to create steps:", stepsError);
-      return NextResponse.json(
-        { error: stepsError.message },
-        { status: 500 },
-      );
-    }
-
-    // -------------------------------------------------------
-    // Update the youth's profile with intake data
-    // -------------------------------------------------------
-    const profileUpdates: Record<string, unknown> = {
-      onboarding_completed: true,
-      onboarding_submitted_at: new Date().toISOString(),
-    };
-    if (goal) profileUpdates.goal = goal;
-    if (skillsBackground !== undefined) profileUpdates.skills_background = skillsBackground;
-    if (district) profileUpdates.district = district;
-    if (sector) profileUpdates.sector = sector;
-    if (situation) profileUpdates.situation = situation;
-
-    await supabase
-      .from("profiles")
-      .update(profileUpdates)
-      .eq("id", youthProfileId);
-
-    return NextResponse.json({
-      message: "Roadmap approved and sent to youth",
-      caseId,
-      youthProfileId,
-      roadmapId: finalRoadmapId || null,
-      stepsCreated: roadmapSteps.length,
-    });
-  } catch (error) {
-    console.error("Approve roadmap error:", error);
-    return NextResponse.json(
-      { error: "An unexpected error occurred" },
-      { status: 500 },
-    );
+            .map((s) => `${s.institution} – ${s.documentTitle}${s.page ? ` (p. ${s.page})` : ""}`)
+            .join("; ")
+        : null,
+    })),
+  );
+  if (stepsError) {
+    console.error("[approve-roadmap] steps insert failed:", stepsError.message);
+    return jsonError("Could not save the roadmap steps. Please try again.", 500);
   }
+
+  await db
+    .from("youth_cases")
+    .update({
+      officer_profile_id: viewer.profileId,
+      status: "active",
+      current_step: 1,
+      total_steps: steps.length,
+    })
+    .eq("id", caseId);
+
+  // Record the approved version (the steps the youth sees, with sources and
+  // "what to bring" details).
+  const approved = {
+    case_id: caseId,
+    youth_profile_id: youthProfileId,
+    title,
+    summary,
+    steps_data: steps,
+    sources: steps.flatMap((s) => s.sources),
+    status: "approved",
+    reviewed_at: new Date().toISOString(),
+    approved_at: new Date().toISOString(),
+  };
+
+  let finalRoadmapId = roadmapId;
+  if (roadmapId) {
+    const { error } = await db.from("ai_roadmaps").update(approved).eq("id", roadmapId);
+    if (error) finalRoadmapId = null;
+  }
+  if (!finalRoadmapId) {
+    const { data } = await db.from("ai_roadmaps").insert(approved).select("id").single();
+    finalRoadmapId = data?.id ?? null;
+  }
+
+  // Older approved versions for this case are superseded.
+  if (finalRoadmapId) {
+    await db
+      .from("ai_roadmaps")
+      .update({ status: "reviewed" })
+      .eq("case_id", caseId)
+      .eq("status", "approved")
+      .neq("id", finalRoadmapId);
+  }
+
+  await db
+    .from("profiles")
+    .update({ onboarding_completed: true })
+    .eq("id", youthProfileId)
+    .is("onboarding_completed", false);
+
+  if (noteToYouth) {
+    await db.from("messages").insert({
+      case_id: caseId,
+      sender_id: viewer.profileId,
+      sender_role: "officer",
+      content: noteToYouth,
+    });
+  }
+
+  return NextResponse.json({
+    caseId,
+    youthProfileId,
+    roadmapId: finalRoadmapId,
+    stepsCreated: steps.length,
+  });
 }

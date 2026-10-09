@@ -1,318 +1,232 @@
 // ============================================================
 // POST /api/ai/generate-roadmap
-// Generates a personalized roadmap draft using NVIDIA Llama
-// plus OpenRouter embeddings, with verified pathway dependency rules
+// Drafts a personalised roadmap (Groq) grounded in the verified library and
+// the human-maintained pathway rules. The result is saved as a DRAFT; the
+// officer reviews, edits and approves it before the youth can see it.
 // ============================================================
 
 import { NextResponse } from "next/server";
-import { auth } from "@/lib/auth";
-import { createClient } from "@/lib/supabase/server";
 import {
   generateEmbedding,
   hybridSearch,
   formatContextForPrompt,
   chatCompletion,
+  describeAIError,
+  AIServiceError,
   extractJsonFromModelText,
   ROADMAP_SYSTEM_PROMPT,
+  AI_CONFIG,
   buildRoadmapUserPrompt,
+  type RetrievedChunk,
+  type RoadmapResponse,
+  type RoadmapStep,
 } from "@/lib/ai";
+import { getPathway, matchGoalToPathway, type PathwayRule } from "@/lib/ai/pathways";
 import {
-  getPathway,
-  matchGoalToPathway,
-  type PathwayRule,
-} from "@/lib/ai/pathways";
-import type {
-  GenerateRoadmapRequest,
-  RoadmapResponse,
-  RoadmapStep,
-} from "@/lib/ai";
+  getPrimaryCase,
+  isResponse,
+  jsonError,
+  requireViewer,
+} from "@/lib/server/access";
+import { takeToken } from "@/lib/server/rate-limit";
 
-/**
- * Validate the structure of the AI-generated roadmap JSON.
- */
-function validateRoadmapJSON(data: unknown): RoadmapResponse {
-  if (!data || typeof data !== "object") {
-    throw new Error("Invalid roadmap: not an object");
-  }
-
-  const obj = data as Record<string, unknown>;
-
-  if (typeof obj.title !== "string" || obj.title.length === 0) {
-    throw new Error("Invalid roadmap: missing or empty title");
-  }
-
-  if (typeof obj.summary !== "string" || obj.summary.length === 0) {
-    throw new Error("Invalid roadmap: missing or empty summary");
-  }
-
-  if (!Array.isArray(obj.steps) || obj.steps.length < 3) {
-    throw new Error("Invalid roadmap: must have at least 3 steps");
-  }
-
-  const validatedSteps: RoadmapStep[] = obj.steps.map((step, index) => {
-    if (!step || typeof step !== "object") {
-      throw new Error(`Invalid step at index ${index}`);
-    }
-    const s = step as Record<string, unknown>;
-    return {
-      order: typeof s.order === "number" ? s.order : index + 1,
-      title: typeof s.title === "string" ? s.title : `Step ${index + 1}`,
-      description: typeof s.description === "string" ? s.description : "",
-      institution: typeof s.institution === "string" ? s.institution : "",
-      location: typeof s.location === "string" ? s.location : null,
-      whatToBring: Array.isArray(s.whatToBring)
-        ? (s.whatToBring as string[])
-        : [],
-      whyThisStep: typeof s.whyThisStep === "string" ? s.whyThisStep : "",
-      sources: Array.isArray(s.sources)
-        ? (s.sources as RoadmapStep["sources"])
-        : [],
-    };
-  });
-
-  return {
-    title: obj.title as string,
-    summary: obj.summary as string,
-    steps: validatedSteps,
-  };
+function str(value: unknown, max = 2000): string {
+  return typeof value === "string" ? value.trim().slice(0, max) : "";
 }
 
-/**
- * Format pathway rules into a string for the prompt.
- */
 function formatPathwayRules(pathway: PathwayRule): string {
   return pathway.steps
     .map(
       (step) =>
         `Step ${step.order}: ${step.title} (${step.institution})\n` +
-        `Description: ${step.description}\n` +
-        `Required documents: ${step.requiredDocuments.join(", ") || "None specified"}\n` +
-        (step.notes ? `Notes: ${step.notes}\n` : ""),
+        `  ${step.description}\n` +
+        `  Required documents: ${step.requiredDocuments.join(", ") || "none listed"}` +
+        (step.notes ? `\n  Notes: ${step.notes}` : ""),
     )
     .join("\n");
 }
 
+/**
+ * Normalise the model's JSON. Sources are only kept when they reference a
+ * document that was actually retrieved, so the AI cannot cite phantom files.
+ */
+function normaliseRoadmap(data: unknown, chunks: RetrievedChunk[]): RoadmapResponse {
+  if (!data || typeof data !== "object") throw new Error("not an object");
+  const obj = data as Record<string, unknown>;
+  if (!Array.isArray(obj.steps) || obj.steps.length < 2) {
+    throw new Error("too few steps");
+  }
+
+  const docs = new Map(chunks.map((c) => [c.document_id, c]));
+
+  const steps: RoadmapStep[] = obj.steps.slice(0, 8).map((raw, index) => {
+    const s = (raw && typeof raw === "object" ? raw : {}) as Record<string, unknown>;
+    const sources = Array.isArray(s.sources) ? s.sources : [];
+    const seen = new Set<string>();
+    return {
+      order: index + 1,
+      title: str(s.title, 160) || `Step ${index + 1}`,
+      description: str(s.description, 1200),
+      institution: str(s.institution, 80),
+      location: str(s.location, 160) || null,
+      whatToBring: Array.isArray(s.whatToBring)
+        ? s.whatToBring.map((x) => str(x, 160)).filter(Boolean).slice(0, 10)
+        : [],
+      whyThisStep: str(s.whyThisStep, 400),
+      sources: sources
+        .map((src) => {
+          const id = str((src as Record<string, unknown>)?.documentId, 80);
+          const chunk = docs.get(id);
+          if (!chunk || seen.has(id)) return null;
+          seen.add(id);
+          return {
+            documentId: id,
+            documentTitle: chunk.document_title,
+            institution: chunk.institution,
+            page: chunk.page_number,
+          };
+        })
+        .filter((x): x is NonNullable<typeof x> => x !== null),
+    };
+  });
+
+  return {
+    title: str(obj.title, 160) || "Personalised roadmap",
+    summary: str(obj.summary, 800),
+    steps,
+  };
+}
+
 export async function POST(request: Request) {
+  const viewer = await requireViewer("officer");
+  if (isResponse(viewer)) return viewer;
+
+  if (!takeToken(`roadmap:${viewer.profileId}`, 6, 60_000)) {
+    return jsonError("Please wait a moment before generating another roadmap.", 429);
+  }
+
+  const body = await request.json().catch(() => null);
+  const youthProfileId = str(body?.youthProfileId, 64);
+  if (!youthProfileId) return jsonError("Choose a youth before generating a roadmap.", 400);
+
+  const { db } = viewer;
+  const { data: profile } = await db
+    .from("profiles")
+    .select("id, full_name, goal, skills, skills_background, district, sector, role")
+    .eq("id", youthProfileId)
+    .single();
+  if (!profile || profile.role !== "youth") return jsonError("Youth not found.", 404);
+
+  // The officer may correct intake details before generating.
+  const input = (body?.youth || {}) as Record<string, unknown>;
+  const youth = {
+    name: profile.full_name,
+    goal: str(input.goal, 200) || profile.goal || "",
+    skillsBackground:
+      str(input.skillsBackground, 1000) || profile.skills_background || profile.skills || "",
+    district: str(input.district, 100) || profile.district || "",
+    sector: str(input.sector, 100) || profile.sector || "",
+  };
+  const officerNotes = str(body?.officerNotes, 2000);
+
+  if (!youth.goal) return jsonError("Set the youth's goal before generating.", 400);
+
+  const pathwayId = matchGoalToPathway(`${youth.goal} ${officerNotes}`);
+  const pathway = pathwayId ? getPathway(pathwayId) : null;
+
+  const query = [youth.goal, youth.skillsBackground, officerNotes, pathway?.name]
+    .filter(Boolean)
+    .join(" ");
+
+  let chunks: RetrievedChunk[];
   try {
-    // 1. Authenticate
-    const session = await auth();
-    if (!session?.user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+    chunks = await hybridSearch({
+      queryText: query,
+      queryEmbedding: await generateEmbedding(query),
+    });
+  } catch (error) {
+    console.error("[generate-roadmap] retrieval failed:", error);
+    return jsonError("We couldn't search the verified library. Please try again.", 503);
+  }
 
-    if (session.user.role !== "officer") {
-      return NextResponse.json(
-        { error: "Only officers can generate roadmaps" },
-        { status: 403 },
-      );
-    }
-
-    // 2. Validate request
-    const body: GenerateRoadmapRequest = await request.json();
-
-    if (!body.youth || typeof body.youth !== "object") {
-      return NextResponse.json(
-        { error: "Youth information is required" },
-        { status: 400 },
-      );
-    }
-
-    const { youth, officerNotes, caseId, youthProfileId } = body as GenerateRoadmapRequest & { youthProfileId?: string };
-
-    if (!youth.name || !youth.goal) {
-      return NextResponse.json(
-        { error: "Youth name and goal are required" },
-        { status: 400 },
-      );
-    }
-
-    // 3. Match goal to a verified pathway
-    const pathwayId = matchGoalToPathway(youth.goal);
-    const pathway = pathwayId ? getPathway(pathwayId) : null;
-
-    // 4. Build a retrieval query from the youth's information
-    const retrievalQuery = [
-      youth.goal,
-      youth.skillsBackground,
-      youth.district,
-      youth.sector,
-      officerNotes,
-    ]
-      .filter(Boolean)
-      .join(" ");
-
-    // 5. Generate BGE-M3 embedding for the retrieval query
-    let queryEmbedding: number[];
-    try {
-      queryEmbedding = await generateEmbedding(retrievalQuery);
-    } catch (embeddingError) {
-      console.error("Embedding generation failed:", embeddingError);
-      return NextResponse.json(
-        { error: "Failed to process the request. Please try again." },
-        { status: 500 },
-      );
-    }
-
-    // 6. Hybrid retrieval: vector + keyword + metadata
-    let retrievedChunks;
-    try {
-      retrievedChunks = await hybridSearch({
-        queryEmbedding,
-        queryText: retrievalQuery,
-        metadataFilters: pathway
-          ? { institution: undefined } // Don't filter by institution — let hybrid scoring handle it
-          : undefined,
-      });
-    } catch (searchError) {
-      console.error("Hybrid retrieval failed:", searchError);
-      return NextResponse.json(
-        { error: "Failed to search verified sources. Please try again." },
-        { status: 500 },
-      );
-    }
-
-    // 7. Build the prompt with context + pathway rules
-    const contextString = formatContextForPrompt(retrievedChunks);
-    const pathwayRulesStr = pathway
+  const userPrompt = buildRoadmapUserPrompt(
+    youth,
+    officerNotes,
+    formatContextForPrompt(chunks),
+    pathway
       ? formatPathwayRules(pathway)
-      : "No specific pathway rules found for this goal. Use only the verified context above for ordering.";
+      : "No fixed pathway matches this goal. Order steps only as the sources explicitly state.",
+  );
 
-    const userPrompt = buildRoadmapUserPrompt(
-      youth,
-      officerNotes || "",
-      contextString,
-      pathwayRulesStr,
-    );
-
-    // 8. Call NVIDIA Llama for roadmap generation
-    let rawResponse: string;
+  let roadmap: RoadmapResponse | null = null;
+  // One retry if the model returns malformed JSON.
+  for (let attempt = 0; attempt < 2 && !roadmap; attempt++) {
     try {
-      const completion = await chatCompletion({
+      const { content } = await chatCompletion({
         messages: [
           { role: "system", content: ROADMAP_SYSTEM_PROMPT },
           { role: "user", content: userPrompt },
         ],
-        responseFormat: { type: "json_object" },
+        json: true,
+        maxTokens: AI_CONFIG.roadmapMaxTokens,
       });
-      rawResponse = completion.choices[0]?.message?.content || "";
-    } catch (chatError) {
-      console.error("Roadmap generation failed:", chatError);
-      const msg = chatError instanceof Error ? chatError.message : "";
-      const isRateLimit = msg.includes("429") || msg.includes("rate") || msg.includes("Rate limit");
-      return NextResponse.json(
-        {
-          error: isRateLimit
-            ? "The AI service is temporarily busy. Please wait a moment and try again."
-            : "Failed to generate roadmap. Please try again.",
-        },
-        { status: isRateLimit ? 429 : 500 },
-      );
-    }
-
-    if (!rawResponse) {
-      return NextResponse.json(
-        { error: "Failed to generate roadmap. Please try again." },
-        { status: 500 },
-      );
-    }
-
-    // 9. Parse and validate the JSON response
-    let parsedResponse: unknown;
-    try {
-      parsedResponse = JSON.parse(extractJsonFromModelText(rawResponse));
-    } catch {
-      console.error("Invalid JSON from NVIDIA chat model:", rawResponse);
-      return NextResponse.json(
-        { error: "The AI returned an invalid response. Please try again." },
-        { status: 500 },
-      );
-    }
-
-    let roadmap: RoadmapResponse;
-    try {
-      roadmap = validateRoadmapJSON(parsedResponse);
-    } catch (validationError) {
-      console.error("Roadmap validation failed:", validationError);
-      return NextResponse.json(
-        { error: "The AI response did not match the expected format. Please try again." },
-        { status: 500 },
-      );
-    }
-
-    // 10. Save the roadmap to the database as DRAFT
-    const supabase = await createClient();
-
-    // If no caseId, find or create one for this youth profile
-    let savedCaseId = caseId;
-    if (!savedCaseId && youthProfileId) {
-      const { data: existingCase } = await supabase
-        .from("youth_cases")
-        .select("id")
-        .eq("youth_profile_id", youthProfileId)
-        .in("status", ["pending", "active"])
-        .order("created_at", { ascending: false })
-        .limit(1)
-        .single();
-
-      if (existingCase) {
-        savedCaseId = existingCase.id;
-      } else {
-        const officerProfile = await supabase
-          .from("profiles")
-          .select("id")
-          .eq("user_id", session.user.id)
-          .single();
-
-        const { data: newCase } = await supabase
-          .from("youth_cases")
-          .insert({
-            youth_profile_id: youthProfileId,
-            officer_profile_id: officerProfile?.data?.id || null,
-            status: "pending",
-            current_step: 0,
-            total_steps: 0,
-          })
-          .select()
-          .single();
-
-        savedCaseId = newCase?.id;
+      roadmap = normaliseRoadmap(JSON.parse(extractJsonFromModelText(content)), chunks);
+    } catch (error) {
+      if (error instanceof AIServiceError) {
+        console.error("[generate-roadmap] generation failed:", error.message);
+        const { message, status } = describeAIError(error);
+        return jsonError(message, status);
       }
+      // Malformed JSON or an unusable structure: try once more.
+      console.warn("[generate-roadmap] invalid model output:", error);
     }
-
-    let savedRoadmapId: string | null = null;
-    if (savedCaseId) {
-      const { data: savedRoadmap, error: roadmapError } = await supabase
-        .from("ai_roadmaps")
-        .insert({
-          case_id: savedCaseId,
-          title: roadmap.title,
-          summary: roadmap.summary,
-          steps_data: roadmap.steps,
-          sources: roadmap.steps.flatMap((s) => s.sources || []),
-          officer_notes: officerNotes || null,
-          status: "draft",
-          youth_profile_id: youthProfileId || null,
-        })
-        .select()
-        .single();
-
-      if (roadmapError) {
-        console.error("Failed to save roadmap:", roadmapError);
-      } else if (savedRoadmap) {
-        savedRoadmapId = savedRoadmap.id;
-      }
-    }
-
-    // 11. Return the roadmap with the saved ID (status: draft — officer must review)
-    return NextResponse.json({
-      ...roadmap,
-      roadmapId: savedRoadmapId,
-    });
-  } catch (error) {
-    console.error("Generate roadmap endpoint error:", error);
-    return NextResponse.json(
-      { error: "An unexpected error occurred. Please try again." },
-      { status: 500 },
-    );
   }
+
+  if (!roadmap) {
+    return jsonError("The AI returned an unusable draft. Please try again.", 502);
+  }
+
+  // Save as a draft against the youth's case (created if needed).
+  let youthCase = await getPrimaryCase(db, youthProfileId);
+  if (!youthCase) {
+    const { data: created } = await db
+      .from("youth_cases")
+      .insert({
+        youth_profile_id: youthProfileId,
+        officer_profile_id: viewer.profileId,
+        status: "pending",
+        current_step: 0,
+        total_steps: 0,
+      })
+      .select()
+      .single();
+    youthCase = created;
+  }
+
+  let roadmapId: string | null = null;
+  if (youthCase) {
+    const { data: saved, error } = await db
+      .from("ai_roadmaps")
+      .insert({
+        case_id: youthCase.id,
+        youth_profile_id: youthProfileId,
+        title: roadmap.title,
+        summary: roadmap.summary,
+        steps_data: roadmap.steps,
+        sources: roadmap.steps.flatMap((s) => s.sources),
+        officer_notes: officerNotes || null,
+        status: "draft",
+      })
+      .select("id")
+      .single();
+    if (error) console.error("[generate-roadmap] could not save draft:", error.message);
+    roadmapId = saved?.id ?? null;
+  }
+
+  return NextResponse.json({
+    ...roadmap,
+    roadmapId,
+    pathway: pathway?.name ?? null,
+    sourcesConsulted: chunks.length,
+  });
 }

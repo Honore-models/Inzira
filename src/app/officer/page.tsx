@@ -3,275 +3,203 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useSession } from "next-auth/react";
-import {
-  ArrowUpRight,
-  ClipboardPlus,
-  Clock,
-  Sparkles,
-  TrendingUp,
-  Users,
-  ShieldCheck,
-} from "lucide-react";
-import { DateSelector } from "@/components/officer/DateSelector";
-import { OfficerAvatar, OfficerShell } from "@/components/officer/OfficerShell";
-import { DashboardSkeleton } from "@/components/Skeleton";
-import { getPhotoUrl } from "@/lib/photos";
+import { ArrowRight, CheckCircle2, ClipboardList, Compass, MessageCircle, TrendingUp, Users } from "lucide-react";
+import { Alert, Avatar, EmptyState, PageHeader, PageSkeleton, ProgressBar } from "@/components/ui";
+import { api } from "@/lib/api-client";
+import { completedSteps, progressPercent, type YouthStatus } from "@/lib/case-status";
+import { firstName, formatRelative, greeting } from "@/lib/format";
 
-interface YouthProfile {
+interface YouthRow {
   id: string;
   full_name: string;
   email: string;
-  goal: string;
-  district: string;
-  onboarding_completed: boolean;
-  youth_cases: { id: string; status: string; current_step: number; total_steps: number }[];
+  goal: string | null;
+  district: string | null;
+  onboarding_submitted_at: string | null;
+  created_at: string;
+  status: YouthStatus;
+  case: { id: string; status: string; current_step: number; total_steps: number; officer_profile_id: string | null } | null;
 }
 
-interface YouthCase {
+interface CaseRow {
   id: string;
   youth_profile_id: string;
-  status: string;
-  current_step: number;
-  total_steps: number;
-  created_at: string;
-  youth: { full_name: string; email: string; goal: string; district: string } | null;
-  officer: { full_name: string } | null;
+  officer_profile_id: string | null;
+  youth: { full_name: string; email: string } | null;
+  lastMessage: { content: string; created_at: string; sender_role: string } | null;
+  unreadCount: number;
 }
-
-const statIcons: Record<string, typeof Users> = {
-  users: Users,
-  sparkles: Sparkles,
-  trending: TrendingUp,
-  clock: Clock,
-};
 
 export default function OfficerDashboard() {
   const { data: session } = useSession();
-  const userName = session?.user?.name || "Officer";
-  const [youth, setYouth] = useState<YouthProfile[]>([]);
-  const [cases, setCases] = useState<YouthCase[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [youth, setYouth] = useState<YouthRow[] | null>(null);
+  const [cases, setCases] = useState<CaseRow[]>([]);
+  const [error, setError] = useState("");
 
   useEffect(() => {
-    async function load() {
-      try {
-        const [youthRes, casesRes] = await Promise.all([
-          fetch("/api/youth"),
-          fetch("/api/cases"),
-        ]);
-        if (youthRes.ok) setYouth(await youthRes.json());
-        if (casesRes.ok) setCases(await casesRes.json());
-      } catch {
-        // Silently handle errors
-      } finally {
-        setLoading(false);
-      }
-    }
-    load();
+    Promise.all([api<YouthRow[]>("/api/youth"), api<CaseRow[]>("/api/cases")])
+      .then(([y, c]) => {
+        setYouth(y);
+        setCases(c);
+      })
+      .catch((e) => setError(e.message));
   }, []);
 
-  const activeCases = cases.filter((c) => c.status === "active");
-  const pendingCases = cases.filter((c) => c.status === "pending" || (c.status === "active" && c.current_step > 0));
-  const waitingForRoadmap = youth.filter((y) => {
-    const hasCase = y.youth_cases && y.youth_cases.length > 0;
-    return y.onboarding_completed && !hasCase;
-  });
+  if (error) return <Alert tone="error" title="We couldn't load your dashboard">{error}</Alert>;
+  if (!youth) return <PageSkeleton />;
+
+  const me = session?.user?.profileId;
+  const count = (s: YouthStatus) => youth.filter((y) => y.status === s).length;
+  const queue = youth
+    .filter((y) => y.status === "needs_roadmap")
+    .sort((a, b) => (a.onboarding_submitted_at || a.created_at).localeCompare(b.onboarding_submitted_at || b.created_at));
+  const active = youth
+    .filter((y) => y.status === "in_progress" && (!me || !y.case?.officer_profile_id || y.case.officer_profile_id === me))
+    .sort((a, b) => progressPercent(a.case) - progressPercent(b.case));
+  const unreadConvos = cases.filter((c) => c.unreadCount > 0 && (!c.officer_profile_id || c.officer_profile_id === me));
 
   const stats = [
-    {
-      label: "Total youth",
-      value: String(youth.length),
-      change: "Registered in system",
-      icon: "users",
-      tone: "green",
-    },
-    {
-      label: "Need roadmap",
-      value: String(waitingForRoadmap.length),
-      change: "Waiting for officer",
-      icon: "sparkles",
-      tone: "amber",
-    },
-    {
-      label: "Active cases",
-      value: String(activeCases.length),
-      change: "In progress",
-      icon: "clock",
-      tone: "blue",
-    },
-    {
-      label: "Completed",
-      value: String(cases.filter((c) => c.status === "completed").length),
-      change: "Successfully finished",
-      icon: "trending",
-      tone: "purple",
-    },
+    { label: "Registered youth", value: youth.length, hint: `${count("not_onboarded")} still onboarding`, icon: Users, tone: "green" },
+    { label: "Need a roadmap", value: count("needs_roadmap"), hint: "Waiting for review", icon: ClipboardList, tone: "amber" },
+    { label: "In progress", value: count("in_progress"), hint: "Following a roadmap", icon: TrendingUp, tone: "blue" },
+    { label: "Completed", value: count("completed"), hint: "Finished every step", icon: CheckCircle2, tone: "purple" },
   ];
 
-  if (loading) {
-    return (
-      <OfficerShell active="Dashboard">
-        <div className="officer-page-wrap">
-          <DashboardSkeleton />
-        </div>
-      </OfficerShell>
-    );
-  }
-
   return (
-    <OfficerShell active="Dashboard">
-      <div className="officer-page-wrap">
-        <header className="officer-heading">
-          <div>
-            <span className="officer-eyebrow">Officer workspace</span>
-            <h1>Good morning, {userName}</h1>
-            <p>Here&apos;s a clear view of the young people who need you today.</p>
-          </div>
-          <div className="officer-heading-actions">
-            <DateSelector />
-            <Link className="officer-button primary" href="/officer/intake">
-              <ClipboardPlus aria-hidden size={16} />
-              New intake
+    <>
+      <PageHeader
+        eyebrow="Officer workspace"
+        title={`${greeting()}, ${firstName(session?.user?.name)}`}
+        description="Here's who needs you today."
+        actions={
+          <Link className="btn btn-primary" href="/officer/intake">
+            <Compass size={16} aria-hidden /> New Smart Intake
+          </Link>
+        }
+      />
+
+      <section className="stat-grid" aria-label="Caseload summary">
+        {stats.map((s) => {
+          const Icon = s.icon;
+          return (
+            <article className={`stat tone-${s.tone}`} key={s.label}>
+              <div className="stat-top">
+                <span>{s.label}</span>
+                <span className="stat-icon">
+                  <Icon size={17} aria-hidden />
+                </span>
+              </div>
+              <strong>{s.value}</strong>
+              <small>{s.hint}</small>
+            </article>
+          );
+        })}
+      </section>
+
+      <div className="grid-2">
+        <section className="card">
+          <header className="card-header">
+            <div>
+              <h2>Roadmap queue</h2>
+              <p>Onboarded youth waiting for a roadmap, oldest first</p>
+            </div>
+            <Link className="btn btn-ghost btn-sm" href="/officer/youth?status=needs_roadmap">
+              View all
             </Link>
-          </div>
-        </header>
-
-        <section className="officer-stat-grid" aria-label="Caseload summary">
-          {stats.map((stat) => {
-            const Icon = statIcons[stat.icon];
-            return (
-              <article className={`officer-stat-card ${stat.tone}`} key={stat.label}>
-                <div className="officer-stat-icon">
-                  <Icon aria-hidden size={19} />
-                </div>
-                <div className="officer-stat-body">
-                  <span>{stat.label}</span>
-                  <strong>{stat.value}</strong>
-                  <p>{stat.change}</p>
-                </div>
-              </article>
-            );
-          })}
+          </header>
+          {queue.length === 0 ? (
+            <EmptyState icon={<CheckCircle2 size={24} />} title="Queue is clear">
+              Every onboarded youth has a roadmap.
+            </EmptyState>
+          ) : (
+            queue.slice(0, 5).map((y) => (
+              <div className="list-row" key={y.id}>
+                <Avatar name={y.full_name} email={y.email} />
+                <Link className="list-row-body" href={`/officer/youth/${y.id}`}>
+                  <strong>{y.full_name}</strong>
+                  <span>
+                    {y.goal || "No goal"} · {y.district || "No district"} · submitted {formatRelative(y.onboarding_submitted_at || y.created_at)}
+                  </span>
+                </Link>
+                <Link className="btn btn-secondary btn-sm" href={`/officer/intake?youthId=${y.id}`}>
+                  Start intake
+                </Link>
+              </div>
+            ))
+          )}
         </section>
 
-        <section className="officer-dash-columns">
-          <article className="officer-card pending-card">
-            <header className="officer-card-header">
-              <div>
-                <h2>Youth needing attention</h2>
-                <p>Youth who need a roadmap or follow-up</p>
-              </div>
-              <Link className="officer-text-link" href="/officer/youth">
-                View all
+        <section className="card">
+          <header className="card-header">
+            <div>
+              <h2>Unread messages</h2>
+              <p>Youth waiting for a reply</p>
+            </div>
+            <Link className="btn btn-ghost btn-sm" href="/officer/messages">
+              Open inbox
+            </Link>
+          </header>
+          {unreadConvos.length === 0 ? (
+            <EmptyState icon={<MessageCircle size={24} />} title="You're all caught up">
+              New messages from youth will appear here.
+            </EmptyState>
+          ) : (
+            unreadConvos.slice(0, 5).map((c) => (
+              <Link className="list-row" href={`/officer/messages?case=${c.id}`} key={c.id}>
+                <Avatar name={c.youth?.full_name} email={c.youth?.email} />
+                <div className="list-row-body">
+                  <strong>{c.youth?.full_name || "Youth"}</strong>
+                  <span>{c.lastMessage?.content}</span>
+                </div>
+                <div className="list-row-meta">
+                  <span>{formatRelative(c.lastMessage?.created_at)}</span>
+                  <span className="unread-count">{c.unreadCount}</span>
+                </div>
               </Link>
-            </header>
-            <div className="pending-list">
-              {/* Youth waiting for roadmap */}
-              {waitingForRoadmap.slice(0, 3).map((y) => (
-                <Link
-                  className="pending-row"
-                  href="/officer/youth"
-                  key={y.id}
-                >
-                  <OfficerAvatar
-                    avatar={{
-                      label: y.full_name?.split(" ").map((w) => w[0]).join("") || "?",
-                      bg: "#1f6f4c",
-                      photo: getPhotoUrl(y.email) || undefined,
-                    }}
-                  />
-                  <div className="pending-row-body">
-                    <strong>{y.full_name}</strong>
-                    <span>{y.goal || "No goal set"} — Needs roadmap</span>
-                  </div>
-                  <div className="pending-row-meta">
-                    <span style={{ color: "#d4a017", fontSize: 12 }}>Waiting</span>
-                  </div>
-                </Link>
-              ))}
-
-              {/* Active cases */}
-              {activeCases.slice(0, 3).map((item) => (
-                <Link
-                  className="pending-row"
-                  href={`/officer/youth/${item.youth_profile_id}`}
-                  key={item.id}
-                >
-                  <OfficerAvatar
-                    avatar={{
-                      label: item.youth?.full_name?.split(" ").map((w) => w[0]).join("") || "?",
-                      bg: "#1f6f4c",
-                      photo: getPhotoUrl(item.youth?.email) || undefined,
-                    }}
-                  />
-                  <div className="pending-row-body">
-                    <strong>{item.youth?.full_name || "Unknown"}</strong>
-                    <span>{item.youth?.goal || "No goal set"}</span>
-                  </div>
-                  <div className="pending-row-meta">
-                    <span>
-                      Step {item.current_step}/{item.total_steps}
-                    </span>
-                    <i className="pending-dot" title="In progress" />
-                  </div>
-                </Link>
-              ))}
-
-              {waitingForRoadmap.length === 0 && activeCases.length === 0 && (
-                <p style={{ color: "#545d65", fontSize: 13, padding: "16px", textAlign: "center" }}>
-                  No youth in your caseload yet. Youth will appear here after they sign up.
-                </p>
-              )}
-            </div>
-          </article>
-
-          <article className="officer-card weekly-card">
-            <header className="officer-card-header">
-              <div>
-                <h2>Caseload health</h2>
-                <p>A clear snapshot of your current workload</p>
-              </div>
-            </header>
-            <div className="caseload-summary">
-              <div className="caseload-stat">
-                <strong>{activeCases.length}</strong>
-                <span>Active</span>
-              </div>
-              <div className="caseload-stat">
-                <strong>{cases.filter((c) => c.status === "completed").length}</strong>
-                <span>Completed</span>
-              </div>
-              <div className="caseload-stat">
-                <strong>{waitingForRoadmap.length}</strong>
-                <span>Needs roadmap</span>
-              </div>
-            </div>
-            <div className="caseload-next-action">
-              <Sparkles aria-hidden size={18} />
-              <div>
-                <strong>{waitingForRoadmap.length > 0 ? `${waitingForRoadmap.length} youth need a roadmap` : "Your roadmap queue is clear"}</strong>
-                <span>{waitingForRoadmap.length > 0 ? "Start a smart intake to prepare their next steps." : "Check your active cases to keep progress moving."}</span>
-              </div>
-              <Link href={waitingForRoadmap.length > 0 ? "/officer/intake" : "/officer/youth"} aria-label="Open next action">
-                <ArrowUpRight aria-hidden size={18} />
-              </Link>
-            </div>
-          </article>
+            ))
+          )}
         </section>
-
-        <aside className="officer-banner">
-          <span className="officer-banner-icon">
-            <ShieldCheck aria-hidden size={22} />
-          </span>
-          <div>
-            <strong>You&apos;re the final decision-maker.</strong>
-            <p>
-              All roadmaps are drafts until you review and approve them. The
-              youth only sees approved steps.
-            </p>
-          </div>
-        </aside>
       </div>
-    </OfficerShell>
+
+      <section className="card" style={{ marginTop: 16 }}>
+        <header className="card-header">
+          <div>
+            <h2>Active roadmaps</h2>
+            <p>Youth following a roadmap, least progress first</p>
+          </div>
+          <Link className="btn btn-ghost btn-sm" href="/officer/youth?status=in_progress">
+            View all
+          </Link>
+        </header>
+        {active.length === 0 ? (
+          <EmptyState icon={<TrendingUp size={24} />} title="No active roadmaps yet">
+            Approve a roadmap from Smart Intake and it will be tracked here.
+          </EmptyState>
+        ) : (
+          active.slice(0, 6).map((y) => (
+            <Link className="list-row" href={`/officer/youth/${y.id}`} key={y.id}>
+              <Avatar name={y.full_name} email={y.email} />
+              <div className="list-row-body">
+                <strong>{y.full_name}</strong>
+                <span>{y.goal || "No goal"}</span>
+              </div>
+              <div className="progress-row" style={{ width: 200 }}>
+                <ProgressBar value={progressPercent(y.case)} />
+                <span>
+                  {completedSteps(y.case)}/{y.case?.total_steps}
+                </span>
+              </div>
+              <ArrowRight size={16} className="muted" aria-hidden />
+            </Link>
+          ))
+        )}
+      </section>
+
+      <div style={{ marginTop: 16 }}>
+        <Alert tone="success" title="You are the final decision-maker">
+          AI-generated roadmaps are drafts. A youth only sees steps after you review and approve them.
+        </Alert>
+      </div>
+    </>
   );
 }

@@ -116,18 +116,15 @@ function SignUpForm() {
         return;
       }
 
-      if (role === "youth") {
-        // Auto-login the youth and go directly to onboarding
-        const loginResult = await signIn("credentials", {
-          email,
-          password,
-          redirect: false,
-        });
-        if (loginResult?.ok) {
-          router.push("/onboarding");
-        } else {
-          router.push("/auth/signin");
-        }
+      // Sign the new user straight in.
+      const loginResult = await signIn("credentials", {
+        email,
+        password,
+        redirect: false,
+      });
+      if (loginResult?.ok) {
+        router.push(role === "youth" ? "/onboarding" : "/officer");
+        router.refresh();
       } else {
         router.push("/auth/signin?registered=true");
       }
@@ -410,6 +407,8 @@ function SignUpForm() {
                       onChange={(e) => setFullName(e.target.value)}
                       required
                       autoFocus
+                      autoComplete="name"
+                      maxLength={120}
                     />
                   </div>
                 </label>
@@ -424,6 +423,7 @@ function SignUpForm() {
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
                       required
+                      autoComplete="email"
                     />
                   </div>
                 </label>
@@ -432,6 +432,7 @@ function SignUpForm() {
                   <span className="ob-field-label">Password</span>
                   <PasswordInput
                     id="signup-password"
+                    autoComplete="new-password"
                     placeholder="At least 8 characters"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
@@ -496,7 +497,10 @@ function SignUpForm() {
 
         <p className="ob-privacy">
           <ShieldCheck aria-hidden size={14} />
-          Your information is safe and private
+          <span>
+            By creating an account you agree to the <Link href="/terms">terms of use</Link> and{" "}
+            <Link href="/privacy">privacy notice</Link>.
+          </span>
         </p>
       </section>
     </main>

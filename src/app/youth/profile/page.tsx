@@ -1,447 +1,201 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import {
-  Briefcase,
-  GraduationCap,
-  Building2,
-  MapPin,
-  User,
-  ShieldCheck,
-  CheckCircle2,
-  Clock,
-  Mail,
-  Pencil,
-  Save,
-  X,
-} from "lucide-react";
-import { YouthShell } from "@/components/youth/YouthShell";
-import { getPhotoUrl } from "@/lib/photos";
-
-interface Profile {
-  id: string;
-  full_name: string;
-  email: string;
-  goal: string;
-  skills: string;
-  district: string;
-  sector: string;
-  role: string;
-  onboarding_completed: boolean;
-  created_at: string;
-}
-
-interface Case {
-  id: string;
-  status: string;
-  current_step: number;
-  total_steps: number;
-  created_at: string;
-  officer: { full_name: string } | null;
-}
-
-const goalIcons: Record<string, typeof Briefcase> = {
-  "Start a business": Briefcase,
-  "Get vocational training": GraduationCap,
-  "Find a job": Building2,
-};
-
-const goalLabels: Record<string, string> = {
-  "Start a business": "Business",
-  "Get vocational training": "Training",
-  "Find a job": "Employment",
-};
+import { useState } from "react";
+import { useSession } from "next-auth/react";
+import { Pencil } from "lucide-react";
+import { Alert, Avatar, PageHeader, PageSkeleton, ProgressBar } from "@/components/ui";
+import { districts, goalOptions, sectorsFor } from "@/data/options";
+import { api } from "@/lib/api-client";
+import { completedSteps, progressPercent } from "@/lib/case-status";
+import { formatDate } from "@/lib/format";
+import { useJourney } from "@/lib/use-journey";
 
 export default function YouthProfile() {
-  const [profile, setProfile] = useState<Profile | null>(null);
-  const [youthCase, setYouthCase] = useState<Case | null>(null);
-  const [loading, setLoading] = useState(true);
+  const { update } = useSession();
+  const { data, error, loading, reload } = useJourney({ requireOnboarding: false });
   const [editing, setEditing] = useState(false);
+  const [form, setForm] = useState({ full_name: "", goal: "", skills_background: "", district: "", sector: "" });
   const [saving, setSaving] = useState(false);
-  const [editGoal, setEditGoal] = useState("");
-  const [editSkills, setEditSkills] = useState("");
-  const [editDistrict, setEditDistrict] = useState("");
-  const [editSector, setEditSector] = useState("");
-  const [saved, setSaved] = useState(false);
+  const [notice, setNotice] = useState<{ tone: "success" | "error"; text: string } | null>(null);
 
-  useEffect(() => {
-    async function load() {
-      try {
-        const profileRes = await fetch("/api/profile");
-        if (profileRes.ok) {
-          const data = await profileRes.json();
-          setProfile(data);
-          setEditGoal(data.goal || "");
-          setEditSkills(data.skills || "");
-          setEditDistrict(data.district || "");
-          setEditSector(data.sector || "");
-        }
+  if (loading) return <PageSkeleton />;
+  if (error || !data?.profile) return <Alert tone="error" title="We couldn't load your profile">{error}</Alert>;
 
-        const casesRes = await fetch("/api/cases");
-        if (casesRes.ok) {
-          const casesData = await casesRes.json();
-          if (casesData.length > 0) {
-            setYouthCase(casesData[0]);
-          }
-        }
-      } catch {
-        // Silently handle errors
-      } finally {
-        setLoading(false);
-      }
-    }
-    load();
-  }, []);
+  const { profile, case: youthCase, officer } = data;
+  const skills = profile.skills_background || profile.skills || "";
 
-  async function handleSave() {
+  function startEditing() {
+    setForm({
+      full_name: profile!.full_name || "",
+      goal: profile!.goal || "",
+      skills_background: skills,
+      district: profile!.district || "",
+      sector: profile!.sector || "",
+    });
+    setNotice(null);
+    setEditing(true);
+  }
+
+  async function save(e: React.FormEvent) {
+    e.preventDefault();
     setSaving(true);
+    setNotice(null);
     try {
-      const res = await fetch("/api/profile", {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          goal: editGoal,
-          skills: editSkills,
-          district: editDistrict,
-          sector: editSector,
-        }),
-      });
-      if (res.ok) {
-        const updated = await res.json();
-        setProfile(updated);
-        setEditing(false);
-        setSaved(true);
-        setTimeout(() => setSaved(false), 3000);
-      }
-    } catch {
-      // Handle error silently
+      await api("/api/profile", { method: "PATCH", json: form });
+      await reload();
+      if (form.full_name !== profile!.full_name) await update?.();
+      setEditing(false);
+      setNotice({ tone: "success", text: "Your profile has been updated." });
+    } catch (err) {
+      setNotice({ tone: "error", text: err instanceof Error ? err.message : "Could not save changes." });
     } finally {
       setSaving(false);
     }
   }
 
-  function handleCancel() {
-    setEditGoal(profile?.goal || "");
-    setEditSkills(profile?.skills || "");
-    setEditDistrict(profile?.district || "");
-    setEditSector(profile?.sector || "");
-    setEditing(false);
-  }
-
-  if (loading) {
-    return (
-      <YouthShell active="My Profile">
-        <div className="youth-page-wrap">
-          <div className="yd-loading">
-            <div className="yd-loading-spinner" />
-            <p>Loading your profile…</p>
-          </div>
-        </div>
-      </YouthShell>
-    );
-  }
-
-  if (!profile) {
-    return (
-      <YouthShell active="My Profile">
-        <div className="youth-page-wrap">
-          <div className="profile-empty">
-            <User size={48} />
-            <h2>Profile not found</h2>
-            <p>Please complete onboarding to set up your profile.</p>
-          </div>
-        </div>
-      </YouthShell>
-    );
-  }
-
-  const initials = profile.full_name
-    ?.split(" ")
-    .map((w) => w[0])
-    .join("")
-    .toUpperCase();
-  const photoUrl = getPhotoUrl(profile.email);
-  const goalIcon = goalIcons[profile.goal] || Briefcase;
-  const GoalIcon = goalIcon;
-  const completedSteps = youthCase
-    ? youthCase.current_step
-    : 0;
-  const totalSteps = youthCase ? youthCase.total_steps : 0;
-  const progressPercent =
-    totalSteps > 0 ? Math.round((completedSteps / totalSteps) * 100) : 0;
+  const goalChoices = Array.from(new Set([...goalOptions, ...(form.goal ? [form.goal] : [])]));
+  const districtChoices = Array.from(new Set([...districts, ...(form.district ? [form.district] : [])]));
 
   return (
-    <YouthShell active="My Profile">
-      <div className="youth-page-wrap">
-        {/* Header */}
-        <div className="profile-header">
-          <div className="profile-header-top">
-            <div className="profile-avatar-section">
-              {photoUrl ? (
-                <img
-                  src={photoUrl}
-                  alt={profile.full_name}
-                  className="profile-photo"
-                />
-              ) : (
-                <div className="profile-initials">{initials}</div>
-              )}
-              <div className="profile-header-info">
-                <h1>{profile.full_name}</h1>
+    <>
+      <PageHeader title="My profile" description="The information your youth officer uses to prepare your roadmap." />
+
+      {notice ? <Alert tone={notice.tone}>{notice.text}</Alert> : null}
+
+      <div className="grid-main" style={{ marginTop: notice ? 16 : 0 }}>
+        <section className="card">
+          <header className="card-header">
+            <div style={{ display: "flex", gap: 14, alignItems: "center" }}>
+              <Avatar name={profile.full_name} email={profile.email} size="lg" />
+              <div>
+                <h2 style={{ fontSize: 18 }}>{profile.full_name}</h2>
                 <p>{profile.email}</p>
               </div>
             </div>
-            {!editing && (
-              <button
-                className="profile-edit-btn"
-                type="button"
-                onClick={() => setEditing(true)}
-              >
-                <Pencil size={14} />
-                Edit profile
+            {!editing ? (
+              <button className="btn btn-secondary btn-sm" type="button" onClick={startEditing}>
+                <Pencil size={14} aria-hidden /> Edit
               </button>
-            )}
-          </div>
-          {saved && (
-            <div className="profile-saved-banner">
-              <CheckCircle2 size={16} />
-              Profile updated successfully
-            </div>
-          )}
-        </div>
+            ) : null}
+          </header>
 
-        {/* Personal Info Card */}
-        <section className="profile-card">
-          <div className="profile-card-header">
-            <h2>
-              <User size={16} />
-              Personal Information
-            </h2>
-          </div>
-          <div className="profile-info-grid">
-            <div className="profile-info-row">
-              <span className="profile-info-label">
-                <Mail size={14} />
-                Email
-              </span>
-              <span className="profile-info-value">{profile.email}</span>
-            </div>
-            <div className="profile-info-row">
-              <span className="profile-info-label">
-                <User size={14} />
-                Full name
-              </span>
-              <span className="profile-info-value">{profile.full_name}</span>
-            </div>
-            <div className="profile-info-row">
-              <span className="profile-info-label">
-                <ShieldCheck size={14} />
-                Account type
-              </span>
-              <span className="profile-info-value profile-role-badge">
-                Youth
-              </span>
-            </div>
-            <div className="profile-info-row">
-              <span className="profile-info-label">
-                <Clock size={14} />
-                Member since
-              </span>
-              <span className="profile-info-value">
-                {profile.created_at
-                  ? new Date(profile.created_at).toLocaleDateString("en-US", {
-                      year: "numeric",
-                      month: "long",
-                      day: "numeric",
-                    })
-                  : "—"}
-              </span>
-            </div>
-          </div>
-        </section>
-
-        {/* Goals & Location Card */}
-        <section className="profile-card">
-          <div className="profile-card-header">
-            <h2>
-              <Briefcase size={16} />
-              Goals &amp; Location
-            </h2>
-          </div>
           {editing ? (
-            <div className="profile-edit-form">
-              <div className="profile-field">
-                <label htmlFor="profile-goal">Primary goal</label>
-                <select
-                  id="profile-goal"
-                  value={editGoal}
-                  onChange={(e) => setEditGoal(e.target.value)}
-                >
-                  <option value="Start a business">Start a business</option>
-                  <option value="Get vocational training">
-                    Get vocational training
-                  </option>
-                  <option value="Find a job">Find a job</option>
-                </select>
-              </div>
-              <div className="profile-field">
-                <label htmlFor="profile-skills">Skills &amp; background</label>
-                <textarea
-                  id="profile-skills"
-                  rows={3}
-                  maxLength={300}
-                  placeholder="Describe your skills, experience, or background…"
-                  value={editSkills}
-                  onChange={(e) => setEditSkills(e.target.value)}
-                />
-                <span className="profile-char-count">
-                  {editSkills.length}/300
-                </span>
-              </div>
-              <div className="profile-field-row">
-                <div className="profile-field">
-                  <label htmlFor="profile-district">District</label>
-                  <input
-                    id="profile-district"
-                    type="text"
-                    value={editDistrict}
-                    onChange={(e) => setEditDistrict(e.target.value)}
-                    placeholder="e.g. Kicukiro"
+            <form className="card-body" onSubmit={save}>
+              <div className="form-grid">
+                <label className="field span-2">
+                  <span className="field-label">Full name</span>
+                  <input className="input" required maxLength={120} value={form.full_name} onChange={(e) => setForm({ ...form, full_name: e.target.value })} />
+                </label>
+                <label className="field span-2">
+                  <span className="field-label">Goal</span>
+                  <select className="select" value={form.goal} onChange={(e) => setForm({ ...form, goal: e.target.value })}>
+                    <option value="">Choose a goal</option>
+                    {goalChoices.map((g) => (
+                      <option key={g}>{g}</option>
+                    ))}
+                  </select>
+                </label>
+                <label className="field span-2">
+                  <span className="field-label">Skills and background</span>
+                  <textarea
+                    className="textarea"
+                    rows={4}
+                    maxLength={1000}
+                    placeholder="Training, certificates, work experience…"
+                    value={form.skills_background}
+                    onChange={(e) => setForm({ ...form, skills_background: e.target.value })}
                   />
-                </div>
-                <div className="profile-field">
-                  <label htmlFor="profile-sector">Sector</label>
-                  <input
-                    id="profile-sector"
-                    type="text"
-                    value={editSector}
-                    onChange={(e) => setEditSector(e.target.value)}
-                    placeholder="e.g. Kimironko"
-                  />
-                </div>
+                  <span className="field-hint">{form.skills_background.length}/1000</span>
+                </label>
+                <label className="field">
+                  <span className="field-label">District</span>
+                  <select className="select" value={form.district} onChange={(e) => setForm({ ...form, district: e.target.value, sector: "" })}>
+                    <option value="">Choose a district</option>
+                    {districtChoices.map((d) => (
+                      <option key={d}>{d}</option>
+                    ))}
+                  </select>
+                </label>
+                <label className="field">
+                  <span className="field-label">Sector</span>
+                  <select className="select" value={form.sector} disabled={!form.district} onChange={(e) => setForm({ ...form, sector: e.target.value })}>
+                    <option value="">Choose a sector</option>
+                    {Array.from(new Set([...sectorsFor(form.district), ...(form.sector ? [form.sector] : [])])).map((s) => (
+                      <option key={s}>{s}</option>
+                    ))}
+                  </select>
+                </label>
               </div>
-              <div className="profile-edit-actions">
-                <button
-                  className="profile-btn outline"
-                  type="button"
-                  onClick={handleCancel}
-                >
-                  <X size={14} />
+              <p className="field-hint" style={{ marginTop: 14 }}>
+                Changes are shared with your officer. If your goal changes, let them know so they can update your roadmap.
+              </p>
+              <div className="form-actions">
+                <button className="btn btn-ghost" type="button" onClick={() => setEditing(false)} disabled={saving}>
                   Cancel
                 </button>
-                <button
-                  className="profile-btn primary"
-                  type="button"
-                  onClick={handleSave}
-                  disabled={saving}
-                >
-                  <Save size={14} />
+                <button className="btn btn-primary" type="submit" disabled={saving}>
+                  {saving ? <span className="spinner" aria-hidden /> : null}
                   {saving ? "Saving…" : "Save changes"}
                 </button>
               </div>
-            </div>
+            </form>
           ) : (
-            <div className="profile-info-grid">
-              <div className="profile-info-row">
-                <span className="profile-info-label">
-                  <GoalIcon size={14} />
-                  Goal
-                </span>
-                <span className="profile-info-value">
-                  {profile.goal || (
-                    <span className="profile-undefined">Not set</span>
-                  )}
-                  {profile.goal && (
-                    <span className="profile-tag">
-                      {goalLabels[profile.goal] || profile.goal}
-                    </span>
-                  )}
-                </span>
+            <dl className="dl">
+              <div>
+                <dt>Goal</dt>
+                <dd>{profile.goal || <span className="muted">Not set</span>}</dd>
               </div>
-              <div className="profile-info-row">
-                <span className="profile-info-label">
-                  <Pencil size={14} />
-                  Skills
-                </span>
-                <span className="profile-info-value">
-                  {profile.skills || (
-                    <span className="profile-undefined">
-                      No skills added yet
-                    </span>
-                  )}
-                </span>
+              <div>
+                <dt>Skills and background</dt>
+                <dd>{skills || <span className="muted">Not added yet</span>}</dd>
               </div>
-              <div className="profile-info-row">
-                <span className="profile-info-label">
-                  <MapPin size={14} />
-                  Location
-                </span>
-                <span className="profile-info-value">
-                  {profile.district ? (
-                    <>
-                      {profile.district}
-                      {profile.sector ? `, ${profile.sector}` : ""}
-                    </>
-                  ) : (
-                    <span className="profile-undefined">Not set</span>
-                  )}
-                </span>
+              <div>
+                <dt>Location</dt>
+                <dd>
+                  {profile.district ? [profile.district, profile.sector].filter(Boolean).join(", ") : <span className="muted">Not set</span>}
+                </dd>
               </div>
-            </div>
+              <div>
+                <dt>Member since</dt>
+                <dd>{formatDate(profile.created_at, { day: "numeric", month: "long", year: "numeric" })}</dd>
+              </div>
+            </dl>
           )}
         </section>
 
-        {/* Case Status Card */}
-        <section className="profile-card">
-          <div className="profile-card-header">
-            <h2>
-              <CheckCircle2 size={16} />
-              My Case
-            </h2>
-          </div>
-          {youthCase ? (
-            <div className="profile-case-section">
-              <div className="profile-case-stats">
-                <div className="profile-case-stat">
-                  <span>Status</span>
-                  <strong className={`profile-status ${youthCase.status}`}>
-                    {youthCase.status.charAt(0).toUpperCase() +
-                      youthCase.status.slice(1)}
-                  </strong>
-                </div>
-                <div className="profile-case-stat">
-                  <span>Progress</span>
-                  <strong>
-                    {completedSteps} / {totalSteps} steps
-                  </strong>
-                </div>
-                <div className="profile-case-stat">
-                  <span>Assigned officer</span>
-                  <strong>
-                    {youthCase.officer?.full_name || (
-                      <span className="profile-undefined">Not assigned</span>
-                    )}
-                  </strong>
-                </div>
-              </div>
-              <div className="profile-progress-bar">
-                <div className="profile-progress-header">
-                  <span>Roadmap progress</span>
-                  <strong>{progressPercent}%</strong>
-                </div>
-                <div className="meter-track">
-                  <span style={{ width: `${progressPercent}%` }} />
-                </div>
-              </div>
+        <aside className="card">
+          <header className="card-header">
+            <h2>My case</h2>
+          </header>
+          <dl className="dl">
+            <div>
+              <dt>Officer</dt>
+              <dd>{officer?.full_name || <span className="muted">Not assigned yet</span>}</dd>
             </div>
-          ) : (
-            <div className="profile-case-empty">
-              <Clock size={32} />
-              <p>No case yet. Complete onboarding and your officer will create a roadmap for you.</p>
+            <div>
+              <dt>Status</dt>
+              <dd>
+                {youthCase?.status === "completed"
+                  ? "Completed"
+                  : youthCase && youthCase.total_steps > 0
+                    ? "In progress"
+                    : "Waiting for roadmap"}
+              </dd>
             </div>
-          )}
-        </section>
+          </dl>
+          {youthCase && youthCase.total_steps > 0 ? (
+            <div className="card-body" style={{ borderTop: "1px solid var(--ui-line)" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", fontSize: 13, marginBottom: 8 }}>
+                <span className="muted">
+                  {completedSteps(youthCase)} of {youthCase.total_steps} steps
+                </span>
+                <strong>{progressPercent(youthCase)}%</strong>
+              </div>
+              <ProgressBar value={progressPercent(youthCase)} />
+            </div>
+          ) : null}
+        </aside>
       </div>
-    </YouthShell>
+    </>
   );
 }

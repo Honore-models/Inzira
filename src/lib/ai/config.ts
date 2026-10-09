@@ -1,33 +1,40 @@
 // ============================================================
 // INZIRA AI - Configuration
-// Chat (assistant + roadmaps) → NVIDIA NIM
-// Embeddings (RAG) → OpenRouter
+// Chat (assistant + roadmaps) → Groq (free tier, OpenAI-compatible API)
+// Embeddings (optional)       → any OpenAI-compatible /embeddings endpoint
+//
+// Groq does not offer embedding models. Retrieval therefore works without
+// embeddings (BM25 keyword ranking over the verified library). If an
+// embedding provider is configured, vector similarity is blended in.
 // ============================================================
 
+function list(...values: (string | undefined)[]): string[] {
+  return Array.from(
+    new Set(values.map((v) => v?.trim()).filter((v): v is string => !!v)),
+  );
+}
+
 export const AI_CONFIG = {
-  nvidiaApiKey: process.env.NVIDIA_API_KEY || "",
-  openrouterApiKey: process.env.OPENROUTER_API_KEY || "",
+  groqApiKey: process.env.GROQ_API_KEY || "",
+  groqBaseUrl: process.env.GROQ_BASE_URL || "https://api.groq.com/openai/v1",
 
-  nvidiaBaseUrl:
-    process.env.NVIDIA_API_BASE_URL || "https://integrate.api.nvidia.com/v1",
-  openrouterBaseUrl:
-    process.env.OPENROUTER_BASE_URL || "https://openrouter.ai/api/v1",
+  // Generation models, tried in order. Each Groq model has its own rate-limit
+  // bucket, so falling through the list is the fastest way past a 429.
+  chatModels: list(
+    process.env.AI_MODEL || "llama-3.3-70b-versatile",
+    process.env.AI_MODEL_FALLBACK_1 || "openai/gpt-oss-120b",
+    process.env.AI_MODEL_FALLBACK_2 || "llama-3.1-8b-instant",
+  ),
 
-  // Generation models (tried in order). NVIDIA NIM ids.
-  chatModels: [
-    process.env.AI_MODEL || "meta/llama-3.2-90b-vision-instruct",
-    process.env.AI_MODEL_FALLBACK_1 || "meta/llama-3.1-70b-instruct",
-    process.env.AI_MODEL_FALLBACK_2 || "meta/llama-3.3-70b-instruct",
-  ],
-
-  // Embedding models stay on OpenRouter (1024-d vectors)
-  embeddingModels: [
-    process.env.EMBEDDING_MODEL || "liquid/lfm-2.5-embedding-350m:free",
-    process.env.EMBEDDING_MODEL_FALLBACK_1 || "nvidia/nemotron-3-embed-1b:free",
-    process.env.EMBEDDING_MODEL_FALLBACK_2 ||
-      "nvidia/llama-nemotron-embed-vl-1b-v2:free",
-  ],
-
+  // Optional embeddings (1024-d to match the pgvector column).
+  embeddingApiKey:
+    process.env.EMBEDDING_API_KEY || process.env.OPENROUTER_API_KEY || "",
+  embeddingBaseUrl:
+    process.env.EMBEDDING_BASE_URL || "https://openrouter.ai/api/v1",
+  embeddingModels: list(
+    process.env.EMBEDDING_MODEL,
+    process.env.EMBEDDING_MODEL_FALLBACK_1,
+  ),
   embeddingDimensions: 1024,
 
   chunkSize: 1000,
@@ -38,18 +45,19 @@ export const AI_CONFIG = {
 
   hybridWeights: {
     vector: 0.6,
-    keyword: 0.25,
-    metadata: 0.15,
+    keyword: 0.4,
   },
 
-  // Roadmaps need room for JSON; keep temperature low for structured output
-  maxTokens: 2048,
-  temperature: 0.3,
-  topP: 1,
+  maxTokens: 1024,
+  roadmapMaxTokens: 3000,
+  temperature: 0.2,
 
-  maxRetries: 3,
-  retryBaseDelayMs: 2000,
+  requestTimeoutMs: 45_000,
 } as const;
+
+export function embeddingsEnabled(): boolean {
+  return !!AI_CONFIG.embeddingApiKey && AI_CONFIG.embeddingModels.length > 0;
+}
 
 /**
  * Validate that required environment variables are set.
@@ -57,11 +65,6 @@ export const AI_CONFIG = {
  */
 export function validateConfig(): string[] {
   const missing: string[] = [];
-  if (!process.env.NVIDIA_API_KEY) {
-    missing.push("NVIDIA_API_KEY");
-  }
-  if (!process.env.OPENROUTER_API_KEY) {
-    missing.push("OPENROUTER_API_KEY");
-  }
+  if (!process.env.GROQ_API_KEY) missing.push("GROQ_API_KEY");
   return missing;
 }

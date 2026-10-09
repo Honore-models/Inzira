@@ -1,5 +1,22 @@
+# dependencies
 node_modules
-.env.local
+
+# Next.js build output
+.next
+out
+*.tsbuildinfo
+next-env.d.ts
+
+# logs
+*.log
+
+# environment (never commit secrets)
 .env
 .env.*
-!.env.example
+!.env.local.example
+
+# local tooling
+.agents
+.dist
+.vercel
+.DS_Store

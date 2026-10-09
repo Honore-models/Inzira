@@ -1,34 +1,36 @@
 // ============================================================
-// GET /api/ai/documents
-// List ingested documents (officers only for management view)
+// GET    /api/ai/documents        — list the verified library (officers)
+// DELETE /api/ai/documents?id=…   — remove a document and its chunks
 // ============================================================
 
 import { NextResponse } from "next/server";
-import { createClient } from "@/lib/supabase/server";
-import { auth } from "@/lib/auth";
+import { invalidateRetrievalCache } from "@/lib/ai";
+import { isResponse, jsonError, requireViewer } from "@/lib/server/access";
 
 export async function GET() {
-  try {
-    const session = await auth();
-    if (session?.user?.role !== "officer") {
-      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-    }
-    const supabase = await createClient();
+  const viewer = await requireViewer("officer");
+  if (isResponse(viewer)) return viewer;
 
-    const { data: documents, error } = await supabase
-      .from("documents")
-      .select("*")
-      .order("created_at", { ascending: false });
+  const { data, error } = await viewer.db
+    .from("documents")
+    .select("id, title, institution, description, source_url, verified, verified_at, chunk_count, created_at")
+    .order("institution")
+    .order("title");
 
-    if (error) {
-      return NextResponse.json({ error: error.message }, { status: 500 });
-    }
+  if (error) return jsonError("Could not load the library.", 500);
+  return NextResponse.json(data);
+}
 
-    return NextResponse.json(documents);
-  } catch {
-    return NextResponse.json(
-      { error: "Internal server error" },
-      { status: 500 },
-    );
-  }
+export async function DELETE(request: Request) {
+  const viewer = await requireViewer("officer");
+  if (isResponse(viewer)) return viewer;
+
+  const id = new URL(request.url).searchParams.get("id");
+  if (!id) return jsonError("Document id is required.", 400);
+
+  const { error } = await viewer.db.from("documents").delete().eq("id", id);
+  if (error) return jsonError("Could not remove the document.", 500);
+
+  invalidateRetrievalCache();
+  return NextResponse.json({ ok: true });
 }

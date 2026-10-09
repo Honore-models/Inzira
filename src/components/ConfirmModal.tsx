@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef } from "react";
-import { AlertTriangle, LogOut, X } from "lucide-react";
+import { AlertTriangle, CheckCircle2, LogOut, X } from "lucide-react";
 
 interface ConfirmModalProps {
   open: boolean;
@@ -10,7 +10,7 @@ interface ConfirmModalProps {
   confirmText?: string;
   cancelText?: string;
   variant?: "danger" | "warning" | "info";
-  icon?: "logout" | "warning";
+  icon?: "logout" | "warning" | "check";
   onConfirm: () => void;
   onCancel: () => void;
 }
@@ -22,7 +22,7 @@ export function ConfirmModal({
   confirmText = "Confirm",
   cancelText = "Cancel",
   variant = "danger",
-  icon = "warning",
+  icon,
   onConfirm,
   onCancel,
 }: ConfirmModalProps) {
@@ -85,6 +85,8 @@ export function ConfirmModal({
         <div className={`confirm-icon ${variant}`}>
           {icon === "logout" ? (
             <LogOut size={24} />
+          ) : icon === "check" || (!icon && variant === "info") ? (
+            <CheckCircle2 size={24} />
           ) : (
             <AlertTriangle size={24} />
           )}

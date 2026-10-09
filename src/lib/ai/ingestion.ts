@@ -1,11 +1,13 @@
 // ============================================================
 // INZIRA AI - Document Ingestion Pipeline
-// Uses BGE-M3 embeddings via OpenRouter
+// Embeddings are optional: without a provider, chunks are stored without
+// vectors and retrieved through keyword ranking.
 // ============================================================
 
 import { createClient } from "@/lib/supabase/server";
 import { generateEmbeddings } from "./embeddings";
 import { chunkText } from "./chunking";
+import { invalidateRetrievalCache } from "./retrieval";
 import type { ChunkedText } from "./types";
 
 export interface IngestResult {
@@ -21,7 +23,7 @@ export interface IngestResult {
  * Pipeline:
  * 1. Create a document record in Supabase
  * 2. Split text into chunks
- * 3. Generate BGE-M3 embeddings for all chunks
+ * 3. Generate embeddings for all chunks (when a provider is configured)
  * 4. Store chunks with embeddings in Supabase
  * 5. Update document record with chunk count
  */
@@ -79,26 +81,24 @@ export async function ingestDocument(params: {
     throw new Error("No chunks generated from document text");
   }
 
-  // 3. Generate BGE-M3 embeddings for all chunks
+  // 3. Generate embeddings (optional — null when no provider is configured)
   const batchSize = 20;
-  const allEmbeddings: number[][] = [];
+  const allEmbeddings: (number[] | null)[] = [];
 
   for (let i = 0; i < chunks.length; i += batchSize) {
     const batch = chunks.slice(i, i + batchSize);
-    const embeddings = await generateEmbeddings(
-      batch.map((c) => c.content),
-    );
-    allEmbeddings.push(...embeddings);
+    const embeddings = await generateEmbeddings(batch.map((c) => c.content));
+    allEmbeddings.push(...batch.map((_, j) => embeddings?.[j] ?? null));
   }
 
-  // 4. Store chunks with embeddings in Supabase
+  // 4. Store chunks in Supabase
   const chunkInserts = chunks.map((chunk, index) => ({
     document_id: documentId,
     content: chunk.content,
     page_number: chunk.pageNumber,
     chunk_index: chunk.chunkIndex,
     institution,
-    embedding: JSON.stringify(allEmbeddings[index]),
+    embedding: allEmbeddings[index] ? JSON.stringify(allEmbeddings[index]) : null,
     metadata: chunk.metadata,
   }));
 
@@ -110,6 +110,7 @@ export async function ingestDocument(params: {
       .insert(batch);
 
     if (chunkError) {
+      await supabase.from("documents").delete().eq("id", documentId);
       throw new Error(`Failed to insert chunks: ${chunkError.message}`);
     }
   }
@@ -119,6 +120,8 @@ export async function ingestDocument(params: {
     .from("documents")
     .update({ chunk_count: chunks.length })
     .eq("id", documentId);
+
+  invalidateRetrievalCache();
 
   return {
     documentId,

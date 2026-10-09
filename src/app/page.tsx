@@ -1,5 +1,6 @@
 import Image from "next/image";
-import { ArrowRight, Menu, Mail, MapPin, Phone, ShieldCheck, Briefcase, GraduationCap, FileText, Shield } from "lucide-react";
+import { ArrowRight, Mail, MapPin, ShieldCheck, Briefcase, GraduationCap, FileText, Landmark } from "lucide-react";
+import { LandingHeader } from "@/components/LandingHeader";
 
 const youthItems = [
   {
@@ -68,24 +69,7 @@ const journey = [
 export default function Home() {
   return (
     <main>
-      <header className="site-header">
-        <a className="brand" href="#top" aria-label="Inzira home">
-          <img src="/inzira_logo.png" alt="Inzira" />
-        </a>
-        <nav className="nav" aria-label="Primary navigation">
-          <a href="#how-it-works">How it works</a>
-          <a href="#problem">The problem</a>
-          <a href="#demo">Live demo</a>
-        </nav>
-        <div className="header-right">
-          <button className="header-menu-btn" type="button" aria-label="Menu">
-            <Menu size={22} />
-          </button>
-          <a className="header-action" href="/auth/signin">
-            Sign in
-          </a>
-        </div>
-      </header>
+      <LandingHeader />
 
       <section id="top" className="hero section">
         <p className="eyebrow">A guided path to real opportunity</p>
@@ -97,30 +81,29 @@ export default function Home() {
           Youth employment programs in Rwanda already exist. Inzira makes them
           findable, sequenced, and easy to follow.
         </p>
-        <div className="button-row" id="demo">
+        <div className="button-row">
           <a className="button primary" href="/auth/signup?role=youth">
-            Enter as a youth
+            Get my roadmap
           </a>
           <a className="button secondary" href="/auth/signup?role=officer">
-            Enter as an officer
+            I&apos;m a youth officer
           </a>
         </div>
 
         <div className="stats" aria-label="Key platform context">
           <div>
-            <strong>60%+</strong>
-            <span>of Rwandan youth are unemployed or underemployed</span>
+            <strong>5</strong>
+            <span>institutions brought into one path: RDB, RRA, BRD, RTB and the Ministry of Youth</span>
           </div>
           <div>
-            <strong>3</strong>
-            <span>separate institutions youth must navigate alone</span>
+            <strong>100%</strong>
+            <span>of roadmaps reviewed and approved by a youth officer</span>
           </div>
           <div>
-            <strong>1</strong>
-            <span>guided path connecting them</span>
+            <strong>Free</strong>
+            <span>for young people, on any phone with a browser</span>
           </div>
         </div>
-        <p className="note">Figures illustrative for demonstration purposes</p>
       </section>
 
       <section id="problem" className="problem section split">
@@ -128,8 +111,8 @@ export default function Home() {
           <p className="eyebrow">The problem</p>
           <h2>Everything a youth needs already exists. Finding it is the problem.</h2>
           <p>
-            RDB, BDF, and RTB all offer real, funded support for education,
-            training, and business growth. But each institution assumes you
+            RDB, RRA, BRD and RTB all offer real, funded support for training,
+            registration and business growth. But each institution assumes you
             already know what to do and in what order.
           </p>
           <p>
@@ -157,7 +140,7 @@ export default function Home() {
         <h2 id="solution-title">One path. Two sides. Built together.</h2>
         <div className="two-sides">
           <FeatureList id="youth" title="For the youth" items={youthItems} />
-          <FeatureList id="officer" title="For the officer" items={officerItems} />
+          <FeatureList id="officers" title="For the officer" items={officerItems} />
         </div>
         <div className="principle">
           <p className="eyebrow">Our principle</p>
@@ -212,20 +195,20 @@ export default function Home() {
             </li>
           ))}
         </ol>
-        <a href="#top" className="text-link">
-          See how it works <ArrowRight aria-hidden size={16} />
+        <a href="/auth/signup?role=youth" className="text-link">
+          Start your journey <ArrowRight aria-hidden size={16} />
         </a>
       </section>
 
       <section className="cta section">
-        <h2>Ready to see it in action?</h2>
-        <p>Choose your entrance and explore Inzira.</p>
+        <h2>Ready to find your path?</h2>
+        <p>Create a free account in two minutes. Already registered? <a href="/auth/signin" style={{ color: "var(--green)", fontWeight: 700 }}>Sign in</a>.</p>
         <div className="button-row">
           <a className="button primary" href="/auth/signup?role=youth">
-            Enter as a youth
+            Get my roadmap
           </a>
           <a className="button secondary" href="/auth/signup?role=officer">
-            Enter as an officer
+            I&apos;m a youth officer
           </a>
         </div>
       </section>
@@ -240,17 +223,6 @@ export default function Home() {
               A guided path connecting Rwandan youth with verified employment
               support programs.
             </p>
-            <div className="footer-social">
-              <a href="#" aria-label="Twitter">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 4s-.7 2.1-2 3.4c1.6 10-9.4 17.3-18 11.6 2.2.1 4.4-.6 6-2C3 15.5.5 9.6 3 5c2.2 2.6 5.6 4.1 9 4-.9-4.2 4-6.6 7-3.8 1.1 0 3-1.2 3-1.2z"/></svg>
-              </a>
-              <a href="#" aria-label="LinkedIn">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M16 8a6 6 0 0 1 6 6v7h-4v-7a2 2 0 0 0-2-2 2 2 0 0 0-2 2v7h-4v-7a6 6 0 0 1 6-6z"/><rect width="4" height="12" x="2" y="9"/><circle cx="4" cy="4" r="2"/></svg>
-              </a>
-              <a href="#" aria-label="Facebook">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z"/></svg>
-              </a>
-            </div>
           </div>
 
           <div className="footer-links-col">
@@ -258,19 +230,18 @@ export default function Home() {
             <ul className="platform-links">
               <li><a href="#how-it-works">How it works</a></li>
               <li><a href="#problem">The problem</a></li>
-              <li><a href="#demo">Live demo</a></li>
-              <li><a href="/auth/signup?role=youth">Enter as a youth</a></li>
-              <li><a href="/auth/signup?role=officer">Enter as an officer</a></li>
+              <li><a href="/auth/signup?role=youth">Create an account</a></li>
+              <li><a href="/auth/signin">Sign in</a></li>
             </ul>
           </div>
 
           <div className="footer-links-col">
-            <h4>Resources</h4>
+            <h4>Official resources</h4>
             <ul>
-              <li><a href="#"><Briefcase size={16} aria-hidden /> RDB — Business support</a></li>
-              <li><a href="#"><Shield size={16} aria-hidden /> BDF — Loan guarantees</a></li>
-              <li><a href="#"><GraduationCap size={16} aria-hidden /> RTB — Vocational training</a></li>
-              <li><a href="#"><FileText size={16} aria-hidden /> RRA — Tax registration</a></li>
+              <li><a href="https://rdb.rw" target="_blank" rel="noopener noreferrer"><Briefcase size={16} aria-hidden /> RDB — Business registration</a></li>
+              <li><a href="https://www.rra.gov.rw" target="_blank" rel="noopener noreferrer"><FileText size={16} aria-hidden /> RRA — Tax registration</a></li>
+              <li><a href="https://www.brd.rw" target="_blank" rel="noopener noreferrer"><Landmark size={16} aria-hidden /> BRD — Loan guarantees</a></li>
+              <li><a href="https://www.rtb.gov.rw" target="_blank" rel="noopener noreferrer"><GraduationCap size={16} aria-hidden /> RTB — Vocational training</a></li>
             </ul>
           </div>
 
@@ -279,7 +250,6 @@ export default function Home() {
             <ul>
               <li><a href="mailto:hello@inzira.rw"><Mail size={16} aria-hidden /> hello@inzira.rw</a></li>
               <li><span><MapPin size={16} aria-hidden /> Kigali, Rwanda</span></li>
-              <li><span><Phone size={16} aria-hidden /> +250 788 123 456</span></li>
             </ul>
           </div>
         </div>
@@ -293,9 +263,8 @@ export default function Home() {
             &copy; {new Date().getFullYear()} <strong>Inzira</strong>. All rights reserved.
           </p>
           <div className="footer-legal">
-            <a href="#">Privacy Policy</a>
-            <a href="#">Terms of Service</a>
-            <a href="#">About Inzira</a>
+            <a href="/privacy">Privacy</a>
+            <a href="/terms">Terms of use</a>
           </div>
         </div>
       </footer>

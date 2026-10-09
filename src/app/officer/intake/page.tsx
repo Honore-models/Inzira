@@ -1,487 +1,619 @@
 "use client";
 
-import { Suspense, useEffect, useState } from "react";
+import { Suspense, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import {
-  ArrowRight,
-  ClipboardList,
+  ArrowDown,
+  ArrowUp,
+  Building2,
+  CheckCircle2,
+  Compass,
   FileText,
+  MapPin,
+  Pencil,
+  Plus,
+  RefreshCw,
+  Send,
   Sparkles,
-  ShieldCheck,
+  Trash2,
+  UserRound,
 } from "lucide-react";
-import { OfficerShell } from "@/components/officer/OfficerShell";
-import { AIDraftPanel } from "@/components/officer/AIDraftPanel";
-import { goalOptions, districts, sectors } from "@/data/officer";
+import { ConfirmModal } from "@/components/ConfirmModal";
+import { Alert, Avatar, EmptyState, PageHeader, PageSkeleton } from "@/components/ui";
+import { INSTITUTIONS, districts, goalOptions, sectorsFor } from "@/data/options";
+import { api } from "@/lib/api-client";
+import { STATUS_LABELS, type YouthStatus } from "@/lib/case-status";
 
-interface AiRoadmapStep {
-  order: number;
+interface YouthOption {
+  id: string;
+  full_name: string;
+  email: string;
+  goal: string | null;
+  skills: string | null;
+  skills_background: string | null;
+  situation: string | null;
+  district: string | null;
+  sector: string | null;
+  status: YouthStatus;
+}
+
+interface DraftStep {
+  key: string;
   title: string;
   description: string;
   institution: string;
-  location: string | null;
+  location: string;
   whatToBring: string[];
   whyThisStep: string;
   sources: { documentId: string; documentTitle: string; institution: string; page: number | null }[];
 }
 
-interface AiRoadmapResponse {
+interface Draft {
+  roadmapId: string | null;
   title: string;
   summary: string;
-  steps: AiRoadmapStep[];
+  steps: DraftStep[];
+  pathway?: string | null;
+  sourcesConsulted?: number;
 }
 
-interface YouthProfileData {
-  profile: {
-    id: string;
-    full_name: string;
-    goal: string;
-    skills: string;
-    skills_background: string;
-    situation: string;
-    district: string;
-    sector: string;
-  };
-  cases: { id: string; status: string }[];
-  aiRoadmaps: { id: string; status: string; title: string; steps_data: unknown }[];
+type ApiStep = Omit<DraftStep, "key" | "location"> & { location: string | null };
+
+const newKey = () => `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+
+function toDraftSteps(steps: ApiStep[]): DraftStep[] {
+  return steps.map((s) => ({
+    key: newKey(),
+    title: s.title || "",
+    description: s.description || "",
+    institution: s.institution || "",
+    location: s.location || "",
+    whatToBring: s.whatToBring || [],
+    whyThisStep: s.whyThisStep || "",
+    sources: s.sources || [],
+  }));
 }
 
-function IntakeForm() {
-  const searchParams = useSearchParams();
-  const youthIdParam = searchParams.get("youthId");
+function StepEditor({ step, onSave, onCancel }: { step: DraftStep; onSave: (s: DraftStep) => void; onCancel: () => void }) {
+  const [value, setValue] = useState({ ...step, bring: step.whatToBring.join("\n") });
+  return (
+    <div className="draft-step-edit">
+      <div className="form-grid">
+        <label className="field span-2">
+          <span className="field-label">Step title</span>
+          <input className="input" value={value.title} maxLength={160} onChange={(e) => setValue({ ...value, title: e.target.value })} autoFocus />
+        </label>
+        <label className="field span-2">
+          <span className="field-label">What the youth should do</span>
+          <textarea className="textarea" rows={3} maxLength={1200} value={value.description} onChange={(e) => setValue({ ...value, description: e.target.value })} />
+        </label>
+        <label className="field">
+          <span className="field-label">Institution</span>
+          <input className="input" list="institution-options" value={value.institution} maxLength={80} onChange={(e) => setValue({ ...value, institution: e.target.value })} />
+        </label>
+        <label className="field">
+          <span className="field-label">Where to go</span>
+          <input className="input" value={value.location} maxLength={160} placeholder="e.g. RDB service desk – Gasabo" onChange={(e) => setValue({ ...value, location: e.target.value })} />
+        </label>
+        <label className="field span-2">
+          <span className="field-label">What to bring</span>
+          <textarea className="textarea" rows={3} placeholder="One item per line" value={value.bring} onChange={(e) => setValue({ ...value, bring: e.target.value })} />
+        </label>
+        <label className="field span-2">
+          <span className="field-label">Why this step matters</span>
+          <input className="input" maxLength={400} value={value.whyThisStep} onChange={(e) => setValue({ ...value, whyThisStep: e.target.value })} />
+        </label>
+      </div>
+      <div className="form-actions">
+        <button className="btn btn-ghost btn-sm" type="button" onClick={onCancel}>
+          Cancel
+        </button>
+        <button
+          className="btn btn-primary btn-sm"
+          type="button"
+          disabled={!value.title.trim()}
+          onClick={() => {
+            // eslint-disable-next-line @typescript-eslint/no-unused-vars
+            const { bring, ...rest } = value;
+            onSave({
+              ...rest,
+              title: rest.title.trim(),
+              whatToBring: bring.split("\n").map((l) => l.trim()).filter(Boolean),
+            });
+          }}
+        >
+          Save step
+        </button>
+      </div>
+    </div>
+  );
+}
 
-  const [district, setDistrict] = useState("");
-  const [showRoadmap, setShowRoadmap] = useState(false);
+function Intake() {
+  const router = useRouter();
+  const params = useSearchParams();
+  const [youth, setYouth] = useState<YouthOption[] | null>(null);
+  const [loadError, setLoadError] = useState("");
+  const [youthId, setYouthId] = useState(params.get("youthId") || "");
+  const [search, setSearch] = useState("");
+  const [form, setForm] = useState({ goal: "", skillsBackground: "", district: "", sector: "", notes: "" });
+  const [draft, setDraft] = useState<Draft | null>(null);
+  const [editing, setEditing] = useState<string | null>(null);
+  const [dirty, setDirty] = useState(false);
+  const [noteToYouth, setNoteToYouth] = useState("");
   const [generating, setGenerating] = useState(false);
-  const [name, setName] = useState("");
-  const [goal, setGoal] = useState(goalOptions[0] || "");
-  const [skills, setSkills] = useState("");
-  const [situation, setSituation] = useState("");
-  const [sector, setSector] = useState("");
-  const [aiSteps, setAiSteps] = useState<
-    { number: number; title: string; detail: string; badge: string; location?: string; source?: string }[]
-  >([]);
-  const [aiRoadmap, setAiRoadmap] = useState<AiRoadmapResponse | null>(null);
-  const [aiRoadmapId, setAiRoadmapId] = useState<string | null>(null);
-  const [resolvedYouthProfileId, setResolvedYouthProfileId] = useState<string | null>(null);
-  const [resolvedCaseId, setResolvedCaseId] = useState<string | null>(null);
-  const [sendError, setSendError] = useState("");
-  const [aiError, setAiError] = useState("");
-  const [sending, setSending] = useState(false);
-  const [preFilling, setPreFilling] = useState(false);
-  const [preFilled, setPreFilled] = useState(false);
+  const [approving, setApproving] = useState(false);
+  const [error, setError] = useState("");
+  const [confirm, setConfirm] = useState<"approve" | "regenerate" | null>(null);
 
-  const sectorOptions = districts.includes(district)
-    ? sectors[district] || []
-    : [];
-
-  // Pre-fill form from youthId param
   useEffect(() => {
-    if (!youthIdParam || preFilled) return;
+    api<YouthOption[]>("/api/youth").then(setYouth).catch((e) => setLoadError(e.message));
+  }, []);
 
-    async function loadYouth() {
-      setPreFilling(true);
-      try {
-        const res = await fetch(`/api/youth/${youthIdParam}`);
-        if (res.ok) {
-          const data: YouthProfileData = await res.json();
-          const p = data.profile;
-          setName(p.full_name || "");
-          setGoal(p.goal || goalOptions[0] || "");
-          setSkills(p.skills_background || p.skills || "");
-          setSituation(p.situation || "");
-          setDistrict(p.district || "");
-          setSector(p.sector || "");
-          setResolvedYouthProfileId(p.id);
+  const selected = useMemo(() => youth?.find((y) => y.id === youthId) || null, [youth, youthId]);
+  const draftParam = params.get("draft");
 
-          // Find the existing case
-          const existingCase = data.cases.find(
-            (c) => c.status === "pending" || c.status === "active",
-          );
-          if (existingCase) {
-            setResolvedCaseId(existingCase.id);
-          }
+  // Prefill from the youth's profile; resume a saved draft when asked to.
+  useEffect(() => {
+    if (!selected) return;
+    setForm({
+      goal: selected.goal || "",
+      skillsBackground: selected.skills_background || selected.skills || "",
+      district: selected.district || "",
+      sector: selected.sector || "",
+      notes: selected.situation || "",
+    });
+    setDraft(null);
+    setDirty(false);
+    setError("");
 
-          setPreFilled(true);
-        }
-      } catch {
-        // silently fail — form stays empty
-      } finally {
-        setPreFilling(false);
-      }
+    const draftId = draftParam;
+    if (draftId) {
+      api<{ roadmaps: { id: string; title: string; summary: string; steps_data: ApiStep[]; status: string }[] }>(`/api/youth/${selected.id}`)
+        .then((d) => {
+          const r = d.roadmaps.find((x) => x.id === draftId && x.status === "draft");
+          if (r) setDraft({ roadmapId: r.id, title: r.title, summary: r.summary || "", steps: toDraftSteps(r.steps_data || []) });
+        })
+        .catch(() => undefined);
     }
-    loadYouth();
-  }, [youthIdParam, preFilled]);
+  }, [selected, draftParam]);
 
-  async function handleGenerate() {
-    if (!name.trim()) return;
+  function chooseYouth(id: string) {
+    setYouthId(id);
+    router.replace(id ? `/officer/intake?youthId=${id}` : "/officer/intake", { scroll: false });
+  }
+
+  async function generate() {
+    if (!selected) return;
+    setConfirm(null);
     setGenerating(true);
-    setSendError("");
-    setAiError("");
-
+    setError("");
+    setEditing(null);
     try {
-      // If no existing youth profile, create one
-      let youthProfileId = resolvedYouthProfileId;
-
-      if (!youthProfileId) {
-        const email = `${name.trim().toLowerCase().replace(/\s+/g, ".")}@youth.rw`;
-        const signupRes = await fetch("/api/auth/signup", {
+      const res = await api<{ roadmapId: string | null; title: string; summary: string; steps: ApiStep[]; pathway: string | null; sourcesConsulted: number }>(
+        "/api/ai/generate-roadmap",
+        {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            email,
-            password: "password123",
-            fullName: name.trim(),
-            role: "youth",
-          }),
-        });
-
-        const signupData = await signupRes.json();
-        // signup returns userId (auth user id), we need to look up the profile
-        if (signupRes.ok) {
-          const profileRes = await fetch("/api/youth");
-          if (profileRes.ok) {
-            const allYouth = await profileRes.json();
-            const found = allYouth.find((y: { user_id: string }) => y.user_id === signupData.userId);
-            if (found) youthProfileId = found.id;
-          }
-        }
-      }
-
-      // Call the real AI roadmap generation API
-      const roadmapRes = await fetch("/api/ai/generate-roadmap", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          youth: {
-            name: name.trim(),
-            goal,
-            skillsBackground: skills,
-            district: district || "Kigali",
-            sector: sector || "",
+          json: {
+            youthProfileId: selected.id,
+            youth: { goal: form.goal, skillsBackground: form.skillsBackground, district: form.district, sector: form.sector },
+            officerNotes: form.notes,
           },
-          officerNotes: situation,
-          youthProfileId: youthProfileId || undefined,
-          caseId: resolvedCaseId || undefined,
-        }),
-      });
-
-      if (!roadmapRes.ok) {
-        const errorData = await roadmapRes.json();
-        setAiError(errorData.error || "Failed to generate roadmap. Please try again.");
-        setGenerating(false);
-        return;
-      }
-
-      const roadmap: AiRoadmapResponse & { roadmapId?: string } = await roadmapRes.json();
-      setAiRoadmap(roadmap);
-      if (roadmap.roadmapId) setAiRoadmapId(roadmap.roadmapId);
-      if (youthProfileId) setResolvedYouthProfileId(youthProfileId);
-
-      // Convert to the format expected by AIDraftPanel
-      const draftSteps = roadmap.steps.map((step) => ({
-        number: step.order,
-        title: step.title,
-        detail: step.description,
-        badge: step.institution,
-        location: step.location || undefined,
-        source: step.sources?.[0]
-          ? `${step.sources[0].institution} - ${step.sources[0].documentTitle}`
-          : undefined,
-      }));
-
-      setAiSteps(draftSteps);
-      setShowRoadmap(true);
-    } catch {
-      setAiError("Failed to connect to the AI service. Please try again.");
+        },
+      );
+      setDraft({ ...res, steps: toDraftSteps(res.steps) });
+      setDirty(false);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Could not generate a roadmap.");
     } finally {
       setGenerating(false);
     }
   }
 
-  async function handleApproveAndSend() {
-    if (!aiSteps.length || !resolvedYouthProfileId) {
-      setSendError("Please generate a roadmap and ensure the youth profile is loaded, then approve and send.");
-      return;
-    }
-    setSending(true);
-    setSendError("");
+  function updateSteps(fn: (steps: DraftStep[]) => DraftStep[]) {
+    setDraft((d) => (d ? { ...d, steps: fn(d.steps) } : d));
+    setDirty(true);
+  }
 
+  function move(index: number, delta: number) {
+    updateSteps((steps) => {
+      const next = [...steps];
+      const [item] = next.splice(index, 1);
+      next.splice(index + delta, 0, item);
+      return next;
+    });
+  }
+
+  function addStep() {
+    const step: DraftStep = { key: newKey(), title: "", description: "", institution: "", location: "", whatToBring: [], whyThisStep: "", sources: [] };
+    updateSteps((steps) => [...steps, step]);
+    setEditing(step.key);
+  }
+
+  async function approve() {
+    if (!selected || !draft) return;
+    setConfirm(null);
+    setApproving(true);
+    setError("");
     try {
-      // Always send the full roadmap data — this ensures the approve endpoint
-      // can work even if the roadmap wasn't saved to the DB during generation
-      const body: Record<string, unknown> = {
-        youthProfileId: resolvedYouthProfileId,
-        goal,
-        skillsBackground: skills,
-        district: district || "",
-        sector: sector || "",
-        situation,
-      };
-
-      if (aiRoadmapId) {
-        // Roadmap was saved to DB during generation
-        body.roadmapId = aiRoadmapId;
-      } else {
-        // Roadmap only exists in client state — send it inline
-        body.roadmapData = {
-          title: aiRoadmap?.title || "Personalized Roadmap",
-          summary: aiRoadmap?.summary || "A roadmap generated from verified sources.",
-          steps: aiRoadmap?.steps || [],
-        };
-      }
-
-      const res = await fetch("/api/ai/approve-roadmap", {
+      await api("/api/ai/approve-roadmap", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(body),
+        json: {
+          youthProfileId: selected.id,
+          roadmapId: draft.roadmapId,
+          noteToYouth,
+          roadmap: {
+            title: draft.title,
+            summary: draft.summary,
+            steps: draft.steps.map((s, i) => ({ ...s, order: i + 1, location: s.location || null })),
+          },
+        },
       });
-
-      if (!res.ok) {
-        const data = await res.json();
-        setSendError(data.error || "Failed to approve roadmap");
-        setSending(false);
-        return;
-      }
-
-      const data = await res.json();
-      // Redirect to the youth detail page (uses youth profile ID, not case ID)
-      window.location.href = `/officer/youth/${data.youthProfileId}`;
-    } catch {
-      setSendError("Failed to approve roadmap. Please try again.");
-      setSending(false);
+      router.push(`/officer/youth/${selected.id}`);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Could not approve the roadmap.");
+      setApproving(false);
     }
   }
 
+  if (loadError) return <Alert tone="error" title="We couldn't load Smart Intake">{loadError}</Alert>;
+  if (!youth) return <PageSkeleton />;
+
+  const q = search.trim().toLowerCase();
+  const candidates = youth
+    .filter((y) => !q || `${y.full_name} ${y.email} ${y.district || ""}`.toLowerCase().includes(q))
+    .sort((a, b) => Number(b.status === "needs_roadmap") - Number(a.status === "needs_roadmap"))
+    .slice(0, 8);
+
+  const incompleteStep = draft?.steps.find((s) => !s.title.trim());
+  const goalChoices = Array.from(new Set([...goalOptions, ...(form.goal ? [form.goal] : [])]));
+  const districtChoices = Array.from(new Set([...districts, ...(form.district ? [form.district] : [])]));
+
   return (
-    <OfficerShell active="Smart Intake">
-      <div className="officer-page-wrap">
-        <header className="intake-top-header">
+    <>
+      <PageHeader
+        title="Smart Intake"
+        description="Draft a roadmap from the verified library, adjust it to the youth's situation, then approve it. Nothing reaches the youth until you approve."
+      />
+
+      <datalist id="institution-options">
+        {INSTITUTIONS.map((i) => (
+          <option key={i} value={i} />
+        ))}
+      </datalist>
+
+      {/* 1. Choose youth */}
+      <section className="card">
+        <header className="card-header">
           <div>
-            <h1>Smart Intake</h1>
-            <p>
-              {preFilled
-                ? `Generating roadmap for ${name}`
-                : "Enter information about the youth. The AI will generate a roadmap based on verified programs."}
-            </p>
+            <h2>1. Youth</h2>
+            <p>Choose a registered youth. Those waiting for a roadmap are listed first.</p>
           </div>
-          <div className="intake-top-actions">
-            <span className="intake-status-note">
-              <ShieldCheck aria-hidden size={16} />
-              All roadmaps are drafts until you approve and send.
-            </span>
-          </div>
+          {selected ? (
+            <button className="btn btn-ghost btn-sm" type="button" onClick={() => chooseYouth("")} disabled={generating || approving}>
+              Change
+            </button>
+          ) : null}
         </header>
-
-        <div className="intake-two-col">
-          <section className="officer-card intake-notes-card">
-            <header className="intake-section-header">
-              <div className="intake-section-icon">
-                <ClipboardList aria-hidden size={18} />
-              </div>
-              <div>
-                <h2>1. Intake Notes</h2>
-                <p>
-                  {preFilled
-                    ? "Pre-filled from youth profile. Edit if needed."
-                    : "Provide details about the youth."}
-                </p>
-              </div>
-            </header>
-
-            {preFilling && (
-              <div style={{ padding: "16px 0", color: "#545d65", fontSize: 13 }}>
-                Loading youth information…
-              </div>
-            )}
-
-            <div className="intake-form-grid">
-              <label className="intake-field full">
-                <span>Youth name</span>
-                <input
-                  type="text"
-                  placeholder="e.g. Diane Uwimana"
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                />
-              </label>
-
-              <label className="intake-field">
-                <span>Goal</span>
-                <select value={goal} onChange={(e) => setGoal(e.target.value)}>
-                  {goalOptions.map((g) => (
-                    <option key={g}>{g}</option>
-                  ))}
-                </select>
-              </label>
-
-              <label className="intake-field">
-                <span>Skills / background</span>
-                <input
-                  type="text"
-                  placeholder="e.g. Tailoring, basic IT"
-                  value={skills}
-                  onChange={(e) => setSkills(e.target.value)}
-                />
-              </label>
-
-              <label className="intake-field full">
-                <span>Current situation / notes</span>
-                <textarea
-                  rows={3}
-                  placeholder="Describe the youth's current situation..."
-                  value={situation}
-                  onChange={(e) => setSituation(e.target.value)}
-                />
-              </label>
-
-              <label className="intake-field">
-                <span>Location</span>
-                <select
-                  value={district}
-                  onChange={(e) => {
-                    setDistrict(e.target.value);
-                    setSector("");
-                  }}
-                >
-                  <option value="">Select district</option>
-                  {districts.map((d) => (
-                    <option key={d}>{d}</option>
-                  ))}
-                </select>
-              </label>
-
-              <label className="intake-field">
-                <span>&nbsp;</span>
-                <select
-                  value={sector}
-                  onChange={(e) => setSector(e.target.value)}
-                >
-                  <option value="">Select sector</option>
-                  {sectorOptions.map((s) => (
-                    <option key={s}>{s}</option>
-                  ))}
-                </select>
+        {selected ? (
+          <div className="list-row">
+            <Avatar name={selected.full_name} email={selected.email} />
+            <div className="list-row-body">
+              <strong>{selected.full_name}</strong>
+              <span>{selected.email}</span>
+            </div>
+            <span className={`badge badge-${selected.status}`}>{STATUS_LABELS[selected.status]}</span>
+          </div>
+        ) : youth.length === 0 ? (
+          <EmptyState icon={<UserRound size={24} />} title="No youth registered yet">
+            Ask the young person to create an account on Inzira first — it takes two minutes on any phone. They will then appear here.
+          </EmptyState>
+        ) : (
+          <>
+            <div className="toolbar">
+              <label className="search-input" style={{ maxWidth: "none" }}>
+                <UserRound size={16} aria-hidden />
+                <input className="input" type="search" placeholder="Search by name, email or district" value={search} onChange={(e) => setSearch(e.target.value)} aria-label="Search youth" />
               </label>
             </div>
-
-            <div className="intake-generate-row">
-              <button
-                className="officer-button primary"
-                type="button"
-                onClick={handleGenerate}
-                disabled={generating || !name.trim()}
-              >
-                <Sparkles aria-hidden size={15} />
-                {generating ? "Generating…" : preFilled ? "Generate roadmap" : "Generate roadmap"}
-              </button>
-              <span className="intake-generate-hint">
-                {generating
-                  ? "AI is generating your roadmap from verified sources…"
-                  : <>Click to generate a roadmap<br />using AI and verified sources.</>}
-              </span>
-            </div>
-            {aiError && (
-              <div style={{ color: "#c0392b", fontSize: 13, padding: "8px 0", marginTop: 8 }}>
-                {aiError}
-              </div>
-            )}
-          </section>
-
-          {showRoadmap ? (
-            <div>
-              {aiRoadmap && (
-                <div style={{ marginBottom: 16 }}>
-                  <h3 style={{ fontSize: 16, fontWeight: 600, marginBottom: 4 }}>{aiRoadmap.title}</h3>
-                  <p style={{ fontSize: 13, color: "#545d65" }}>{aiRoadmap.summary}</p>
-                </div>
-              )}
-              <AIDraftPanel steps={aiSteps} />
-              {sendError && (
-                <div style={{ color: "#c0392b", fontSize: 13, padding: "8px 0" }}>
-                  {sendError}
-                </div>
-              )}
-              <div style={{ marginTop: 16, display: "flex", gap: 12 }}>
-                <button
-                  className="officer-button primary"
-                  type="button"
-                  onClick={handleApproveAndSend}
-                  disabled={sending || !resolvedYouthProfileId}
-                >
-                  {sending ? "Approving…" : "Approve and send to youth"}
-                  {!sending && <ArrowRight aria-hidden size={15} />}
+            {candidates.length === 0 ? (
+              <p className="card-body muted">No youth match your search.</p>
+            ) : (
+              candidates.map((y) => (
+                <button className="list-row" type="button" key={y.id} onClick={() => chooseYouth(y.id)}>
+                  <Avatar name={y.full_name} email={y.email} size="sm" />
+                  <div className="list-row-body">
+                    <strong>{y.full_name}</strong>
+                    <span>{[y.goal, y.district].filter(Boolean).join(" · ") || y.email}</span>
+                  </div>
+                  <span className={`badge badge-${y.status}`}>{STATUS_LABELS[y.status]}</span>
                 </button>
-                <button
-                  className="officer-button outline"
-                  type="button"
-                  onClick={() => {
-                    setShowRoadmap(false);
-                    setAiRoadmap(null);
-                    setAiRoadmapId(null);
-                  }}
-                >
-                  Regenerate
-                </button>
-                <Link className="officer-button outline" href="/officer/youth">
-                  Skip for now
-                </Link>
-              </div>
-            </div>
-          ) : (
-            <section className="officer-card intake-roadmap-empty">
-              <header className="intake-section-header">
-                <div className="intake-section-icon ai">
-                  <Sparkles aria-hidden size={18} />
-                </div>
+              ))
+            )}
+          </>
+        )}
+      </section>
+
+      {selected ? (
+        <div className="grid-main" style={{ marginTop: 16 }}>
+          <div className="stack" style={{ minWidth: 0 }}>
+            {/* 2. Intake notes */}
+            <section className="card">
+              <header className="card-header">
                 <div>
-                  <h2>2. AI Generated Roadmap</h2>
-                  <p>(will appear here)</p>
+                  <h2>2. Intake notes</h2>
+                  <p>Pre-filled from the youth&apos;s profile. Correct anything that has changed.</p>
                 </div>
               </header>
-
-              <div className="intake-empty-state">
-                <div className="intake-empty-icon">
-                  <FileText aria-hidden size={40} />
+              <div className="card-body">
+                <div className="form-grid">
+                  <label className="field">
+                    <span className="field-label">Goal</span>
+                    <select className="select" value={form.goal} onChange={(e) => setForm({ ...form, goal: e.target.value })}>
+                      <option value="">Choose a goal</option>
+                      {goalChoices.map((g) => (
+                        <option key={g}>{g}</option>
+                      ))}
+                    </select>
+                  </label>
+                  <label className="field">
+                    <span className="field-label">District</span>
+                    <select className="select" value={form.district} onChange={(e) => setForm({ ...form, district: e.target.value, sector: "" })}>
+                      <option value="">Choose a district</option>
+                      {districtChoices.map((d) => (
+                        <option key={d}>{d}</option>
+                      ))}
+                    </select>
+                  </label>
+                  <label className="field span-2">
+                    <span className="field-label">Skills and background</span>
+                    <input className="input" maxLength={1000} value={form.skillsBackground} onChange={(e) => setForm({ ...form, skillsBackground: e.target.value })} placeholder="e.g. Tailoring certificate, sells clothes at the market" />
+                  </label>
+                  <label className="field span-2">
+                    <span className="field-label">Officer notes</span>
+                    <textarea
+                      className="textarea"
+                      rows={3}
+                      maxLength={2000}
+                      value={form.notes}
+                      onChange={(e) => setForm({ ...form, notes: e.target.value })}
+                      placeholder="Context from your conversation: what they've already done, constraints, priorities…"
+                    />
+                    <span className="field-hint">The AI uses these notes to personalise and skip steps already completed.</span>
+                  </label>
                 </div>
-                <h3>No roadmap yet</h3>
-                <p>
-                  {preFilled
-                    ? "Click &ldquo;Generate roadmap&rdquo; to create a step-by-step plan for this youth."
-                    : "Fill in the intake notes and click &ldquo;Generate roadmap&rdquo; to create a step-by-step plan for this youth."}
-                </p>
-              </div>
-
-              <div className="intake-info-banner">
-                <ShieldCheck aria-hidden size={18} />
-                <div>
-                  <strong>The AI uses only verified program documents.</strong>
-                  <p>
-                    Every roadmap is a draft until you review and approve it.
-                  </p>
+                <div className="form-actions">
+                  <button
+                    className="btn btn-primary"
+                    type="button"
+                    disabled={generating || approving || !form.goal}
+                    onClick={() => (draft && dirty ? setConfirm("regenerate") : generate())}
+                  >
+                    {generating ? <span className="spinner" aria-hidden /> : draft ? <RefreshCw size={16} aria-hidden /> : <Sparkles size={16} aria-hidden />}
+                    {generating ? "Drafting from verified sources…" : draft ? "Regenerate draft" : "Generate draft roadmap"}
+                  </button>
                 </div>
               </div>
             </section>
-          )}
+
+            {error ? <Alert tone="error">{error}</Alert> : null}
+
+            {/* 3. Draft */}
+            {draft ? (
+              <section className="card">
+                <header className="card-header">
+                  <div>
+                    <h2>3. Review the draft</h2>
+                    <p>
+                      {draft.pathway ? `Ordered using the verified "${draft.pathway}" pathway. ` : ""}
+                      {draft.sourcesConsulted !== undefined ? `${draft.sourcesConsulted} verified passages consulted.` : ""}
+                    </p>
+                  </div>
+                  <span className="badge badge-draft">Draft · not visible to youth</span>
+                </header>
+                <div className="card-body">
+                  <div className="form-grid" style={{ marginBottom: 20 }}>
+                    <label className="field span-2">
+                      <span className="field-label">Roadmap title (shown to the youth)</span>
+                      <input
+                        className="input"
+                        maxLength={160}
+                        value={draft.title}
+                        onChange={(e) => {
+                          setDraft({ ...draft, title: e.target.value });
+                          setDirty(true);
+                        }}
+                      />
+                    </label>
+                    <label className="field span-2">
+                      <span className="field-label">Summary</span>
+                      <textarea
+                        className="textarea"
+                        rows={2}
+                        maxLength={800}
+                        value={draft.summary}
+                        onChange={(e) => {
+                          setDraft({ ...draft, summary: e.target.value });
+                          setDirty(true);
+                        }}
+                      />
+                    </label>
+                  </div>
+
+                  {draft.steps.map((step, index) => (
+                    <article className="draft-step" key={step.key}>
+                      <div className="draft-step-head">
+                        <span className="draft-step-num">{index + 1}</span>
+                        <h3>{step.title || <span className="muted">Untitled step</span>}</h3>
+                        <div className="draft-step-tools">
+                          <button className="icon-button" type="button" aria-label="Move up" disabled={index === 0} onClick={() => move(index, -1)}>
+                            <ArrowUp size={16} />
+                          </button>
+                          <button className="icon-button" type="button" aria-label="Move down" disabled={index === draft.steps.length - 1} onClick={() => move(index, 1)}>
+                            <ArrowDown size={16} />
+                          </button>
+                          <button className="icon-button" type="button" aria-label="Edit step" onClick={() => setEditing(step.key)}>
+                            <Pencil size={15} />
+                          </button>
+                          <button
+                            className="icon-button"
+                            type="button"
+                            aria-label="Remove step"
+                            disabled={draft.steps.length <= 1}
+                            onClick={() => updateSteps((steps) => steps.filter((s) => s.key !== step.key))}
+                          >
+                            <Trash2 size={15} />
+                          </button>
+                        </div>
+                      </div>
+                      <div className="draft-step-body">
+                        {editing === step.key ? (
+                          <StepEditor
+                            step={step}
+                            onCancel={() => {
+                              setEditing(null);
+                              if (!step.title) updateSteps((steps) => steps.filter((s) => s.key !== step.key));
+                            }}
+                            onSave={(next) => {
+                              updateSteps((steps) => steps.map((s) => (s.key === step.key ? next : s)));
+                              setEditing(null);
+                            }}
+                          />
+                        ) : (
+                          <>
+                            {step.description ? <p>{step.description}</p> : null}
+                            <div className="timeline-meta">
+                              {step.institution ? (
+                                <span>
+                                  <Building2 size={14} aria-hidden /> {step.institution}
+                                </span>
+                              ) : null}
+                              {step.location ? (
+                                <span>
+                                  <MapPin size={14} aria-hidden /> {step.location}
+                                </span>
+                              ) : null}
+                            </div>
+                            {step.whatToBring.length ? (
+                              <div className="bring-list">
+                                <strong>What to bring</strong>
+                                <ul>
+                                  {step.whatToBring.map((b) => (
+                                    <li key={b}>
+                                      <CheckCircle2 size={14} aria-hidden /> {b}
+                                    </li>
+                                  ))}
+                                </ul>
+                              </div>
+                            ) : null}
+                            {step.sources.length ? (
+                              <p className="source-note">
+                                <FileText size={13} aria-hidden />
+                                {step.sources.map((s) => `${s.institution} – ${s.documentTitle}`).join("; ")}
+                              </p>
+                            ) : (
+                              <p className="source-note" style={{ color: "var(--ui-amber)" }}>
+                                <FileText size={13} aria-hidden /> No library source cited — check this step before approving.
+                              </p>
+                            )}
+                          </>
+                        )}
+                      </div>
+                    </article>
+                  ))}
+
+                  <button className="btn btn-secondary btn-sm" type="button" style={{ marginTop: 14 }} onClick={addStep} disabled={!!editing}>
+                    <Plus size={14} aria-hidden /> Add step
+                  </button>
+                </div>
+              </section>
+            ) : !generating ? (
+              <section className="card">
+                <EmptyState icon={<Compass size={24} />} title="No draft yet">
+                  Check the intake notes, then generate a draft. It usually takes 5–15 seconds.
+                </EmptyState>
+              </section>
+            ) : null}
+          </div>
+
+          {/* 4. Approve */}
+          <aside className="stack">
+            <section className="card">
+              <header className="card-header">
+                <h2>4. Approve and send</h2>
+              </header>
+              <div className="card-body">
+                <label className="field">
+                  <span className="field-label">Message to {selected.full_name.split(" ")[0]} (optional)</span>
+                  <textarea
+                    className="textarea"
+                    rows={4}
+                    maxLength={2000}
+                    value={noteToYouth}
+                    onChange={(e) => setNoteToYouth(e.target.value)}
+                    placeholder="A few words of encouragement or guidance. Sent as a message when you approve."
+                    disabled={!draft}
+                  />
+                </label>
+                {incompleteStep ? (
+                  <p className="field-hint" style={{ color: "var(--ui-amber)", marginTop: 10 }}>
+                    Give every step a title before approving.
+                  </p>
+                ) : null}
+                <button
+                  className="btn btn-primary btn-block"
+                  type="button"
+                  style={{ marginTop: 14 }}
+                  disabled={!draft || !!incompleteStep || !!editing || approving || generating || !draft.steps.length}
+                  onClick={() => setConfirm("approve")}
+                >
+                  {approving ? <span className="spinner" aria-hidden /> : <Send size={16} aria-hidden />}
+                  {approving ? "Approving…" : "Approve and send to youth"}
+                </button>
+                {selected.status === "in_progress" || selected.status === "completed" ? (
+                  <p className="field-hint" style={{ marginTop: 10 }}>
+                    This youth already has a roadmap. Approving replaces it and restarts their progress at step 1.
+                  </p>
+                ) : null}
+              </div>
+            </section>
+            <Alert tone="success" title="Human-reviewed by design">
+              The AI uses only the verified library and fixed pathway rules. Check every step — you are accountable for what the youth sees.
+            </Alert>
+            <Link className="btn btn-ghost btn-sm" href={`/officer/youth/${selected.id}`}>
+              View {selected.full_name.split(" ")[0]}&apos;s profile
+            </Link>
+          </aside>
         </div>
-      </div>
-    </OfficerShell>
+      ) : null}
+
+      <ConfirmModal
+        open={confirm === "approve"}
+        title="Approve this roadmap?"
+        message={`${selected?.full_name} will see these ${draft?.steps.length || 0} steps immediately${noteToYouth.trim() ? ", along with your message" : ""}.`}
+        confirmText="Approve and send"
+        variant="info"
+        onConfirm={approve}
+        onCancel={() => setConfirm(null)}
+      />
+      <ConfirmModal
+        open={confirm === "regenerate"}
+        title="Discard your edits?"
+        message="Regenerating replaces the current draft, including the changes you've made."
+        confirmText="Regenerate"
+        variant="warning"
+        onConfirm={generate}
+        onCancel={() => setConfirm(null)}
+      />
+    </>
   );
 }
 
 export default function OfficerIntake() {
   return (
-    <Suspense fallback={
-      <OfficerShell active="Smart Intake">
-        <div className="officer-page-wrap">
-          <div className="yd-loading">
-            <div className="yd-loading-spinner" />
-            <p>Loading Smart Intake…</p>
-          </div>
-        </div>
-      </OfficerShell>
-    }>
-      <IntakeForm />
+    <Suspense fallback={<PageSkeleton />}>
+      <Intake />
     </Suspense>
   );
 }
